@@ -5,11 +5,27 @@ pub struct Token {
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
-    for word in sql.split_whitespace() {
+    let mut curr_token_value: String = String::new();
+    for ch in sql.chars() {
+        if ch.is_whitespace() {
+            if !curr_token_value.is_empty() {
+                tokens.push(Token {
+                    value: curr_token_value,
+                });
+                curr_token_value = String::new();
+            }
+            continue;
+        }
+
+        curr_token_value.push(ch);
+    }
+
+    if !curr_token_value.is_empty() {
         tokens.push(Token {
-            value: word.to_owned(),
+            value: curr_token_value,
         });
     }
+
     return tokens;
 }
 
