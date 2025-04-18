@@ -26,6 +26,34 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         } else {
             None
         };
+
+        if get_in_comment(curr_ch, next_ch, in_comment) {
+            if !in_comment {
+                // start of new comment, add any current token if any
+                if !curr_token_value.is_empty() {
+                    tokens.push(Token {
+                        value: curr_token_value,
+                    });
+                    curr_token_value = String::new();
+                }
+            }
+
+            curr_token_value.push(curr_ch);
+            in_comment = true;
+            continue;
+        } else {
+            if in_comment {
+                // comment just ended, add comment token
+                if !curr_token_value.is_empty() {
+                    tokens.push(Token {
+                        value: curr_token_value,
+                    });
+                    curr_token_value = String::new();
+                }
+            }
+            in_comment = false;
+        }
+
         match curr_ch {
             BACKTICK => {
                 if in_quote == Some(BACKTICK) {
@@ -58,25 +86,13 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     in_quote = None;
                 }
             }
-            HYPHEN => {
-                if next_ch == Some(HYPHEN) {
-                    if !curr_token_value.is_empty() {
-                        tokens.push(Token {
-                            value: curr_token_value,
-                        });
-                    }
-                    curr_token_value = String::new();
-                    in_comment = true;
-                }
-            }
             NEW_LINE => {
                 in_quote = None;
-                in_comment = false;
             }
             _ => (),
         }
 
-        if in_quote.is_some() || in_comment {
+        if in_quote.is_some() {
             curr_token_value.push(curr_ch);
             continue;
         }
@@ -101,6 +117,20 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     return tokens;
+}
+
+fn get_in_comment(curr_ch: char, next_ch: Option<char>, in_comment: bool) -> bool {
+    if in_comment {
+        if curr_ch == NEW_LINE {
+            return false;
+        }
+        return true;
+    }
+
+    if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
+        return true;
+    }
+    return false;
 }
 
 #[cfg(test)]
