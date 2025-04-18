@@ -5,10 +5,17 @@ const BRACKET_OPEN: char = '[';
 const BRACKET_CLOSE: char = ']';
 const HYPHEN: char = '-';
 const NEW_LINE: char = '\n';
+const SLASH_FORWARD: char = '/';
+const ASTERISK: char = '*';
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub value: String,
+}
+
+enum CommentType {
+    SingleLine,
+    MultiLine,
 }
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
@@ -16,19 +23,15 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
     let mut curr_token_value: String = String::new();
     let mut in_quote: Option<char> = None;
-    let mut in_comment: bool = false;
+    let mut in_comment: Option<CommentType> = None;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
-        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-            Some(sql_bytes[i + 1].into())
-        } else {
-            None
-        };
 
-        if get_in_comment(curr_ch, next_ch, in_comment) {
-            if !in_comment {
+        let next_in_comment: Option<CommentType> = get_in_comment(&in_comment, sql_bytes, i);
+        if next_in_comment.is_some() {
+            if in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token_value.is_empty() {
                     tokens.push(Token {
@@ -39,19 +42,17 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
 
             curr_token_value.push(curr_ch);
-            in_comment = true;
+            in_comment = next_in_comment;
             continue;
         } else {
-            if in_comment {
+            if in_comment.is_some() {
                 // comment just ended, add comment token
-                if !curr_token_value.is_empty() {
-                    tokens.push(Token {
-                        value: curr_token_value,
-                    });
-                    curr_token_value = String::new();
-                }
+                tokens.push(Token {
+                    value: curr_token_value,
+                });
+                curr_token_value = String::new();
             }
-            in_comment = false;
+            in_comment = next_in_comment;
         }
 
         match curr_ch {
@@ -119,18 +120,44 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     return tokens;
 }
 
-fn get_in_comment(curr_ch: char, next_ch: Option<char>, in_comment: bool) -> bool {
-    if in_comment {
-        if curr_ch == NEW_LINE {
-            return false;
+fn get_in_comment(
+    in_comment: &Option<CommentType>,
+    sql_bytes: &[u8],
+    curr_idx: usize,
+) -> Option<CommentType> {
+    let curr_ch: char = sql_bytes[curr_idx].into();
+    match in_comment {
+        Some(CommentType::SingleLine) => {
+            if curr_ch == NEW_LINE {
+                return None;
+            }
+            return Some(CommentType::SingleLine);
         }
-        return true;
-    }
+        Some(CommentType::MultiLine) => {
+            if curr_idx >= 2 {
+                let prev2_ch: char = sql_bytes[curr_idx - 2].into();
+                let prev1_ch: char = sql_bytes[curr_idx - 1].into();
+                if prev2_ch == ASTERISK && prev1_ch == SLASH_FORWARD {
+                    return None;
+                }
+            }
+            return Some(CommentType::MultiLine);
+        }
+        None => {
+            if (curr_idx + 1) < sql_bytes.len() {
+                let next_ch: char = sql_bytes[curr_idx + 1].into();
 
-    if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
-        return true;
+                if curr_ch == HYPHEN && next_ch == HYPHEN {
+                    return Some(CommentType::SingleLine);
+                }
+
+                if curr_ch == SLASH_FORWARD && next_ch == ASTERISK {
+                    return Some(CommentType::MultiLine);
+                }
+            }
+            return None;
+        }
     }
-    return false;
 }
 
 #[cfg(test)]
@@ -219,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_sql_tokens_comment_inline() {
+    fn test_get_sql_tokens_comment_single_inline() {
         assert_eq!(
             vec![
                 Token {
@@ -237,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_sql_tokens_comment_newline() {
+    fn test_get_sql_tokens_comment_single_newline() {
         assert_eq!(
             vec![
                 Token {
@@ -260,6 +287,68 @@ mod tests {
                 r#"
                 SELECT *
                 -- comment newline
+                FROM TBL1
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_inline() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("*"),
+                },
+                Token {
+                    value: String::from("/*multi inline*/"),
+                },
+                Token {
+                    value: String::from("FROM"),
+                },
+                Token {
+                    value: String::from("TBL1"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_newline() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("*"),
+                },
+                Token {
+                    value: String::from(
+                        r#"/*
+                    multi line
+                    comment
+                */"#
+                    ),
+                },
+                Token {
+                    value: String::from("FROM"),
+                },
+                Token {
+                    value: String::from("TBL1"),
+                },
+            ],
+            get_sql_tokens(String::from(
+                r#"
+                SELECT *
+                /*
+                    multi line
+                    comment
+                */
                 FROM TBL1
                 "#
             ))
