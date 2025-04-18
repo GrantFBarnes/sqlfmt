@@ -13,12 +13,20 @@ pub struct Token {
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
+
     let mut curr_token_value: String = String::new();
     let mut in_quote: Option<char> = None;
     let mut in_comment: bool = false;
-    let mut chars = sql.chars().peekable();
-    while let Some(ch) = chars.next() {
-        match ch {
+
+    let sql_bytes: &[u8] = sql.as_bytes();
+    for i in 0..sql_bytes.len() {
+        let curr_ch: char = sql_bytes[i].into();
+        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+            Some(sql_bytes[i + 1].into())
+        } else {
+            None
+        };
+        match curr_ch {
             BACKTICK => {
                 if in_quote == Some(BACKTICK) {
                     in_quote = None;
@@ -51,7 +59,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 }
             }
             HYPHEN => {
-                if chars.peek() == Some(&HYPHEN) {
+                if next_ch == Some(HYPHEN) {
                     if !curr_token_value.is_empty() {
                         tokens.push(Token {
                             value: curr_token_value,
@@ -69,11 +77,11 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         if in_quote.is_some() || in_comment {
-            curr_token_value.push(ch);
+            curr_token_value.push(curr_ch);
             continue;
         }
 
-        if ch.is_whitespace() {
+        if curr_ch.is_whitespace() {
             if !curr_token_value.is_empty() {
                 tokens.push(Token {
                     value: curr_token_value,
@@ -83,7 +91,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             continue;
         }
 
-        curr_token_value.push(ch);
+        curr_token_value.push(curr_ch);
     }
 
     if !curr_token_value.is_empty() {
