@@ -32,7 +32,7 @@ impl Token {
 }
 
 #[derive(Debug, PartialEq)]
-enum TokenCategory {
+pub enum TokenCategory {
     Comment,
     Quote,
     NewLine,
