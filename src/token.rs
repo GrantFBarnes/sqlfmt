@@ -11,12 +11,14 @@ const SLASH_FORWARD: char = '/';
 #[derive(Debug, PartialEq)]
 pub struct Token {
     pub value: String,
+    pub category: Option<TokenCategory>,
 }
 
 impl Token {
     fn new() -> Token {
         Token {
             value: String::new(),
+            category: None,
         }
     }
 
@@ -27,6 +29,13 @@ impl Token {
     fn is_empty(&self) -> bool {
         self.value.is_empty()
     }
+}
+
+#[derive(Debug, PartialEq)]
+enum TokenCategory {
+    Comment,
+    Quote,
+    NewLine,
 }
 
 #[derive(Clone)]
@@ -64,6 +73,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
+                curr_token.category = Some(TokenCategory::Comment);
             }
 
             curr_token.value.push(curr_ch);
@@ -83,6 +93,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
+                curr_token.category = Some(TokenCategory::Quote);
             }
 
             curr_token.value.push(curr_ch);
@@ -99,6 +110,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 curr_token = Token::new();
             }
             curr_token.value.push(curr_ch);
+            curr_token.category = Some(TokenCategory::NewLine);
             tokens.push(curr_token);
             curr_token = Token::new();
             continue;
@@ -231,15 +243,19 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
                 Token {
                     value: String::from("FROM"),
+                    category: None,
                 },
                 Token {
                     value: String::from("TBL1"),
+                    category: None,
                 },
             ],
             get_sql_tokens(String::from("SELECT * FROM TBL1"))
@@ -252,12 +268,15 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("1"),
+                    category: None,
                 },
                 Token {
                     value: String::from("--comment inline"),
+                    category: Some(TokenCategory::Comment),
                 },
             ],
             get_sql_tokens(String::from("SELECT 1 --comment inline"))
@@ -270,24 +289,31 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
                 Token {
                     value: String::from("\n"),
+                    category: Some(TokenCategory::NewLine),
                 },
                 Token {
                     value: String::from("-- comment newline"),
+                    category: Some(TokenCategory::Comment),
                 },
                 Token {
                     value: String::from("\n"),
+                    category: Some(TokenCategory::NewLine),
                 },
                 Token {
                     value: String::from("FROM"),
+                    category: None,
                 },
                 Token {
                     value: String::from("TBL1"),
+                    category: None,
                 },
             ],
             get_sql_tokens(String::from(
@@ -304,18 +330,23 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
                 Token {
                     value: String::from("/*multi inline*/"),
+                    category: Some(TokenCategory::Comment),
                 },
                 Token {
                     value: String::from("FROM"),
+                    category: None,
                 },
                 Token {
                     value: String::from("TBL1"),
+                    category: None,
                 },
             ],
             get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1"))
@@ -328,12 +359,15 @@ mod tests {
             vec![
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
                 Token {
                     value: String::from("/*multi odd*/"),
+                    category: Some(TokenCategory::Comment),
                 },
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
             ],
             get_sql_tokens(String::from("*/*multi odd*/*"))
@@ -346,12 +380,15 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("*"),
+                    category: None,
                 },
                 Token {
                     value: String::from("\n"),
+                    category: Some(TokenCategory::NewLine),
                 },
                 Token {
                     value: String::from(
@@ -360,15 +397,19 @@ mod tests {
                     comment
                 */"#
                     ),
+                    category: Some(TokenCategory::Comment),
                 },
                 Token {
                     value: String::from("\n"),
+                    category: Some(TokenCategory::NewLine),
                 },
                 Token {
                     value: String::from("FROM"),
+                    category: None,
                 },
                 Token {
                     value: String::from("TBL1"),
+                    category: None,
                 },
             ],
             get_sql_tokens(String::from(
@@ -388,9 +429,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("`Column 1`"),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT `Column 1`"))
@@ -403,9 +446,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("'Column 1'"),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT 'Column 1'"))
@@ -418,9 +463,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("\"Column 1\""),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT \"Column 1\""))
@@ -433,9 +480,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("[Column 1]"),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT [Column 1]"))
@@ -448,9 +497,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("''"),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT ''"))
@@ -463,9 +514,11 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from("'Column''s Name'"),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from("SELECT 'Column''s Name'"))
@@ -478,12 +531,14 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
+                    category: None,
                 },
                 Token {
                     value: String::from(
                         r#"'Column
 Name'"#
                     ),
+                    category: Some(TokenCategory::Quote),
                 },
             ],
             get_sql_tokens(String::from(
