@@ -13,6 +13,22 @@ pub struct Token {
     pub value: String,
 }
 
+impl Token {
+    fn new() -> Token {
+        Token {
+            value: String::new(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.value.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.value.is_empty()
+    }
+}
+
 #[derive(Clone)]
 enum CommentType {
     SingleLine,
@@ -30,36 +46,32 @@ enum QuoteType {
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
-    let mut curr_token_value: String = String::new();
+    let mut curr_token: Token = Token::new();
     let mut in_comment: Option<CommentType> = None;
     let mut in_quote: Option<QuoteType> = None;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
-        let curr_token_len: usize = curr_token_value.len();
+        let curr_token_len: usize = curr_token.len();
 
         let was_in_comment: Option<CommentType> = in_comment.clone();
         in_comment = get_in_comment(&in_comment, sql_bytes, i, curr_token_len);
         if in_comment.is_some() {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
-                if !curr_token_value.is_empty() {
-                    tokens.push(Token {
-                        value: curr_token_value,
-                    });
-                    curr_token_value = String::new();
+                if !curr_token.is_empty() {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
                 }
             }
 
-            curr_token_value.push(curr_ch);
+            curr_token.value.push(curr_ch);
             continue;
         } else if was_in_comment.is_some() {
             // comment just ended, add comment token
-            tokens.push(Token {
-                value: curr_token_value,
-            });
-            curr_token_value = String::new();
+            tokens.push(curr_token);
+            curr_token = Token::new();
         }
 
         let was_in_quote: Option<QuoteType> = in_quote.clone();
@@ -67,54 +79,44 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         if in_quote.is_some() {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
-                if !curr_token_value.is_empty() {
-                    tokens.push(Token {
-                        value: curr_token_value,
-                    });
-                    curr_token_value = String::new();
+                if !curr_token.is_empty() {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
                 }
             }
 
-            curr_token_value.push(curr_ch);
+            curr_token.value.push(curr_ch);
             continue;
         } else if was_in_quote.is_some() {
             // quote just ended, add quote token
-            tokens.push(Token {
-                value: curr_token_value,
-            });
-            curr_token_value = String::new();
+            tokens.push(curr_token);
+            curr_token = Token::new();
         }
 
         if curr_ch == NEW_LINE {
-            if !curr_token_value.is_empty() {
-                tokens.push(Token {
-                    value: curr_token_value,
-                });
-                curr_token_value = String::new();
+            if !curr_token.is_empty() {
+                tokens.push(curr_token);
+                curr_token = Token::new();
             }
-            tokens.push(Token {
-                value: curr_ch.to_string(),
-            });
+            curr_token.value.push(curr_ch);
+            tokens.push(curr_token);
+            curr_token = Token::new();
             continue;
         }
 
         if curr_ch.is_whitespace() {
-            if !curr_token_value.is_empty() {
-                tokens.push(Token {
-                    value: curr_token_value,
-                });
-                curr_token_value = String::new();
+            if !curr_token.is_empty() {
+                tokens.push(curr_token);
+                curr_token = Token::new();
             }
             continue;
         }
 
-        curr_token_value.push(curr_ch);
+        curr_token.value.push(curr_ch);
     }
 
-    if !curr_token_value.is_empty() {
-        tokens.push(Token {
-            value: curr_token_value,
-        });
+    if !curr_token.is_empty() {
+        tokens.push(curr_token);
     }
 
     return tokens;
