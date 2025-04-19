@@ -547,4 +547,21 @@ Name'"#
             ))
         );
     }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_abrupt_end() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(r#"'Column"#),
+                    category: Some(TokenCategory::Quote),
+                },
+            ],
+            get_sql_tokens(String::from(r#"SELECT 'Column"#))
+        );
+    }
 }
