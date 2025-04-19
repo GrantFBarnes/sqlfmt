@@ -30,13 +30,13 @@ impl Token {
 }
 
 #[derive(Clone)]
-enum CommentType {
+enum CommentCategory {
     SingleLine,
     MultiLine,
 }
 
 #[derive(Clone)]
-enum QuoteType {
+enum QuoteCategory {
     Backtick,
     QuoteSingle,
     QuoteDouble,
@@ -47,15 +47,15 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
     let mut curr_token: Token = Token::new();
-    let mut in_comment: Option<CommentType> = None;
-    let mut in_quote: Option<QuoteType> = None;
+    let mut in_comment: Option<CommentCategory> = None;
+    let mut in_quote: Option<QuoteCategory> = None;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
         let curr_token_len: usize = curr_token.len();
 
-        let was_in_comment: Option<CommentType> = in_comment.clone();
+        let was_in_comment: Option<CommentCategory> = in_comment.clone();
         in_comment = get_in_comment(&in_comment, sql_bytes, i, curr_token_len);
         if in_comment.is_some() {
             if was_in_comment.is_none() {
@@ -74,7 +74,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
-        let was_in_quote: Option<QuoteType> = in_quote.clone();
+        let was_in_quote: Option<QuoteCategory> = in_quote.clone();
         in_quote = get_in_quote(&in_quote, sql_bytes, i, curr_token_len);
         if in_quote.is_some() {
             if was_in_quote.is_none() {
@@ -123,20 +123,20 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 }
 
 fn get_in_comment(
-    in_comment: &Option<CommentType>,
+    in_comment: &Option<CommentCategory>,
     sql_bytes: &[u8],
     curr_idx: usize,
     curr_token_len: usize,
-) -> Option<CommentType> {
+) -> Option<CommentCategory> {
     let curr_ch: char = sql_bytes[curr_idx].into();
     match in_comment {
-        Some(CommentType::SingleLine) => {
+        Some(CommentCategory::SingleLine) => {
             if curr_ch == NEW_LINE {
                 return None;
             }
-            return Some(CommentType::SingleLine);
+            return Some(CommentCategory::SingleLine);
         }
-        Some(CommentType::MultiLine) => {
+        Some(CommentCategory::MultiLine) => {
             if curr_idx >= 2 && curr_token_len > 1 {
                 let prev2_ch: char = sql_bytes[curr_idx - 2].into();
                 let prev1_ch: char = sql_bytes[curr_idx - 1].into();
@@ -144,18 +144,18 @@ fn get_in_comment(
                     return None;
                 }
             }
-            return Some(CommentType::MultiLine);
+            return Some(CommentCategory::MultiLine);
         }
         None => {
             if (curr_idx + 1) < sql_bytes.len() {
                 let next_ch: char = sql_bytes[curr_idx + 1].into();
 
                 if curr_ch == HYPHEN && next_ch == HYPHEN {
-                    return Some(CommentType::SingleLine);
+                    return Some(CommentCategory::SingleLine);
                 }
 
                 if curr_ch == SLASH_FORWARD && next_ch == ASTERISK {
-                    return Some(CommentType::MultiLine);
+                    return Some(CommentCategory::MultiLine);
                 }
             }
             return None;
@@ -164,11 +164,11 @@ fn get_in_comment(
 }
 
 fn get_in_quote(
-    in_quote: &Option<QuoteType>,
+    in_quote: &Option<QuoteCategory>,
     sql_bytes: &[u8],
     curr_idx: usize,
     curr_token_len: usize,
-) -> Option<QuoteType> {
+) -> Option<QuoteCategory> {
     let curr_ch: char = sql_bytes[curr_idx].into();
     match in_quote {
         Some(qt) => {
@@ -180,13 +180,13 @@ fn get_in_quote(
             let prev1_ch: char = sql_bytes[curr_idx - 1].into();
             let prev2_ch: char = sql_bytes[curr_idx - 2].into();
             match qt {
-                QuoteType::Backtick => {
+                QuoteCategory::Backtick => {
                     if prev1_ch == BACKTICK {
                         return None;
                     }
                     return in_quote.clone();
                 }
-                QuoteType::QuoteSingle => {
+                QuoteCategory::QuoteSingle => {
                     if prev1_ch == QUOTE_SINGLE
                         && prev2_ch != QUOTE_SINGLE
                         && curr_ch != QUOTE_SINGLE
@@ -195,13 +195,13 @@ fn get_in_quote(
                     }
                     return in_quote.clone();
                 }
-                QuoteType::QuoteDouble => {
+                QuoteCategory::QuoteDouble => {
                     if prev1_ch == QUOTE_DOUBLE {
                         return None;
                     }
                     return in_quote.clone();
                 }
-                QuoteType::Bracket => {
+                QuoteCategory::Bracket => {
                     if prev1_ch == BRACKET_CLOSE {
                         return None;
                     }
@@ -211,10 +211,10 @@ fn get_in_quote(
         }
         None => {
             return match curr_ch {
-                BACKTICK => Some(QuoteType::Backtick),
-                QUOTE_SINGLE => Some(QuoteType::QuoteSingle),
-                QUOTE_DOUBLE => Some(QuoteType::QuoteDouble),
-                BRACKET_OPEN => Some(QuoteType::Bracket),
+                BACKTICK => Some(QuoteCategory::Backtick),
+                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
+                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
+                BRACKET_OPEN => Some(QuoteCategory::Bracket),
                 _ => None,
             };
         }
