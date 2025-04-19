@@ -448,4 +448,25 @@ mod tests {
             get_sql_tokens(String::from("SELECT 'Column''s Name'"))
         );
     }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_multiline() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from(
+                        r#"'Column
+Name'"#
+                    ),
+                },
+            ],
+            get_sql_tokens(String::from(
+                r#"SELECT 'Column
+Name'"#
+            ))
+        );
+    }
 }
