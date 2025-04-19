@@ -85,6 +85,19 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token_value = String::new();
         }
 
+        if curr_ch == NEW_LINE {
+            if !curr_token_value.is_empty() {
+                tokens.push(Token {
+                    value: curr_token_value,
+                });
+                curr_token_value = String::new();
+            }
+            tokens.push(Token {
+                value: curr_ch.to_string(),
+            });
+            continue;
+        }
+
         if curr_ch.is_whitespace() {
             if !curr_token_value.is_empty() {
                 tokens.push(Token {
@@ -260,7 +273,13 @@ mod tests {
                     value: String::from("*"),
                 },
                 Token {
+                    value: String::from("\n"),
+                },
+                Token {
                     value: String::from("-- comment newline"),
+                },
+                Token {
+                    value: String::from("\n"),
                 },
                 Token {
                     value: String::from("FROM"),
@@ -270,11 +289,9 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from(
-                r#"
-                SELECT *
+                r#"SELECT *
                 -- comment newline
-                FROM TBL1
-                "#
+                FROM TBL1"#
             ))
         );
     }
@@ -332,12 +349,18 @@ mod tests {
                     value: String::from("*"),
                 },
                 Token {
+                    value: String::from("\n"),
+                },
+                Token {
                     value: String::from(
                         r#"/*
                     multi line
                     comment
                 */"#
                     ),
+                },
+                Token {
+                    value: String::from("\n"),
                 },
                 Token {
                     value: String::from("FROM"),
@@ -347,14 +370,12 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from(
-                r#"
-                SELECT *
+                r#"SELECT *
                 /*
                     multi line
                     comment
                 */
-                FROM TBL1
-                "#
+                FROM TBL1"#
             ))
         );
     }
