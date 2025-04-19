@@ -13,26 +13,36 @@ pub struct Token {
     pub value: String,
 }
 
+#[derive(Clone)]
 enum CommentType {
     SingleLine,
     MultiLine,
+}
+
+#[derive(Clone)]
+enum QuoteType {
+    Backtick,
+    QuoteSingle,
+    QuoteDouble,
+    Bracket,
 }
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
     let mut curr_token_value: String = String::new();
-    let mut in_quote: Option<char> = None;
     let mut in_comment: Option<CommentType> = None;
+    let mut in_quote: Option<QuoteType> = None;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
+        let curr_token_len: usize = curr_token_value.len();
 
-        let next_in_comment: Option<CommentType> =
-            get_in_comment(&in_comment, sql_bytes, i, curr_token_value.len());
-        if next_in_comment.is_some() {
-            if in_comment.is_none() {
+        let was_in_comment: Option<CommentType> = in_comment.clone();
+        in_comment = get_in_comment(&in_comment, sql_bytes, i, curr_token_len);
+        if in_comment.is_some() {
+            if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token_value.is_empty() {
                     tokens.push(Token {
@@ -43,60 +53,36 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
 
             curr_token_value.push(curr_ch);
-            in_comment = next_in_comment;
             continue;
-        } else {
-            if in_comment.is_some() {
-                // comment just ended, add comment token
-                tokens.push(Token {
-                    value: curr_token_value,
-                });
-                curr_token_value = String::new();
-            }
-            in_comment = next_in_comment;
+        } else if was_in_comment.is_some() {
+            // comment just ended, add comment token
+            tokens.push(Token {
+                value: curr_token_value,
+            });
+            curr_token_value = String::new();
         }
 
-        match curr_ch {
-            BACKTICK => {
-                if in_quote == Some(BACKTICK) {
-                    in_quote = None;
-                } else if in_quote.is_none() {
-                    in_quote = Some(BACKTICK);
-                }
-            }
-            QUOTE_SINGLE => {
-                if in_quote == Some(QUOTE_SINGLE) {
-                    in_quote = None;
-                } else if in_quote.is_none() {
-                    in_quote = Some(QUOTE_SINGLE);
-                }
-            }
-            QUOTE_DOUBLE => {
-                if in_quote == Some(QUOTE_DOUBLE) {
-                    in_quote = None;
-                } else if in_quote.is_none() {
-                    in_quote = Some(QUOTE_DOUBLE);
-                }
-            }
-            BRACKET_OPEN => {
-                if in_quote.is_none() {
-                    in_quote = Some(BRACKET_OPEN);
-                }
-            }
-            BRACKET_CLOSE => {
-                if in_quote == Some(BRACKET_OPEN) {
-                    in_quote = None;
-                }
-            }
-            NEW_LINE => {
-                in_quote = None;
-            }
-            _ => (),
-        }
-
+        let was_in_quote: Option<QuoteType> = in_quote.clone();
+        in_quote = get_in_quote(&in_quote, sql_bytes, i, curr_token_len);
         if in_quote.is_some() {
+            if was_in_quote.is_none() {
+                // start of new quote, add any current token if any
+                if !curr_token_value.is_empty() {
+                    tokens.push(Token {
+                        value: curr_token_value,
+                    });
+                    curr_token_value = String::new();
+                }
+            }
+
             curr_token_value.push(curr_ch);
             continue;
+        } else if was_in_quote.is_some() {
+            // quote just ended, add quote token
+            tokens.push(Token {
+                value: curr_token_value,
+            });
+            curr_token_value = String::new();
         }
 
         if curr_ch.is_whitespace() {
@@ -162,6 +148,59 @@ fn get_in_comment(
     }
 }
 
+fn get_in_quote(
+    in_quote: &Option<QuoteType>,
+    sql_bytes: &[u8],
+    curr_idx: usize,
+    curr_token_len: usize,
+) -> Option<QuoteType> {
+    let curr_ch: char = sql_bytes[curr_idx].into();
+    match in_quote {
+        Some(qt) => {
+            if curr_token_len == 1 {
+                return in_quote.clone();
+            }
+
+            let prev1_ch: char = sql_bytes[curr_idx - 1].into();
+            match qt {
+                QuoteType::Backtick => {
+                    if prev1_ch == BACKTICK {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+                QuoteType::QuoteSingle => {
+                    if prev1_ch == QUOTE_SINGLE {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+                QuoteType::QuoteDouble => {
+                    if prev1_ch == QUOTE_DOUBLE {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+                QuoteType::Bracket => {
+                    if prev1_ch == BRACKET_CLOSE {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+            }
+        }
+        None => {
+            return match curr_ch {
+                BACKTICK => Some(QuoteType::Backtick),
+                QUOTE_SINGLE => Some(QuoteType::QuoteSingle),
+                QUOTE_DOUBLE => Some(QuoteType::QuoteDouble),
+                BRACKET_OPEN => Some(QuoteType::Bracket),
+                _ => None,
+            };
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,66 +223,6 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from("SELECT * FROM TBL1"))
-        );
-    }
-
-    #[test]
-    fn test_get_sql_tokens_quote_backtick() {
-        assert_eq!(
-            vec![
-                Token {
-                    value: String::from("SELECT"),
-                },
-                Token {
-                    value: String::from("`Column 1`"),
-                },
-            ],
-            get_sql_tokens(String::from("SELECT `Column 1`"))
-        );
-    }
-
-    #[test]
-    fn test_get_sql_tokens_quote_single() {
-        assert_eq!(
-            vec![
-                Token {
-                    value: String::from("SELECT"),
-                },
-                Token {
-                    value: String::from("'Column 1'"),
-                },
-            ],
-            get_sql_tokens(String::from("SELECT 'Column 1'"))
-        );
-    }
-
-    #[test]
-    fn test_get_sql_tokens_quote_double() {
-        assert_eq!(
-            vec![
-                Token {
-                    value: String::from("SELECT"),
-                },
-                Token {
-                    value: String::from("\"Column 1\""),
-                },
-            ],
-            get_sql_tokens(String::from("SELECT \"Column 1\""))
-        );
-    }
-
-    #[test]
-    fn test_get_sql_tokens_quote_bracket() {
-        assert_eq!(
-            vec![
-                Token {
-                    value: String::from("SELECT"),
-                },
-                Token {
-                    value: String::from("[Column 1]"),
-                },
-            ],
-            get_sql_tokens(String::from("SELECT [Column 1]"))
         );
     }
 
@@ -372,6 +351,81 @@ mod tests {
                 FROM TBL1
                 "#
             ))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_backtick() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("`Column 1`"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT `Column 1`"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("'Column 1'"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT 'Column 1'"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_double() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("\"Column 1\""),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT \"Column 1\""))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_bracket() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("[Column 1]"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT [Column 1]"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_empty() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("''"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT ''"))
         );
     }
 }
