@@ -1,12 +1,12 @@
+const ASTERISK: char = '*';
 const BACKTICK: char = '`';
-const QUOTE_SINGLE: char = '\'';
-const QUOTE_DOUBLE: char = '"';
-const BRACKET_OPEN: char = '[';
 const BRACKET_CLOSE: char = ']';
+const BRACKET_OPEN: char = '[';
 const HYPHEN: char = '-';
 const NEW_LINE: char = '\n';
+const QUOTE_DOUBLE: char = '"';
+const QUOTE_SINGLE: char = '\'';
 const SLASH_FORWARD: char = '/';
-const ASTERISK: char = '*';
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
