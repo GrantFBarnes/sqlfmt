@@ -157,11 +157,13 @@ fn get_in_quote(
     let curr_ch: char = sql_bytes[curr_idx].into();
     match in_quote {
         Some(qt) => {
-            if curr_token_len == 1 {
+            if curr_token_len <= 1 {
                 return in_quote.clone();
             }
+            // at least 2 characters in current token
 
             let prev1_ch: char = sql_bytes[curr_idx - 1].into();
+            let prev2_ch: char = sql_bytes[curr_idx - 2].into();
             match qt {
                 QuoteType::Backtick => {
                     if prev1_ch == BACKTICK {
@@ -170,7 +172,10 @@ fn get_in_quote(
                     return in_quote.clone();
                 }
                 QuoteType::QuoteSingle => {
-                    if prev1_ch == QUOTE_SINGLE {
+                    if prev1_ch == QUOTE_SINGLE
+                        && prev2_ch != QUOTE_SINGLE
+                        && curr_ch != QUOTE_SINGLE
+                    {
                         return None;
                     }
                     return in_quote.clone();
@@ -426,6 +431,21 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from("SELECT ''"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_escape() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                },
+                Token {
+                    value: String::from("'Column''s Name'"),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT 'Column''s Name'"))
         );
     }
 }
