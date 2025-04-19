@@ -2,6 +2,7 @@ const ASTERISK: char = '*';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
+const DELIMITER: char = ';';
 const HYPHEN: char = '-';
 const NEW_LINE: char = '\n';
 const QUOTE_DOUBLE: char = '"';
@@ -35,6 +36,7 @@ impl Token {
 pub enum TokenCategory {
     Comment,
     Quote,
+    Delimiter,
     NewLine,
 }
 
@@ -111,6 +113,18 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             curr_token.value.push(curr_ch);
             curr_token.category = Some(TokenCategory::NewLine);
+            tokens.push(curr_token);
+            curr_token = Token::new();
+            continue;
+        }
+
+        if curr_ch == DELIMITER {
+            if !curr_token.is_empty() {
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+            curr_token.value.push(curr_ch);
+            curr_token.category = Some(TokenCategory::Delimiter);
             tokens.push(curr_token);
             curr_token = Token::new();
             continue;
@@ -562,6 +576,60 @@ Name'"#
                 },
             ],
             get_sql_tokens(String::from("SELECT 'Column"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_basic() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT 1;"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_two() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                },
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT 1; SELECT 1;"))
         );
     }
 }
