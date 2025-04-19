@@ -557,11 +557,11 @@ Name'"#
                     category: None,
                 },
                 Token {
-                    value: String::from(r#"'Column"#),
+                    value: String::from("'Column"),
                     category: Some(TokenCategory::Quote),
                 },
             ],
-            get_sql_tokens(String::from(r#"SELECT 'Column"#))
+            get_sql_tokens(String::from("SELECT 'Column"))
         );
     }
 }
