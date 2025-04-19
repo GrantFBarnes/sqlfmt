@@ -29,7 +29,8 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
 
-        let next_in_comment: Option<CommentType> = get_in_comment(&in_comment, sql_bytes, i);
+        let next_in_comment: Option<CommentType> =
+            get_in_comment(&in_comment, sql_bytes, i, curr_token_value.len());
         if next_in_comment.is_some() {
             if in_comment.is_none() {
                 // start of new comment, add any current token if any
@@ -124,6 +125,7 @@ fn get_in_comment(
     in_comment: &Option<CommentType>,
     sql_bytes: &[u8],
     curr_idx: usize,
+    curr_token_len: usize,
 ) -> Option<CommentType> {
     let curr_ch: char = sql_bytes[curr_idx].into();
     match in_comment {
@@ -134,7 +136,7 @@ fn get_in_comment(
             return Some(CommentType::SingleLine);
         }
         Some(CommentType::MultiLine) => {
-            if curr_idx >= 2 {
+            if curr_idx >= 2 && curr_token_len > 1 {
                 let prev2_ch: char = sql_bytes[curr_idx - 2].into();
                 let prev1_ch: char = sql_bytes[curr_idx - 1].into();
                 if prev2_ch == ASTERISK && prev1_ch == SLASH_FORWARD {
@@ -314,6 +316,24 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_odd() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("*"),
+                },
+                Token {
+                    value: String::from("/*multi odd*/"),
+                },
+                Token {
+                    value: String::from("*"),
+                },
+            ],
+            get_sql_tokens(String::from("*/*multi odd*/*"))
         );
     }
 
