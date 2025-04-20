@@ -275,4 +275,12 @@ LIMIT 1"#
             ))
         );
     }
+
+    #[test]
+    fn test_get_formatted_sql_two_statements() {
+        assert_eq!(
+            String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;"),
+            get_formatted_sql(String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;"))
+        );
+    }
 }
