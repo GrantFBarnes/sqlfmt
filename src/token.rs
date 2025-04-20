@@ -42,6 +42,75 @@ impl Token {
     fn is_empty(&self) -> bool {
         self.value.is_empty()
     }
+
+    fn get_category(&self) -> Option<TokenCategory> {
+        if self.category.is_some() {
+            return self.category.clone();
+        }
+        match self.value.to_uppercase().as_str() {
+            "ADD" => Some(TokenCategory::Keyword),
+            "ALL" => Some(TokenCategory::Keyword),
+            "ALTER" => Some(TokenCategory::Keyword),
+            "AND" => Some(TokenCategory::Keyword),
+            "ANY" => Some(TokenCategory::Keyword),
+            "AS" => Some(TokenCategory::Keyword),
+            "ASC" => Some(TokenCategory::Keyword),
+            "BACKUP" => Some(TokenCategory::Keyword),
+            "BETWEEN" => Some(TokenCategory::Keyword),
+            "BY" => Some(TokenCategory::Keyword),
+            "CASE" => Some(TokenCategory::Keyword),
+            "CHECK" => Some(TokenCategory::Keyword),
+            "COLUMN" => Some(TokenCategory::Keyword),
+            "CONSTRAINT" => Some(TokenCategory::Keyword),
+            "CREATE" => Some(TokenCategory::Keyword),
+            "DATABASE" => Some(TokenCategory::Keyword),
+            "DEFAULT" => Some(TokenCategory::Keyword),
+            "DELETE" => Some(TokenCategory::Keyword),
+            "DESC" => Some(TokenCategory::Keyword),
+            "DISTINCT" => Some(TokenCategory::Keyword),
+            "DROP" => Some(TokenCategory::Keyword),
+            "EXEC" => Some(TokenCategory::Keyword),
+            "EXISTS" => Some(TokenCategory::Keyword),
+            "FOREIGN" => Some(TokenCategory::Keyword),
+            "FROM" => Some(TokenCategory::Keyword),
+            "FULL" => Some(TokenCategory::Keyword),
+            "GROUP" => Some(TokenCategory::Keyword),
+            "HAVING" => Some(TokenCategory::Keyword),
+            "IN" => Some(TokenCategory::Keyword),
+            "INDEX" => Some(TokenCategory::Keyword),
+            "INNER" => Some(TokenCategory::Keyword),
+            "INSERT" => Some(TokenCategory::Keyword),
+            "INTO" => Some(TokenCategory::Keyword),
+            "IS" => Some(TokenCategory::Keyword),
+            "JOIN" => Some(TokenCategory::Keyword),
+            "KEY" => Some(TokenCategory::Keyword),
+            "LEFT" => Some(TokenCategory::Keyword),
+            "LIKE" => Some(TokenCategory::Keyword),
+            "LIMIT" => Some(TokenCategory::Keyword),
+            "NOT" => Some(TokenCategory::Keyword),
+            "NULL" => Some(TokenCategory::Keyword),
+            "OR" => Some(TokenCategory::Keyword),
+            "ORDER" => Some(TokenCategory::Keyword),
+            "OUTER" => Some(TokenCategory::Keyword),
+            "PRIMARY" => Some(TokenCategory::Keyword),
+            "PROCEDURE" => Some(TokenCategory::Keyword),
+            "REPLACE" => Some(TokenCategory::Keyword),
+            "RIGHT" => Some(TokenCategory::Keyword),
+            "ROWNUM" => Some(TokenCategory::Keyword),
+            "SELECT" => Some(TokenCategory::Keyword),
+            "SET" => Some(TokenCategory::Keyword),
+            "TABLE" => Some(TokenCategory::Keyword),
+            "TOP" => Some(TokenCategory::Keyword),
+            "TRUNCATE" => Some(TokenCategory::Keyword),
+            "UNION" => Some(TokenCategory::Keyword),
+            "UNIQUE" => Some(TokenCategory::Keyword),
+            "UPDATE" => Some(TokenCategory::Keyword),
+            "VALUES" => Some(TokenCategory::Keyword),
+            "VIEW" => Some(TokenCategory::Keyword),
+            "WHERE" => Some(TokenCategory::Keyword),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -56,6 +125,7 @@ pub enum TokenCategory {
     Operator,
     Bitwise,
     Compare,
+    Keyword,
 }
 
 #[derive(Clone)]
@@ -90,6 +160,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token.is_empty() {
+                    curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -110,6 +181,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
                 if !curr_token.is_empty() {
+                    curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -128,6 +200,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             DELIMITER | NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
+                    curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -149,6 +222,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             LESS_THAN | PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
+                    curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -192,6 +266,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     && prev_ch != Some(SLASH_FORWARD)
                     && prev_ch != Some(PERCENT)
                 {
+                    curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -223,6 +298,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
         if curr_ch.is_whitespace() {
             if !curr_token.is_empty() {
+                curr_token.category = curr_token.get_category();
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
@@ -233,6 +309,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     if !curr_token.is_empty() {
+        curr_token.category = curr_token.get_category();
         tokens.push(curr_token);
     }
 
@@ -348,7 +425,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("*"),
@@ -356,7 +433,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("FROM"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -373,7 +450,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -394,7 +471,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("*"),
@@ -414,7 +491,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("FROM"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -435,7 +512,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("*"),
@@ -447,7 +524,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("FROM"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -485,7 +562,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("*"),
@@ -510,7 +587,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("FROM"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -534,7 +611,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("`Column 1`"),
@@ -551,7 +628,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("'Column 1'"),
@@ -568,7 +645,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("\"Column 1\""),
@@ -585,7 +662,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("[Column 1]"),
@@ -602,7 +679,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("*"),
@@ -610,7 +687,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("FROM"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("[S].[TBL1]"),
@@ -627,7 +704,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("''"),
@@ -644,7 +721,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("'Column''s Name'"),
@@ -661,7 +738,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from(
@@ -684,7 +761,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("'Column"),
@@ -701,7 +778,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -722,7 +799,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -734,7 +811,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -755,7 +832,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -788,7 +865,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("MIN"),
@@ -813,7 +890,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("("),
@@ -821,7 +898,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("SELECT"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("1"),
@@ -1155,7 +1232,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1171,7 +1248,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1196,7 +1273,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1212,7 +1289,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1237,7 +1314,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1253,7 +1330,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1278,7 +1355,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1294,7 +1371,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1319,7 +1396,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1335,7 +1412,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1360,7 +1437,7 @@ Name'"#
             vec![
                 Token {
                     value: String::from("WHERE"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
@@ -1376,7 +1453,7 @@ Name'"#
                 },
                 Token {
                     value: String::from("AND"),
-                    category: None,
+                    category: Some(TokenCategory::Keyword),
                 },
                 Token {
                     value: String::from("C1"),
