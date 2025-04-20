@@ -125,37 +125,30 @@ mod tests {
     #[test]
     fn test_get_formatted_sql_basic() {
         assert_eq!(
-            String::from("SELECT * FROM TBL1"),
-            get_formatted_sql(String::from("SELECT * FROM TBL1"))
+            get_formatted_sql(String::from("SELECT * FROM TBL1")),
+            String::from("SELECT * FROM TBL1")
         );
     }
 
     #[test]
     fn test_get_formatted_sql_basic_newlines() {
         assert_eq!(
-            String::from(
-                r#"SELECT *
-FROM TBL1"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT  *
                     FROM  TBL1
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT *
+FROM TBL1"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_multiple_columns() {
         assert_eq!(
-            String::from(
-                r#"SELECT
-    C1 AS 'Column 1',
-    C2 AS 'Column 2',
-    C3
-FROM TBL1 AS T"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT
@@ -164,49 +157,50 @@ FROM TBL1 AS T"#
                     C3
                     FROM TBL1 AS T
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT
+    C1 AS 'Column 1',
+    C2 AS 'Column 2',
+    C3
+FROM TBL1 AS T"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_sub_query_inline() {
         assert_eq!(
-            String::from(r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#),
             get_formatted_sql(String::from(
                 r#"
                     SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID
                 "#
-            ))
+            )),
+            String::from(r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#)
         );
     }
 
     #[test]
     fn test_get_formatted_sql_sub_query_multiline() {
         assert_eq!(
-            String::from(
-                r#"SELECT (
-        SELECT TOP 1 ID FROM TBL1
-    ) AS ID"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT (
                     SELECT TOP 1 ID FROM TBL1
                     ) AS ID
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT (
+        SELECT TOP 1 ID FROM TBL1
+    ) AS ID"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_join() {
         assert_eq!(
-            String::from(
-                r#"SELECT T1.C1, T1.C2,
-    T2.C2
-FROM TBL1 AS T1
-    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT T1.C1, T1.C2,
@@ -214,22 +208,19 @@ FROM TBL1 AS T1
                     FROM TBL1 AS T1
                     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT T1.C1, T1.C2,
+    T2.C2
+FROM TBL1 AS T1
+    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_where() {
         assert_eq!(
-            String::from(
-                r#"SELECT
-    C1,
-    C2,
-    C3
-FROM TBL1
-WHERE C1 > 1
-    AND C2 IS NOT NULL"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT
@@ -240,25 +231,22 @@ WHERE C1 > 1
                     WHERE C1>1
                     AND C2 IS NOT NULL
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT
+    C1,
+    C2,
+    C3
+FROM TBL1
+WHERE C1 > 1
+    AND C2 IS NOT NULL"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_multi_join() {
         assert_eq!(
-            String::from(
-                r#"SELECT DISTINCT
-    T1.C1 AS C1,
-    T2.C2 AS C2,
-    T3.C3 AS C3
-FROM TBL1 AS T1
-    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
-    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
-WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
-ORDER BY T1.C1
-LIMIT 1"#
-            ),
             get_formatted_sql(String::from(
                 r#"
                     SELECT DISTINCT
@@ -272,15 +260,27 @@ LIMIT 1"#
                     ORDER BY T1.C1
                     LIMIT 1
                 "#
-            ))
+            )),
+            String::from(
+                r#"SELECT DISTINCT
+    T1.C1 AS C1,
+    T2.C2 AS C2,
+    T3.C3 AS C3
+FROM TBL1 AS T1
+    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
+WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
+ORDER BY T1.C1
+LIMIT 1"#
+            )
         );
     }
 
     #[test]
     fn test_get_formatted_sql_two_statements() {
         assert_eq!(
-            String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;"),
-            get_formatted_sql(String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;"))
+            get_formatted_sql(String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;")),
+            String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;")
         );
     }
 }

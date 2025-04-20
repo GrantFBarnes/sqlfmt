@@ -1394,6 +1394,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_basic() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT * FROM TBL1")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1411,14 +1412,14 @@ mod tests {
                     value: String::from("TBL1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("SELECT * FROM TBL1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comment_single_inline() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 1 --comment inline")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1432,14 +1433,18 @@ mod tests {
                     value: String::from("--comment inline"),
                     category: Some(TokenCategory::Comment),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 1 --comment inline"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comment_single_newline() {
         assert_eq!(
+            get_sql_tokens(String::from(
+                r#"SELECT *
+                -- comment newline
+                FROM TBL1"#
+            )),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1469,18 +1474,14 @@ mod tests {
                     value: String::from("TBL1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from(
-                r#"SELECT *
-                -- comment newline
-                FROM TBL1"#
-            ))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comment_multi_inline() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1502,14 +1503,14 @@ mod tests {
                     value: String::from("TBL1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comment_multi_odd() {
         assert_eq!(
+            get_sql_tokens(String::from("*/*multi odd*/*")),
             vec![
                 Token {
                     value: String::from("*"),
@@ -1523,14 +1524,21 @@ mod tests {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
                 },
-            ],
-            get_sql_tokens(String::from("*/*multi odd*/*"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comment_multi_newline() {
         assert_eq!(
+            get_sql_tokens(String::from(
+                r#"SELECT *
+                /*
+                    multi line
+                    comment
+                */
+                FROM TBL1"#
+            )),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1565,21 +1573,14 @@ mod tests {
                     value: String::from("TBL1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from(
-                r#"SELECT *
-                /*
-                    multi line
-                    comment
-                */
-                FROM TBL1"#
-            ))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_backtick() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT `Column 1`")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1589,14 +1590,14 @@ mod tests {
                     value: String::from("`Column 1`"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT `Column 1`"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_single() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 'Column 1'")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1606,14 +1607,14 @@ mod tests {
                     value: String::from("'Column 1'"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 'Column 1'"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_double() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT \"Column 1\"")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1623,14 +1624,14 @@ mod tests {
                     value: String::from("\"Column 1\""),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT \"Column 1\""))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_bracket() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT [Column 1]")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1640,14 +1641,14 @@ mod tests {
                     value: String::from("[Column 1]"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT [Column 1]"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_bracket_schema() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1665,14 +1666,14 @@ mod tests {
                     value: String::from("[S].[TBL1]"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_empty() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT ''")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1682,14 +1683,14 @@ mod tests {
                     value: String::from("''"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT ''"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_single_escape() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 'Column''s Name'")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1699,14 +1700,17 @@ mod tests {
                     value: String::from("'Column''s Name'"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 'Column''s Name'"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_single_multiline() {
         assert_eq!(
+            get_sql_tokens(String::from(
+                r#"SELECT 'Column
+Name'"#
+            )),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1719,17 +1723,14 @@ Name'"#
                     ),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from(
-                r#"SELECT 'Column
-Name'"#
-            ))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_quote_single_abrupt_end() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 'Column")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1739,14 +1740,14 @@ Name'"#
                     value: String::from("'Column"),
                     category: Some(TokenCategory::Quote),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 'Column"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_delimiter_basic() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 1;")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1760,14 +1761,14 @@ Name'"#
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 1;"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_delimiter_two() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 1; SELECT 1;")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1793,14 +1794,14 @@ Name'"#
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 1; SELECT 1;"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_comma() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT 1,2, 3")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1826,14 +1827,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("SELECT 1,2, 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_empty() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT MIN()")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1851,14 +1852,14 @@ Name'"#
                     value: String::from(")"),
                     category: Some(TokenCategory::ParenClose),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT MIN()"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_content() {
         assert_eq!(
+            get_sql_tokens(String::from("SELECT (SELECT 1)")),
             vec![
                 Token {
                     value: String::from("SELECT"),
@@ -1880,14 +1881,14 @@ Name'"#
                     value: String::from(")"),
                     category: Some(TokenCategory::ParenClose),
                 },
-            ],
-            get_sql_tokens(String::from("SELECT (SELECT 1)"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_add() {
         assert_eq!(
+            get_sql_tokens(String::from("1+2 + 3")),
             vec![
                 Token {
                     value: String::from("1"),
@@ -1909,14 +1910,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("1+2 + 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_subtract() {
         assert_eq!(
+            get_sql_tokens(String::from("1-2 - 3")),
             vec![
                 Token {
                     value: String::from("1"),
@@ -1938,14 +1939,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("1-2 - 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_multiply() {
         assert_eq!(
+            get_sql_tokens(String::from("1*2 * 3")),
             vec![
                 Token {
                     value: String::from("1"),
@@ -1967,14 +1968,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("1*2 * 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_divide() {
         assert_eq!(
+            get_sql_tokens(String::from("1/2 / 3")),
             vec![
                 Token {
                     value: String::from("1"),
@@ -1996,14 +1997,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("1/2 / 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_modulo() {
         assert_eq!(
+            get_sql_tokens(String::from("1%2 % 3")),
             vec![
                 Token {
                     value: String::from("1"),
@@ -2025,14 +2026,14 @@ Name'"#
                     value: String::from("3"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("1%2 % 3"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_add_equal() {
         assert_eq!(
+            get_sql_tokens(String::from("V+=1")),
             vec![
                 Token {
                     value: String::from("V"),
@@ -2046,14 +2047,14 @@ Name'"#
                     value: String::from("1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V+=1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_minus_equal() {
         assert_eq!(
+            get_sql_tokens(String::from("V-=1")),
             vec![
                 Token {
                     value: String::from("V"),
@@ -2067,14 +2068,14 @@ Name'"#
                     value: String::from("1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V-=1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_multiply_equal() {
         assert_eq!(
+            get_sql_tokens(String::from("V*=1")),
             vec![
                 Token {
                     value: String::from("V"),
@@ -2088,14 +2089,14 @@ Name'"#
                     value: String::from("1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V*=1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_divide_equal() {
         assert_eq!(
+            get_sql_tokens(String::from("V/=1")),
             vec![
                 Token {
                     value: String::from("V"),
@@ -2109,14 +2110,14 @@ Name'"#
                     value: String::from("1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V/=1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_operator_modulo_equal() {
         assert_eq!(
+            get_sql_tokens(String::from("V%=1")),
             vec![
                 Token {
                     value: String::from("V"),
@@ -2130,14 +2131,14 @@ Name'"#
                     value: String::from("1"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V%=1"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_bitwise_and() {
         assert_eq!(
+            get_sql_tokens(String::from("V1&V2")),
             vec![
                 Token {
                     value: String::from("V1"),
@@ -2151,14 +2152,14 @@ Name'"#
                     value: String::from("V2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V1&V2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_bitwise_or() {
         assert_eq!(
+            get_sql_tokens(String::from("V1|V2")),
             vec![
                 Token {
                     value: String::from("V1"),
@@ -2172,14 +2173,14 @@ Name'"#
                     value: String::from("V2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V1|V2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_bitwise_exclusive_or() {
         assert_eq!(
+            get_sql_tokens(String::from("V1^V2")),
             vec![
                 Token {
                     value: String::from("V1"),
@@ -2193,14 +2194,14 @@ Name'"#
                     value: String::from("V2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("V1^V2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_lt() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2234,14 +2235,14 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_gt() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2275,14 +2276,14 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_eq() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2316,14 +2317,14 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_neq() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2357,14 +2358,14 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_gteq() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2398,14 +2399,14 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2"))
+            ]
         );
     }
 
     #[test]
     fn test_get_sql_tokens_paren_compare_lteq() {
         assert_eq!(
+            get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2")),
             vec![
                 Token {
                     value: String::from("WHERE"),
@@ -2439,8 +2440,7 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                 },
-            ],
-            get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2"))
+            ]
         );
     }
 }
