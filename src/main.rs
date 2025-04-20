@@ -1,8 +1,15 @@
-use token::*;
+use format::*;
 
+mod format;
 mod token;
 
 fn main() {
-    let tokens: Vec<token::Token> = get_sql_tokens(String::from("SELECT * FROM TBL1"));
-    dbg!(tokens);
+    let sql: String = String::from(
+        r#"
+            SELECT *
+            FROM TBL1
+        "#,
+    );
+    let formatted: String = get_formatted_sql(sql);
+    dbg!(formatted);
 }
