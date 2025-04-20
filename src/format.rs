@@ -140,10 +140,8 @@ mod tests {
                     FROM  TBL1
                 "#
             )),
-            String::from(
-                r#"SELECT *
+            r#"SELECT *
 FROM TBL1"#
-            )
         );
     }
 
@@ -159,13 +157,11 @@ FROM TBL1"#
                     FROM TBL1 AS T
                 "#
             )),
-            String::from(
-                r#"SELECT
+            r#"SELECT
     C1 AS 'Column 1',
     C2 AS 'Column 2',
     C3
 FROM TBL1 AS T"#
-            )
         );
     }
 
@@ -177,7 +173,7 @@ FROM TBL1 AS T"#
                     SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID
                 "#
             )),
-            String::from(r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#)
+            r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#
         );
     }
 
@@ -191,11 +187,9 @@ FROM TBL1 AS T"#
                     ) AS ID
                 "#
             )),
-            String::from(
-                r#"SELECT (
+            r#"SELECT (
         SELECT TOP 1 ID FROM TBL1
     ) AS ID"#
-            )
         );
     }
 
@@ -210,12 +204,10 @@ FROM TBL1 AS T"#
                     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
                 "#
             )),
-            String::from(
-                r#"SELECT T1.C1, T1.C2,
+            r#"SELECT T1.C1, T1.C2,
     T2.C2
 FROM TBL1 AS T1
     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1"#
-            )
         );
     }
 
@@ -233,15 +225,13 @@ FROM TBL1 AS T1
                     AND C2 IS NOT NULL
                 "#
             )),
-            String::from(
-                r#"SELECT
+            r#"SELECT
     C1,
     C2,
     C3
 FROM TBL1
 WHERE C1 > 1
     AND C2 IS NOT NULL"#
-            )
         );
     }
 
@@ -262,8 +252,7 @@ WHERE C1 > 1
                     LIMIT 1
                 "#
             )),
-            String::from(
-                r#"SELECT DISTINCT
+            r#"SELECT DISTINCT
     T1.C1 AS C1,
     T2.C2 AS C2,
     T3.C3 AS C3
@@ -273,7 +262,6 @@ FROM TBL1 AS T1
 WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
 ORDER BY T1.C1
 LIMIT 1"#
-            )
         );
     }
 
@@ -334,7 +322,7 @@ SELECT C1 /* inline comment */
     }
 
     #[test]
-    fn select_case() {
+    fn test_get_formatted_sql_case() {
         assert_eq!(
             get_formatted_sql(String::from(
                 r#"
