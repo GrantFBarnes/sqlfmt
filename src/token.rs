@@ -2,9 +2,15 @@ const ASTERISK: char = '*';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
+const COMMA: char = ',';
+const COMPARE_EQ: char = '=';
+const COMPARE_GT: char = '>';
+const COMPARE_LT: char = '<';
 const DELIMITER: char = ';';
 const HYPHEN: char = '-';
 const NEW_LINE: char = '\n';
+const PAREN_CLOSE: char = ')';
+const PAREN_OPEN: char = '(';
 const QUOTE_DOUBLE: char = '"';
 const QUOTE_SINGLE: char = '\'';
 const SLASH_FORWARD: char = '/';
@@ -32,12 +38,16 @@ impl Token {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenCategory {
     Comment,
     Quote,
-    Delimiter,
     NewLine,
+    Delimiter,
+    Comma,
+    ParenOpen,
+    ParenClose,
+    Compare,
 }
 
 #[derive(Clone)]
@@ -106,28 +116,77 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
-        if curr_ch == NEW_LINE {
-            if !curr_token.is_empty() {
+        match curr_ch {
+            NEW_LINE | DELIMITER | COMMA | PAREN_OPEN | PAREN_CLOSE => {
+                if !curr_token.is_empty() {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.category = match curr_ch {
+                    NEW_LINE => Some(TokenCategory::NewLine),
+                    DELIMITER => Some(TokenCategory::Delimiter),
+                    COMMA => Some(TokenCategory::Comma),
+                    PAREN_OPEN => Some(TokenCategory::ParenOpen),
+                    PAREN_CLOSE => Some(TokenCategory::ParenClose),
+                    _ => None,
+                };
                 tokens.push(curr_token);
                 curr_token = Token::new();
+                continue;
             }
-            curr_token.value.push(curr_ch);
-            curr_token.category = Some(TokenCategory::NewLine);
-            tokens.push(curr_token);
-            curr_token = Token::new();
-            continue;
-        }
+            COMPARE_LT => {
+                if !curr_token.is_empty() {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.category = Some(TokenCategory::Compare);
 
-        if curr_ch == DELIMITER {
-            if !curr_token.is_empty() {
-                tokens.push(curr_token);
-                curr_token = Token::new();
+                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+                    Some(sql_bytes[i + 1].into())
+                } else {
+                    None
+                };
+
+                if next_ch != Some(COMPARE_EQ) && next_ch != Some(COMPARE_GT) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
             }
-            curr_token.value.push(curr_ch);
-            curr_token.category = Some(TokenCategory::Delimiter);
-            tokens.push(curr_token);
-            curr_token = Token::new();
-            continue;
+            COMPARE_EQ | COMPARE_GT => {
+                let prev_ch: Option<char> = if i >= 1 {
+                    Some(sql_bytes[i - 1].into())
+                } else {
+                    None
+                };
+
+                if !curr_token.is_empty()
+                    && prev_ch != Some(COMPARE_LT)
+                    && prev_ch != Some(COMPARE_GT)
+                {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.category = Some(TokenCategory::Compare);
+
+                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+                    Some(sql_bytes[i + 1].into())
+                } else {
+                    None
+                };
+
+                if next_ch != Some(COMPARE_EQ) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
+            }
+            _ => (),
         }
 
         if curr_ch.is_whitespace() {
@@ -630,6 +689,339 @@ Name'"#
                 },
             ],
             get_sql_tokens(String::from("SELECT 1; SELECT 1;"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comma() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(","),
+                    category: Some(TokenCategory::Comma),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(","),
+                    category: Some(TokenCategory::Comma),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("SELECT 1,2, 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_empty() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("MIN"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("("),
+                    category: Some(TokenCategory::ParenOpen),
+                },
+                Token {
+                    value: String::from(")"),
+                    category: Some(TokenCategory::ParenClose),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT MIN()"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_content() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("("),
+                    category: Some(TokenCategory::ParenOpen),
+                },
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(")"),
+                    category: Some(TokenCategory::ParenClose),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT (SELECT 1)"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_lt() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_gt() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(">"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(">"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_eq() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_neq() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<>"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<>"),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_gteq() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(">="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from(">="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_lteq() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("WHERE"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("AND"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("<="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("C2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2"))
         );
     }
 }
