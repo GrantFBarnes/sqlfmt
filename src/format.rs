@@ -43,7 +43,7 @@ impl FormatState {
     fn decrease_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(vec!["("]),
-            "FROM" => self.decrease_indent_stack_until(vec!["SELECT"]),
+            "FROM" | "INTO" => self.decrease_indent_stack_until(vec!["SELECT"]),
             "END" => self.decrease_indent_stack_until(vec!["BEGIN", "CASE"]),
             "WHERE" | "ORDER" | "GROUP" | "HAVING" => {
                 self.decrease_indent_stack_until(vec!["FROM"])
@@ -341,6 +341,60 @@ SELECT C1 /* inline comment */
         WHEN C1 <= 3 THEN 'medium'
         ELSE 'large' END AS C2,
     C3
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_simple() {
+        assert_eq!(
+            get_formatted_sql(String::from("INSERT INTO TBL1(ID)VALUES(1)")),
+            r#"INSERT INTO TBL1 (ID) VALUES (1)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_multiple_columns() {
+        assert_eq!(
+            get_formatted_sql(String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")),
+            r#"INSERT INTO TBL1 (C1, C2, C3) VALUES (1, 2, 3)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_select() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    INSERT INTO TBL1 (C1,C2,C3)
+                    SELECT C1,C2,C3
+                    FROM TBL1
+                "#,
+            )),
+            r#"INSERT INTO TBL1 (C1, C2, C3)
+SELECT C1, C2, C3
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_into() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT
+                    C1,
+                    C2,
+                    C3
+                    INTO TBL2
+                    FROM TBL1
+                "#,
+            )),
+            r#"SELECT
+    C1,
+    C2,
+    C3
+INTO TBL2
 FROM TBL1"#
         );
     }
