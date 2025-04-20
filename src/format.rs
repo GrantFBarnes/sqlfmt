@@ -33,7 +33,7 @@ impl FormatState {
 
     fn increase_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
-            "SELECT" | "FROM" | "WHERE" | "(" => {
+            "SELECT" | "FROM" | "WHERE" | "CASE" | "(" => {
                 self.indent_stack.push(token_value);
             }
             _ => (),
@@ -44,6 +44,7 @@ impl FormatState {
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(vec!["("]),
             "FROM" => self.decrease_indent_stack_until(vec!["SELECT"]),
+            "END" => self.decrease_indent_stack_until(vec!["BEGIN", "CASE"]),
             "WHERE" | "ORDER" | "GROUP" | "HAVING" => {
                 self.decrease_indent_stack_until(vec!["FROM"])
             }
@@ -329,6 +330,30 @@ SELECT C1 /* inline comment */
                       indent
 
                     */ FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn select_case() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT
+                    C1,
+                    CASE WHEN C1<=1 THEN 'small'
+                    WHEN C1<=3 THEN 'medium'
+                    ELSE 'large' END AS C2,
+                    C3
+                    FROM TBL1
+                "#
+            )),
+            r#"SELECT
+    C1,
+    CASE WHEN C1 <= 1 THEN 'small'
+        WHEN C1 <= 3 THEN 'medium'
+        ELSE 'large' END AS C2,
+    C3
+FROM TBL1"#
         );
     }
 }
