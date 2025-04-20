@@ -19,31 +19,46 @@ impl FormatState {
         self.result_builder.last() == Some(&String::from("\n"))
     }
 
+    fn is_paren_start(&self) -> bool {
+        self.result_builder.last() == Some(&String::from("("))
+    }
+
     fn get_indent(&self) -> String {
         " ".repeat(INDENT_SIZE * self.indent_stack.len())
     }
 
-    fn get_indent_stack(&self, token_value: String) -> Vec<String> {
-        let mut new_indent_stack: Vec<String> = self.indent_stack.clone();
-        match token_value.as_str() {
-            "SELECT" => {
-                new_indent_stack.push(token_value);
-            }
-            "FROM" => loop {
-                let top: Option<String> = new_indent_stack.pop();
-                if top.is_none() {
-                    break;
-                }
+    fn push(&mut self, token_value: String) {
+        self.result_builder.push(token_value);
+    }
 
-                let top: String = top.unwrap();
-                let top: &str = top.as_str();
-                if top == "SELECT" {
-                    break;
-                }
-            },
+    fn decrease_indent_stack(&mut self, token_value: String) {
+        match token_value.as_str() {
+            ")" => self.decrease_indent_stack_until(vec!["("]),
+            "FROM" => self.decrease_indent_stack_until(vec!["SELECT"]),
             _ => (),
         }
-        return new_indent_stack;
+    }
+
+    fn decrease_indent_stack_until(&mut self, find_values: Vec<&str>) {
+        loop {
+            let top: Option<String> = self.indent_stack.pop();
+            if top.is_none() {
+                break;
+            }
+            let top: String = top.unwrap();
+            if find_values.contains(&top.as_str()) {
+                break;
+            }
+        }
+    }
+
+    fn increase_indent_stack(&mut self, token_value: String) {
+        match token_value.as_str() {
+            "SELECT" | "(" => {
+                self.indent_stack.push(token_value);
+            }
+            _ => (),
+        }
     }
 
     fn get_result(&self) -> String {
@@ -58,14 +73,16 @@ pub fn get_formatted_sql(sql: String) -> String {
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
 
-        state.indent_stack = state.get_indent_stack(token.value.clone());
+        state.decrease_indent_stack(token.value.clone());
 
         let pre_space: Option<String> = get_pre_space(&state, token);
         if pre_space.is_some() {
-            state.result_builder.push(pre_space.unwrap());
+            state.push(pre_space.unwrap());
         }
 
-        state.result_builder.push(token.value.clone());
+        state.push(token.value.clone());
+
+        state.increase_indent_stack(token.value.clone());
     }
 
     return state.get_result();
@@ -75,19 +92,24 @@ fn get_pre_space(state: &FormatState, token: &Token) -> Option<String> {
     match token.category {
         Some(TokenCategory::NewLine)
         | Some(TokenCategory::Delimiter)
-        | Some(TokenCategory::Comma) => {
-            return None;
-        }
+        | Some(TokenCategory::Comma) => return None,
         Some(TokenCategory::Operator)
         | Some(TokenCategory::Compare)
-        | Some(TokenCategory::Bitwise) => {
-            return Some(String::from(" "));
-        }
+        | Some(TokenCategory::Bitwise) => return Some(String::from(" ")),
         _ => (),
     }
 
     if state.is_line_start() {
         return Some(state.get_indent());
+    }
+
+    if state.is_paren_start() {
+        return None;
+    }
+
+    match token.category {
+        Some(TokenCategory::ParenClose) => return None,
+        _ => (),
     }
 
     return Some(String::from(" "));
@@ -138,6 +160,36 @@ FROM TBL1 AS T"#
                     C2 AS 'Column 2',
                     C3
                     FROM TBL1 AS T
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_sub_query_inline() {
+        assert_eq!(
+            String::from(r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#),
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_sub_query_multiline() {
+        assert_eq!(
+            String::from(
+                r#"SELECT (
+        SELECT TOP 1 ID FROM TBL1
+    ) AS ID"#
+            ),
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT (
+                    SELECT TOP 1 ID FROM TBL1
+                    ) AS ID
                 "#
             ))
         );
