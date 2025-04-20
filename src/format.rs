@@ -283,4 +283,52 @@ LIMIT 1"#
             String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;")
         );
     }
+
+    #[test]
+    fn test_get_formatted_sql_single_comments() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    -- top comment
+                    SELECT C1--inline comment
+                    -- after comment
+                    FROM TBL1
+                "#,
+            )),
+            r#"-- top comment
+SELECT C1 --inline comment
+    -- after comment
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multiline_comments() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    /* top comment */
+                    SELECT C1/* inline comment */
+                    /*
+
+                    after
+
+                    comment
+                      indent
+
+                    */FROM TBL1
+                "#,
+            )),
+            r#"/* top comment */
+SELECT C1 /* inline comment */
+    /*
+
+                    after
+
+                    comment
+                      indent
+
+                    */ FROM TBL1"#
+        );
+    }
 }
