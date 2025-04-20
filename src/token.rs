@@ -1,20 +1,25 @@
+const AMPERSAND: char = '&';
 const ASTERISK: char = '*';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
+const CIRCUMFLEX: char = '^';
 const COMMA: char = ',';
-const COMPARE_EQ: char = '=';
-const COMPARE_GT: char = '>';
-const COMPARE_LT: char = '<';
 const DELIMITER: char = ';';
+const EQUAL: char = '=';
 const FULL_STOP: char = '.';
+const GREATER_THAN: char = '>';
 const HYPHEN: char = '-';
+const LESS_THAN: char = '<';
 const NEW_LINE: char = '\n';
 const PAREN_CLOSE: char = ')';
 const PAREN_OPEN: char = '(';
+const PERCENT: char = '%';
+const PLUS: char = '+';
 const QUOTE_DOUBLE: char = '"';
 const QUOTE_SINGLE: char = '\'';
 const SLASH_FORWARD: char = '/';
+const VERTICAL_BAR: char = '|';
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
@@ -48,6 +53,8 @@ pub enum TokenCategory {
     Comma,
     ParenOpen,
     ParenClose,
+    Operator,
+    Bitwise,
     Compare,
 }
 
@@ -118,31 +125,43 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         match curr_ch {
-            NEW_LINE | DELIMITER | COMMA | PAREN_OPEN | PAREN_CLOSE => {
+            DELIMITER | NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
+            | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
                 curr_token.category = match curr_ch {
-                    NEW_LINE => Some(TokenCategory::NewLine),
                     DELIMITER => Some(TokenCategory::Delimiter),
+                    NEW_LINE => Some(TokenCategory::NewLine),
                     COMMA => Some(TokenCategory::Comma),
                     PAREN_OPEN => Some(TokenCategory::ParenOpen),
                     PAREN_CLOSE => Some(TokenCategory::ParenClose),
+                    AMPERSAND => Some(TokenCategory::Bitwise),
+                    VERTICAL_BAR => Some(TokenCategory::Bitwise),
+                    CIRCUMFLEX => Some(TokenCategory::Bitwise),
                     _ => None,
                 };
                 tokens.push(curr_token);
                 curr_token = Token::new();
                 continue;
             }
-            COMPARE_LT => {
+            LESS_THAN | PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.category = Some(TokenCategory::Compare);
+                curr_token.category = match curr_ch {
+                    LESS_THAN => Some(TokenCategory::Compare),
+                    PLUS => Some(TokenCategory::Operator),
+                    HYPHEN => Some(TokenCategory::Operator),
+                    ASTERISK => Some(TokenCategory::Operator),
+                    SLASH_FORWARD => Some(TokenCategory::Operator),
+                    PERCENT => Some(TokenCategory::Operator),
+                    _ => None,
+                };
 
                 let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
                     Some(sql_bytes[i + 1].into())
@@ -150,14 +169,14 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     None
                 };
 
-                if next_ch != Some(COMPARE_EQ) && next_ch != Some(COMPARE_GT) {
+                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
 
                 continue;
             }
-            COMPARE_EQ | COMPARE_GT => {
+            EQUAL | GREATER_THAN => {
                 let prev_ch: Option<char> = if i >= 1 {
                     Some(sql_bytes[i - 1].into())
                 } else {
@@ -165,14 +184,26 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 };
 
                 if !curr_token.is_empty()
-                    && prev_ch != Some(COMPARE_LT)
-                    && prev_ch != Some(COMPARE_GT)
+                    && prev_ch != Some(LESS_THAN)
+                    && prev_ch != Some(GREATER_THAN)
+                    && prev_ch != Some(PLUS)
+                    && prev_ch != Some(HYPHEN)
+                    && prev_ch != Some(ASTERISK)
+                    && prev_ch != Some(SLASH_FORWARD)
+                    && prev_ch != Some(PERCENT)
                 {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.category = Some(TokenCategory::Compare);
+                curr_token.category = match prev_ch {
+                    Some(PLUS) => Some(TokenCategory::Operator),
+                    Some(HYPHEN) => Some(TokenCategory::Operator),
+                    Some(ASTERISK) => Some(TokenCategory::Operator),
+                    Some(SLASH_FORWARD) => Some(TokenCategory::Operator),
+                    Some(PERCENT) => Some(TokenCategory::Operator),
+                    _ => Some(TokenCategory::Compare),
+                };
 
                 let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
                     Some(sql_bytes[i + 1].into())
@@ -180,7 +211,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     None
                 };
 
-                if next_ch != Some(COMPARE_EQ) {
+                if next_ch != Some(EQUAL) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -321,7 +352,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("FROM"),
@@ -367,7 +398,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("\n"),
@@ -408,7 +439,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("/*multi inline*/"),
@@ -433,7 +464,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("/*multi odd*/"),
@@ -441,7 +472,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
             ],
             get_sql_tokens(String::from("*/*multi odd*/*"))
@@ -458,7 +489,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("\n"),
@@ -575,7 +606,7 @@ mod tests {
                 },
                 Token {
                     value: String::from("*"),
-                    category: None,
+                    category: Some(TokenCategory::Operator),
                 },
                 Token {
                     value: String::from("FROM"),
@@ -802,6 +833,319 @@ Name'"#
                 },
             ],
             get_sql_tokens(String::from("SELECT (SELECT 1)"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_add() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("+"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("+"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("1+2 + 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_subtract() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("-"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("-"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("1-2 - 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_multiply() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("*"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("*"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("1*2 * 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_divide() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("/"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("/"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("1/2 / 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_modulo() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("%"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("2"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("%"),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("3"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("1%2 % 3"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_add_equal() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("+="),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V+=1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_minus_equal() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("-="),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V-=1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_multiply_equal() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("*="),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V*=1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_divide_equal() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("/="),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V/=1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_operator_modulo_equal() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("%="),
+                    category: Some(TokenCategory::Operator),
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V%=1"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_bitwise_and() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("&"),
+                    category: Some(TokenCategory::Bitwise),
+                },
+                Token {
+                    value: String::from("V2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V1&V2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_bitwise_or() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("|"),
+                    category: Some(TokenCategory::Bitwise),
+                },
+                Token {
+                    value: String::from("V2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V1|V2"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_bitwise_exclusive_or() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("V1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("^"),
+                    category: Some(TokenCategory::Bitwise),
+                },
+                Token {
+                    value: String::from("V2"),
+                    category: None,
+                },
+            ],
+            get_sql_tokens(String::from("V1^V2"))
         );
     }
 
