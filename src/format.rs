@@ -44,7 +44,9 @@ impl FormatState {
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(vec!["("]),
             "FROM" => self.decrease_indent_stack_until(vec!["SELECT"]),
-            "WHERE" => self.decrease_indent_stack_until(vec!["FROM"]),
+            "WHERE" | "ORDER" | "GROUP" | "HAVING" => {
+                self.decrease_indent_stack_until(vec!["FROM"])
+            }
             _ => (),
         }
     }
@@ -237,6 +239,38 @@ WHERE C1 > 1
                     FROM TBL1
                     WHERE C1>1
                     AND C2 IS NOT NULL
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multi_join() {
+        assert_eq!(
+            String::from(
+                r#"SELECT DISTINCT
+    T1.C1 AS C1,
+    T2.C2 AS C2,
+    T3.C3 AS C3
+FROM TBL1 AS T1
+    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
+WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
+ORDER BY T1.C1
+LIMIT 1"#
+            ),
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT DISTINCT
+                    T1.C1 AS C1,
+                    T2.C2 AS C2,
+                    T3.C3 AS C3
+                    FROM TBL1 AS T1
+                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
+                    WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
+                    ORDER BY T1.C1
+                    LIMIT 1
                 "#
             ))
         );
