@@ -31,10 +31,20 @@ impl FormatState {
         self.result_builder.push(token_value);
     }
 
+    fn increase_indent_stack(&mut self, token_value: String) {
+        match token_value.as_str() {
+            "SELECT" | "FROM" | "WHERE" | "(" => {
+                self.indent_stack.push(token_value);
+            }
+            _ => (),
+        }
+    }
+
     fn decrease_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(vec!["("]),
             "FROM" => self.decrease_indent_stack_until(vec!["SELECT"]),
+            "WHERE" => self.decrease_indent_stack_until(vec!["FROM"]),
             _ => (),
         }
     }
@@ -49,15 +59,6 @@ impl FormatState {
             if find_values.contains(&top.as_str()) {
                 break;
             }
-        }
-    }
-
-    fn increase_indent_stack(&mut self, token_value: String) {
-        match token_value.as_str() {
-            "SELECT" | "(" => {
-                self.indent_stack.push(token_value);
-            }
-            _ => (),
         }
     }
 
@@ -190,6 +191,52 @@ FROM TBL1 AS T"#
                     SELECT (
                     SELECT TOP 1 ID FROM TBL1
                     ) AS ID
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join() {
+        assert_eq!(
+            String::from(
+                r#"SELECT T1.C1, T1.C2,
+    T2.C2
+FROM TBL1 AS T1
+    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1"#
+            ),
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT T1.C1, T1.C2,
+                    T2.C2
+                    FROM TBL1 AS T1
+                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                "#
+            ))
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_where() {
+        assert_eq!(
+            String::from(
+                r#"SELECT
+    C1,
+    C2,
+    C3
+FROM TBL1
+WHERE C1 > 1
+    AND C2 IS NOT NULL"#
+            ),
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT
+                    C1,
+                    C2,
+                    C3
+                    FROM TBL1
+                    WHERE C1>1
+                    AND C2 IS NOT NULL
                 "#
             ))
         );
