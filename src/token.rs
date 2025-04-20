@@ -7,6 +7,7 @@ const COMPARE_EQ: char = '=';
 const COMPARE_GT: char = '>';
 const COMPARE_LT: char = '<';
 const DELIMITER: char = ';';
+const FULL_STOP: char = '.';
 const HYPHEN: char = '-';
 const NEW_LINE: char = '\n';
 const PAREN_CLOSE: char = ')';
@@ -287,7 +288,7 @@ fn get_in_quote(
                     return in_quote.clone();
                 }
                 QuoteCategory::Bracket => {
-                    if prev1_ch == BRACKET_CLOSE {
+                    if prev1_ch == BRACKET_CLOSE && curr_ch != FULL_STOP {
                         return None;
                     }
                     return in_quote.clone();
@@ -561,6 +562,31 @@ mod tests {
                 },
             ],
             get_sql_tokens(String::from("SELECT [Column 1]"))
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_bracket_schema() {
+        assert_eq!(
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("*"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("FROM"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("[S].[TBL1]"),
+                    category: Some(TokenCategory::Quote),
+                },
+            ],
+            get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]"))
         );
     }
 
