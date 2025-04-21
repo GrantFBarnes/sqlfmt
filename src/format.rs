@@ -27,7 +27,6 @@ impl FormatState {
         if token.category == Some(TokenCategory::NewLine)
             || token.category == Some(TokenCategory::Delimiter)
             || token.category == Some(TokenCategory::Comma)
-            || token.category == Some(TokenCategory::ParenClose)
         {
             return;
         }
@@ -44,7 +43,9 @@ impl FormatState {
             return;
         }
 
-        if prev_token_category == Some(TokenCategory::ParenOpen) {
+        if token.category == Some(TokenCategory::ParenClose)
+            || prev_token_category == Some(TokenCategory::ParenOpen)
+        {
             return;
         }
 
@@ -69,20 +70,18 @@ impl FormatState {
     fn increase_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "INTO" | "FROM" | "WHERE" | "CASE" | "BEGIN"
-            | "WHILE" | "(" => {
-                self.indent_stack.push(token_value);
-            }
+            | "WHILE" | "WITH" | "(" => self.indent_stack.push(token_value),
             _ => (),
         }
     }
 
     fn decrease_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
-            ")" => self.decrease_indent_stack_until(vec!["("]),
+            ")" => self.decrease_indent_stack_until_paren(),
             "FROM" => self.decrease_indent_stack_until(vec!["SELECT", "DELETE", "INTO"]),
             "INTO" => self.decrease_indent_stack_until(vec!["SELECT", "INSERT"]),
             "SELECT" => self.decrease_indent_stack_until(vec![
-                "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "(",
+                "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "WITH",
             ]),
             "END" => self.decrease_indent_stack_until(vec!["BEGIN", "CASE"]),
             "WHERE" | "ORDER" | "GROUP" | "HAVING" | "WHILE" => {
@@ -92,14 +91,34 @@ impl FormatState {
         }
     }
 
-    fn decrease_indent_stack_until(&mut self, find_values: Vec<&str>) {
+    fn decrease_indent_stack_until_paren(&mut self) {
         loop {
-            let top: Option<String> = self.indent_stack.pop();
-            if top.is_none() {
+            let token_value: Option<String> = self.indent_stack.pop();
+            if token_value.is_none() {
                 break;
             }
-            let top: String = top.unwrap();
-            if find_values.contains(&top.as_str()) {
+
+            let token_value: String = token_value.unwrap();
+            if token_value == "(" {
+                break;
+            }
+        }
+    }
+
+    fn decrease_indent_stack_until(&mut self, find_values: Vec<&str>) {
+        loop {
+            let token_value: Option<String> = self.indent_stack.pop();
+            if token_value.is_none() {
+                break;
+            }
+
+            let token_value: String = token_value.unwrap();
+            if token_value == "(" {
+                self.indent_stack.push(token_value);
+                break;
+            }
+
+            if find_values.contains(&token_value.as_str()) {
                 break;
             }
         }
@@ -202,12 +221,16 @@ FROM TBL1 AS T"#
                 r#"
                     SELECT (
                     SELECT TOP 1 ID FROM TBL1
-                    ) AS ID
+                    ) AS ID,
+                    C1
+                    FROM TBL1
                 "#
             )),
             r#"SELECT (
-    SELECT TOP 1 ID FROM TBL1
-) AS ID"#
+        SELECT TOP 1 ID FROM TBL1
+    ) AS ID,
+    C1
+FROM TBL1"#
         );
     }
 
@@ -409,9 +432,9 @@ FROM TBL1"#
                 "#,
             )),
             r#"WITH CTE1 AS
-(SELECT C1 FROM TBL1),
-CTE2 AS
-(SELECT C2 FROM TBL2)
+    (SELECT C1 FROM TBL1),
+    CTE2 AS
+    (SELECT C2 FROM TBL2)
 SELECT * FROM CTE1
     INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1"#
         );
