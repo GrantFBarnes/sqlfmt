@@ -3,37 +3,73 @@ use crate::token::*;
 const INDENT_SIZE: usize = 4;
 
 struct FormatState {
-    result_builder: Vec<String>,
+    tokens: Vec<Token>,
     indent_stack: Vec<String>,
 }
 
 impl FormatState {
     fn new() -> FormatState {
         FormatState {
-            result_builder: vec![],
+            tokens: vec![],
             indent_stack: vec![],
         }
-    }
-
-    fn is_line_start(&self) -> bool {
-        self.result_builder.last() == Some(&String::from("\n"))
-    }
-
-    fn is_paren_start(&self) -> bool {
-        self.result_builder.last() == Some(&String::from("("))
     }
 
     fn get_indent(&self) -> String {
         " ".repeat(INDENT_SIZE * self.indent_stack.len())
     }
 
-    fn push(&mut self, token_value: String) {
-        self.result_builder.push(token_value);
+    fn push(&mut self, token: Token) {
+        self.tokens.push(token);
+    }
+
+    fn add_pre_space(&mut self, token: &Token) {
+        if token.category == Some(TokenCategory::NewLine)
+            || token.category == Some(TokenCategory::Delimiter)
+            || token.category == Some(TokenCategory::Comma)
+            || token.category == Some(TokenCategory::ParenClose)
+        {
+            return;
+        }
+
+        let prev_token_category: Option<TokenCategory> = if self.tokens.len() > 0 {
+            let prev_token: &Token = self.tokens.last().unwrap();
+            prev_token.category.clone()
+        } else {
+            None
+        };
+
+        if prev_token_category == Some(TokenCategory::NewLine) {
+            self.push(Token::new_space(self.get_indent()));
+            return;
+        }
+
+        if prev_token_category == Some(TokenCategory::ParenOpen) {
+            return;
+        }
+
+        match token.category {
+            Some(TokenCategory::Compare) | Some(TokenCategory::Bitwise) => {
+                self.push(Token::new_space(String::from(" ")));
+                return;
+            }
+            Some(TokenCategory::ParenOpen) => {
+                if prev_token_category == Some(TokenCategory::DataType)
+                    || prev_token_category == Some(TokenCategory::Method)
+                {
+                    return;
+                }
+            }
+            _ => (),
+        }
+
+        self.push(Token::new_space(String::from(" ")));
     }
 
     fn increase_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
-            "SELECT" | "FROM" | "WHERE" | "CASE" | "(" => {
+            "SELECT" | "INSERT" | "DELETE" | "INTO" | "FROM" | "WHERE" | "CASE" | "BEGIN"
+            | "WHILE" | "(" => {
                 self.indent_stack.push(token_value);
             }
             _ => (),
@@ -43,9 +79,13 @@ impl FormatState {
     fn decrease_indent_stack(&mut self, token_value: String) {
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(vec!["("]),
-            "FROM" | "INTO" => self.decrease_indent_stack_until(vec!["SELECT"]),
+            "FROM" => self.decrease_indent_stack_until(vec!["SELECT", "DELETE", "INTO"]),
+            "INTO" => self.decrease_indent_stack_until(vec!["SELECT", "INSERT"]),
+            "SELECT" => self.decrease_indent_stack_until(vec![
+                "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "(",
+            ]),
             "END" => self.decrease_indent_stack_until(vec!["BEGIN", "CASE"]),
-            "WHERE" | "ORDER" | "GROUP" | "HAVING" => {
+            "WHERE" | "ORDER" | "GROUP" | "HAVING" | "WHILE" => {
                 self.decrease_indent_stack_until(vec!["FROM"])
             }
             _ => (),
@@ -66,7 +106,11 @@ impl FormatState {
     }
 
     fn get_result(&self) -> String {
-        self.result_builder.concat().trim().to_string()
+        let mut result: String = String::new();
+        for token in &self.tokens {
+            result.push_str(token.value.clone().as_str());
+        }
+        return result.trim().to_string();
     }
 }
 
@@ -76,47 +120,13 @@ pub fn get_formatted_sql(sql: String) -> String {
     let tokens: Vec<Token> = get_sql_tokens(sql);
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
-
         state.decrease_indent_stack(token.value.clone());
-
-        let pre_space: Option<String> = get_pre_space(&state, token);
-        if pre_space.is_some() {
-            state.push(pre_space.unwrap());
-        }
-
-        state.push(token.value.clone());
-
+        state.add_pre_space(token);
+        state.push(token.clone());
         state.increase_indent_stack(token.value.clone());
     }
 
     return state.get_result();
-}
-
-fn get_pre_space(state: &FormatState, token: &Token) -> Option<String> {
-    match token.category {
-        Some(TokenCategory::NewLine)
-        | Some(TokenCategory::Delimiter)
-        | Some(TokenCategory::Comma) => return None,
-        Some(TokenCategory::Operator)
-        | Some(TokenCategory::Compare)
-        | Some(TokenCategory::Bitwise) => return Some(String::from(" ")),
-        _ => (),
-    }
-
-    if state.is_line_start() {
-        return Some(state.get_indent());
-    }
-
-    if state.is_paren_start() {
-        return None;
-    }
-
-    match token.category {
-        Some(TokenCategory::ParenClose) => return None,
-        _ => (),
-    }
-
-    return Some(String::from(" "));
 }
 
 #[cfg(test)]
@@ -124,15 +134,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_formatted_sql_basic() {
+    fn test_get_formatted_sql_select_simple() {
         assert_eq!(
             get_formatted_sql(String::from("SELECT * FROM TBL1")),
-            String::from("SELECT * FROM TBL1")
+            r#"SELECT * FROM TBL1"#
         );
     }
 
     #[test]
-    fn test_get_formatted_sql_basic_newlines() {
+    fn test_get_formatted_sql_select_simple_newlines() {
         assert_eq!(
             get_formatted_sql(String::from(
                 r#"
@@ -146,7 +156,15 @@ FROM TBL1"#
     }
 
     #[test]
-    fn test_get_formatted_sql_multiple_columns() {
+    fn test_get_formatted_sql_select_multiple_columns_inline() {
+        assert_eq!(
+            get_formatted_sql(String::from("SELECT C1,C2, C3 FROM TBL1")),
+            r#"SELECT C1, C2, C3 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multiple_columns_newlines() {
         assert_eq!(
             get_formatted_sql(String::from(
                 r#"
@@ -188,8 +206,42 @@ FROM TBL1 AS T"#
                 "#
             )),
             r#"SELECT (
-        SELECT TOP 1 ID FROM TBL1
-    ) AS ID"#
+    SELECT TOP 1 ID FROM TBL1
+) AS ID"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_where_in() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT *
+                    FROM TBL1
+                    WHERE C1 IN (1,2,3)
+                "#,
+            )),
+            r#"SELECT *
+FROM TBL1
+WHERE C1 IN (1, 2, 3)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_group_by() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT C1,
+                    COUNT(*) AS CNT
+                    FROM TBL1
+                    GROUP BY C1
+                "#,
+            )),
+            r#"SELECT C1,
+    COUNT(*) AS CNT
+FROM TBL1
+GROUP BY C1"#
         );
     }
 
@@ -322,6 +374,58 @@ SELECT C1 /* inline comment */
     }
 
     #[test]
+    fn test_get_formatted_sql_select_into() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    SELECT
+                    C1,
+                    C2,
+                    C3
+                    INTO TBL2
+                    FROM TBL1
+                "#,
+            )),
+            r#"SELECT
+    C1,
+    C2,
+    C3
+INTO TBL2
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_multiple_cte() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    WITH CTE1 AS
+                    (SELECT C1 FROM TBL1),
+                    CTE2 AS
+                    (SELECT C2 FROM TBL2)
+                    SELECT * FROM CTE1
+                    INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1
+                "#,
+            )),
+            r#"WITH CTE1 AS
+(SELECT C1 FROM TBL1),
+CTE2 AS
+(SELECT C2 FROM TBL2)
+SELECT * FROM CTE1
+    INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_if() {
+        assert_eq!(
+            get_formatted_sql(String::from("SELECT IIF(C1>5,1,0) AS C1 FROM TBL1")),
+            r#"SELECT IIF(C1 > 5, 1, 0) AS C1 FROM TBL1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_case() {
         assert_eq!(
             get_formatted_sql(String::from(
@@ -378,24 +482,144 @@ FROM TBL1"#
     }
 
     #[test]
-    fn test_get_formatted_sql_select_into() {
+    fn test_get_formatted_sql_delete_simple() {
+        assert_eq!(
+            get_formatted_sql(String::from("DELETE FROM TBL1 WHERE C<=1")),
+            r#"DELETE FROM TBL1 WHERE C <= 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delete_newline() {
         assert_eq!(
             get_formatted_sql(String::from(
                 r#"
-                    SELECT
-                    C1,
-                    C2,
-                    C3
-                    INTO TBL2
-                    FROM TBL1
-                "#,
+                DELETE
+                FROM TBL1
+                WHERE C<=1
+                "#
             )),
-            r#"SELECT
-    C1,
-    C2,
-    C3
-INTO TBL2
-FROM TBL1"#
+            r#"DELETE
+FROM TBL1
+WHERE C <= 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_create_table_simple() {
+        assert_eq!(
+            get_formatted_sql(String::from("CREATE TABLE TBL1 (C1 INT)")),
+            r#"CREATE TABLE TBL1 (C1 INT)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_create_table_varchar() {
+        assert_eq!(
+            get_formatted_sql(String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")),
+            r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_create_table_default() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    CREATE TABLE TBL1 (
+                      ID UUID NOT NULL DEFAULT UUID()
+                    )
+                "#
+            )),
+            r#"CREATE TABLE TBL1 (
+    ID UUID NOT NULL DEFAULT UUID()
+)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_create_table_complex() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    CREATE TABLE IF NOT EXISTS TBL1 (
+                        ID UUID NOT NULL DEFAULT UUID(),
+                        C1 VARCHAR(10) NOT NULL,
+                        D1 DATETIME NULL,
+                        I1 INT,
+                        PRIMARY KEY (ID)
+                    )
+                "#
+            )),
+            r#"CREATE TABLE IF NOT EXISTS TBL1 (
+    ID UUID NOT NULL DEFAULT UUID(),
+    C1 VARCHAR(10) NOT NULL,
+    D1 DATETIME NULL,
+    I1 INT,
+    PRIMARY KEY (ID)
+)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_trigger() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    CREATE TRIGGER IF NOT EXISTS TR1
+                        AFTER INSERT
+                        ON TBL1
+                        FOR EACH ROW
+                    BEGIN
+                        CALL SP1(NEW.ID);
+                    END;
+                "#
+            )),
+            r#"CREATE TRIGGER IF NOT EXISTS TR1
+AFTER INSERT
+    ON TBL1
+    FOR EACH ROW
+    BEGIN
+        CALL SP1 (NEW.ID);
+    END;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_while_loop() {
+        assert_eq!(
+            get_formatted_sql(String::from(
+                r#"
+                    DECLARE VAR_COUNT INT;
+
+                    SELECT COUNT(ID)
+                    INTO VAR_COUNT
+                    FROM TBL1;
+
+                    WHILE VAR_COUNT > 0 DO
+                        DELETE FROM TBL1
+                        WHERE ID = VAR_COUNT;
+
+                        SELECT COUNT(ID)
+                        INTO VAR_COUNT
+                        FROM TBL1;
+                    END WHILE;
+                "#
+            )),
+            r#"DECLARE VAR_COUNT INT;
+
+SELECT COUNT(ID)
+INTO VAR_COUNT
+FROM TBL1;
+
+WHILE VAR_COUNT > 0 DO
+    DELETE FROM TBL1
+    WHERE ID = VAR_COUNT;
+
+    SELECT COUNT(ID)
+    INTO VAR_COUNT
+    FROM TBL1;
+END WHILE;"#
         );
     }
 }
