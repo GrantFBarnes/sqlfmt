@@ -1,6 +1,10 @@
 use crate::token::*;
 
 const INDENT_SIZE: usize = 4;
+const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
+    "SELECT", "INSERT", "DELETE", "UPDATE", "INTO", "FROM", "WHERE", "CASE", "BEGIN", "WHILE",
+    "WITH", "(",
+];
 
 struct FormatState {
     tokens: Vec<Token>,
@@ -68,57 +72,55 @@ impl FormatState {
     }
 
     fn increase_indent_stack(&mut self, token_value: String) {
-        match token_value.as_str() {
-            "SELECT" | "INSERT" | "DELETE" | "INTO" | "FROM" | "WHERE" | "CASE" | "BEGIN"
-            | "WHILE" | "WITH" | "(" => self.indent_stack.push(token_value),
-            _ => (),
+        let token_value: String = token_value.to_uppercase();
+        if INDENT_INCREASE_TOKEN_VALUES.contains(&token_value.as_str()) {
+            self.indent_stack.push(token_value);
         }
     }
 
     fn decrease_indent_stack(&mut self, token_value: String) {
+        let token_value: String = token_value.to_uppercase();
         match token_value.as_str() {
-            ")" => self.decrease_indent_stack_until_paren(),
-            "FROM" => self.decrease_indent_stack_until(vec!["SELECT", "DELETE", "INTO"]),
-            "INTO" => self.decrease_indent_stack_until(vec!["SELECT", "INSERT"]),
-            "SELECT" => self.decrease_indent_stack_until(vec![
-                "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "WITH",
-            ]),
-            "END" => self.decrease_indent_stack_until(vec!["BEGIN", "CASE"]),
+            ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
+            "END" => self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE"]),
+            "INTO" => self.decrease_indent_stack_until(token_value, vec!["SELECT", "INSERT"]),
+            "SELECT" => self.decrease_indent_stack_until(
+                token_value,
+                vec![
+                    "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "WITH",
+                ],
+            ),
+            "FROM" => self.decrease_indent_stack_until(
+                token_value,
+                vec!["SELECT", "DELETE", "UPDATE", "INTO"],
+            ),
             "WHERE" | "ORDER" | "GROUP" | "HAVING" | "WHILE" => {
-                self.decrease_indent_stack_until(vec!["FROM"])
+                self.decrease_indent_stack_until(token_value, vec!["FROM"])
             }
             _ => (),
         }
     }
 
-    fn decrease_indent_stack_until_paren(&mut self) {
+    fn decrease_indent_stack_until(&mut self, token_value: String, find_values: Vec<&str>) {
         loop {
-            let token_value: Option<String> = self.indent_stack.pop();
-            if token_value.is_none() {
+            let top: Option<String> = self.indent_stack.pop();
+            if top.is_none() {
                 break;
             }
 
-            let token_value: String = token_value.unwrap();
-            if token_value == "(" {
-                break;
-            }
-        }
-    }
+            let top: String = top.unwrap();
 
-    fn decrease_indent_stack_until(&mut self, find_values: Vec<&str>) {
-        loop {
-            let token_value: Option<String> = self.indent_stack.pop();
-            if token_value.is_none() {
+            if top == "(" && token_value != ")" {
+                self.indent_stack.push(top);
                 break;
             }
 
-            let token_value: String = token_value.unwrap();
-            if token_value == "(" {
-                self.indent_stack.push(token_value);
+            if top == "BEGIN" && token_value != "END" {
+                self.indent_stack.push(top);
                 break;
             }
 
-            if find_values.contains(&token_value.as_str()) {
+            if find_values.contains(&top.as_str()) {
                 break;
             }
         }
