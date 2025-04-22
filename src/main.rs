@@ -15,28 +15,6 @@ const FONT_MAGENTA: &str = "\x1b[35m";
 const FONT_YELLOW: &str = "\x1b[33m";
 const FONT_RESET: &str = "\x1b[0m";
 
-struct Settings {
-    input: Option<String>,
-    output: Option<String>,
-    case: Option<CaseSetting>,
-}
-
-impl Settings {
-    fn new() -> Settings {
-        Settings {
-            input: None,
-            output: None,
-            case: None,
-        }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-enum CaseSetting {
-    Upper,
-    Lower,
-}
-
 fn main() {
     let settings: Settings = get_settings_from_args();
     let sql_in: String = get_input_sql(&settings);

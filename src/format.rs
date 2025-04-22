@@ -1,4 +1,4 @@
-use crate::{CaseSetting, Settings, token::*};
+use crate::token::*;
 
 const INDENT_SIZE: usize = 4;
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
@@ -152,6 +152,28 @@ impl FormatState {
         }
         return result.trim().to_string();
     }
+}
+
+pub struct Settings {
+    pub input: Option<String>,
+    pub output: Option<String>,
+    pub case: Option<CaseSetting>,
+}
+
+impl Settings {
+    pub fn new() -> Settings {
+        Settings {
+            input: None,
+            output: None,
+            case: None,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum CaseSetting {
+    Upper,
+    Lower,
 }
 
 pub fn get_formatted_sql(settings: &Settings, sql: String) -> String {
