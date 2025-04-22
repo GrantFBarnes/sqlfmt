@@ -182,6 +182,26 @@ mod tests {
     }
 
     #[test]
+    fn test_get_formatted_sql_upper() {
+        let mut settings: Settings = Settings::new();
+        settings.case = Some(CaseSetting::Upper);
+        assert_eq!(
+            get_formatted_sql(&settings, String::from("select * from tbl1")),
+            r#"SELECT * FROM tbl1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_lower() {
+        let mut settings: Settings = Settings::new();
+        settings.case = Some(CaseSetting::Lower);
+        assert_eq!(
+            get_formatted_sql(&settings, String::from("SELECT * FROM TBL1")),
+            r#"select * from TBL1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_select_simple_newlines() {
         assert_eq!(
             get_formatted_sql(
