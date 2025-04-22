@@ -1,4 +1,4 @@
-use crate::{Settings, token::*};
+use crate::{CaseSetting, Settings, token::*};
 
 const INDENT_SIZE: usize = 4;
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
@@ -126,10 +126,29 @@ impl FormatState {
         }
     }
 
-    fn get_result(&self) -> String {
+    fn get_result(&self, settings: &Settings) -> String {
         let mut result: String = String::new();
         for token in &self.tokens {
-            result.push_str(token.value.clone().as_str());
+            let token_value: String = token.value.clone();
+
+            match token.category {
+                Some(TokenCategory::Keyword)
+                | Some(TokenCategory::DataType)
+                | Some(TokenCategory::Method) => match settings.case {
+                    Some(CaseSetting::Upper) => {
+                        result.push_str(token_value.to_uppercase().as_str());
+                        continue;
+                    }
+                    Some(CaseSetting::Lower) => {
+                        result.push_str(token_value.to_lowercase().as_str());
+                        continue;
+                    }
+                    None => (),
+                },
+                _ => (),
+            }
+
+            result.push_str(token_value.as_str());
         }
         return result.trim().to_string();
     }
@@ -147,7 +166,7 @@ pub fn get_formatted_sql(settings: &Settings, sql: String) -> String {
         state.increase_indent_stack(token.value.clone());
     }
 
-    return state.get_result();
+    return state.get_result(settings);
 }
 
 #[cfg(test)]
