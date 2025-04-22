@@ -40,7 +40,7 @@ enum CaseSetting {
 fn main() {
     let settings: Settings = get_settings_from_args();
     let sql_in: String = get_input_sql(&settings);
-    let sql_out: String = get_formatted_sql(sql_in);
+    let sql_out: String = get_formatted_sql(&settings, sql_in);
     output_result(&settings, &sql_out);
 }
 
