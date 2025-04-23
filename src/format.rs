@@ -1,6 +1,5 @@
 use crate::token::*;
 
-const INDENT_SIZE: usize = 4;
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
     "SELECT", "INSERT", "DELETE", "UPDATE", "INTO", "FROM", "WHERE", "CASE", "BEGIN", "WHILE",
     "WITH", "(",
@@ -19,15 +18,19 @@ impl FormatState {
         }
     }
 
-    fn get_indent(&self) -> String {
-        " ".repeat(INDENT_SIZE * self.indent_stack.len())
+    fn get_indent(&self, settings: &Settings) -> String {
+        if settings.tabs {
+            "\t".repeat(self.indent_stack.len())
+        } else {
+            " ".repeat(settings.spaces * self.indent_stack.len())
+        }
     }
 
     fn push(&mut self, token: Token) {
         self.tokens.push(token);
     }
 
-    fn add_pre_space(&mut self, token: &Token) {
+    fn add_pre_space(&mut self, token: &Token, settings: &Settings) {
         if token.category == Some(TokenCategory::NewLine)
             || token.category == Some(TokenCategory::Delimiter)
             || token.category == Some(TokenCategory::Comma)
@@ -43,7 +46,7 @@ impl FormatState {
         };
 
         if prev_token_category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_space(self.get_indent()));
+            self.push(Token::new_space(self.get_indent(settings)));
             return;
         }
 
@@ -158,6 +161,8 @@ pub struct Settings {
     pub input: Option<String>,
     pub output: Option<String>,
     pub case: Option<CaseSetting>,
+    pub tabs: bool,
+    pub spaces: usize,
 }
 
 impl Settings {
@@ -166,6 +171,8 @@ impl Settings {
             input: None,
             output: None,
             case: None,
+            tabs: false,
+            spaces: 4,
         }
     }
 }
@@ -183,7 +190,7 @@ pub fn get_formatted_sql(settings: &Settings, sql: String) -> String {
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
         state.decrease_indent_stack(token.value.clone());
-        state.add_pre_space(token);
+        state.add_pre_space(token, settings);
         state.push(token.clone());
         state.increase_indent_stack(token.value.clone());
     }

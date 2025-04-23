@@ -7,9 +7,6 @@ use std::{
 };
 
 const FONT_RED: &str = "\x1b[31m";
-const FONT_CYAN: &str = "\x1b[36m";
-const FONT_MAGENTA: &str = "\x1b[35m";
-const FONT_YELLOW: &str = "\x1b[33m";
 const FONT_RESET: &str = "\x1b[0m";
 
 pub fn get_settings_from_args() -> Settings {
@@ -18,6 +15,7 @@ pub fn get_settings_from_args() -> Settings {
     enum ArgType {
         Input,
         Output,
+        Spaces,
     }
     let mut arg_type: Option<ArgType> = None;
 
@@ -27,26 +25,13 @@ pub fn get_settings_from_args() -> Settings {
                 print_help();
                 process::exit(0);
             }
-            "-u" | "--upper" => {
-                if settings.case.is_some() {
-                    print_error("Case setting already defined.");
-                    print_help();
-                    process::exit(1);
-                }
-                settings.case = Some(CaseSetting::Upper);
-            }
-            "-l" | "--lower" => {
-                if settings.case.is_some() {
-                    print_error("Case setting already defined.");
-                    print_help();
-                    process::exit(1);
-                }
-                settings.case = Some(CaseSetting::Lower);
+            "-v" | "--version" => {
+                print_version();
+                process::exit(0);
             }
             "-i" | "--input" => {
                 if arg_type.is_some() {
                     print_error("Invalid arguments provided.");
-                    print_help();
                     process::exit(1);
                 }
                 arg_type = Some(ArgType::Input);
@@ -54,16 +39,46 @@ pub fn get_settings_from_args() -> Settings {
             "-o" | "--output" => {
                 if arg_type.is_some() {
                     print_error("Invalid arguments provided.");
-                    print_help();
                     process::exit(1);
                 }
                 arg_type = Some(ArgType::Output);
+            }
+            "-u" | "--upper" => {
+                if settings.case.is_some() {
+                    print_error("Case setting already defined.");
+                    process::exit(1);
+                }
+                settings.case = Some(CaseSetting::Upper);
+            }
+            "-l" | "--lower" => {
+                if settings.case.is_some() {
+                    print_error("Case setting already defined.");
+                    process::exit(1);
+                }
+                settings.case = Some(CaseSetting::Lower);
+            }
+            "-t" | "--tabs" => {
+                if settings.tabs {
+                    print_error("Tabs setting already defined.");
+                    process::exit(1);
+                }
+                settings.tabs = true;
+            }
+            "-s" | "--spaces" => {
+                if arg_type.is_some() {
+                    print_error("Invalid arguments provided.");
+                    process::exit(1);
+                }
+                if settings.tabs {
+                    print_error("Tabs setting already defined.");
+                    process::exit(1);
+                }
+                arg_type = Some(ArgType::Spaces);
             }
             _ => match arg_type {
                 Some(ArgType::Input) => {
                     if settings.input.is_some() {
                         print_error("Input was already defined.");
-                        print_help();
                         process::exit(1);
                     }
                     settings.input = Some(arg);
@@ -72,19 +87,31 @@ pub fn get_settings_from_args() -> Settings {
                 Some(ArgType::Output) => {
                     if settings.output.is_some() {
                         print_error("Output was already defined.");
-                        print_help();
                         process::exit(1);
                     }
                     settings.output = Some(arg);
                     arg_type = None;
                 }
+                Some(ArgType::Spaces) => {
+                    let spaces: Result<usize, std::num::ParseIntError> = arg.parse::<usize>();
+                    if spaces.is_err() {
+                        print_error("Invalid space count provided.");
+                        process::exit(1);
+                    }
+                    settings.spaces = spaces.unwrap();
+                    arg_type = None;
+                }
                 None => {
                     print_error("Invalid arguments provided.");
-                    print_help();
                     process::exit(1);
                 }
             },
         }
+    }
+
+    if arg_type.is_some() {
+        print_error("Invalid arguments provided.");
+        process::exit(1);
     }
 
     return settings;
@@ -96,7 +123,6 @@ pub fn get_input_sql(settings: &Settings) -> String {
     if stdin.is_terminal() {
         if settings.input.is_none() {
             print_error("Input file not provided.");
-            print_help();
             process::exit(1);
         }
 
@@ -129,45 +155,35 @@ pub fn output_result(settings: &Settings, sql_out: &String) {
 
 fn print_help() {
     println!(
-        "Format SQL
+        "sqlfmt - SQL Format
 
-usage: sqlfmt {}-i <input file path>{} {}-o [output file path]{}
-       {}<input stream>{} | sqlfmt
+Usage:
+  sqlfmt -i <INPUT_FILE_PATH>
+  <INPUT_STREAM> | sqlfmt
 
-notes: {}required{}, {}optional{}
-       output is printed to stdout if no output file provided
+Options:
+  Basic
+    -h, --help    Print this message
+    -v, --version Print version
 
-options:
-    {}
-    {}
-    {}
-    {}
-    {}",
-        FONT_CYAN,
-        FONT_RESET,
-        FONT_MAGENTA,
-        FONT_RESET,
-        FONT_CYAN,
-        FONT_RESET,
-        FONT_CYAN,
-        FONT_RESET,
-        FONT_MAGENTA,
-        FONT_RESET,
-        get_help_parameter('h', "help", "Show this message"),
-        get_help_parameter('i', "input", "Input file path"),
-        get_help_parameter('o', "output", "Output file path"),
-        get_help_parameter('u', "upper", "Uppercase keywords"),
-        get_help_parameter('l', "lower", "Lowercase keywords"),
+  IO
+    -i, --input  <FILE_PATH> Define path to input SQL file
+    -o, --output <FILE_PATH> Define path to output SQL file
+
+  Format Settings
+    -u, --upper        Uppercase keywords
+    -l, --lower        Lowercase keywords
+    -t, --tabs         Use tabs for indents
+    -s, --spaces <INT> Define amount of spaces per indent"
     );
 }
 
-fn get_help_parameter(letter: char, word: &str, description: &str) -> String {
-    format!(
-        "    {}-{}{}, {}--{}{}\t{}",
-        FONT_YELLOW, letter, FONT_RESET, FONT_YELLOW, word, FONT_RESET, description
-    )
+fn print_version() {
+    let version: &str = env!("CARGO_PKG_VERSION");
+    println!("{version}");
 }
 
 fn print_error(msg: &str) {
-    println!("{}Error:{} {}", FONT_RED, FONT_RESET, msg);
+    println!("{FONT_RED}Error:{FONT_RESET} {msg}");
+    println!("Run with -h/--help to print help.");
 }
