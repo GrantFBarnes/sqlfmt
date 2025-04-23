@@ -1,4 +1,4 @@
-use crate::Settings;
+use crate::Configuration;
 
 use std::{
     env, fs,
@@ -9,8 +9,8 @@ use std::{
 const FONT_RED: &str = "\x1b[31m";
 const FONT_RESET: &str = "\x1b[0m";
 
-pub fn get_settings_from_args() -> Settings {
-    let mut settings: Settings = Settings::new();
+pub fn get_config_from_args() -> Configuration {
+    let mut config: Configuration = Configuration::new();
 
     enum ArgType {
         Input,
@@ -44,32 +44,32 @@ pub fn get_settings_from_args() -> Settings {
                 arg_type = Some(ArgType::Output);
             }
             "-u" | "--upper" => {
-                if settings.upper || settings.lower {
+                if config.upper || config.lower {
                     print_error("Case setting already defined.");
                     process::exit(1);
                 }
-                settings.upper = true;
+                config.upper = true;
             }
             "-l" | "--lower" => {
-                if settings.upper || settings.lower {
+                if config.upper || config.lower {
                     print_error("Case setting already defined.");
                     process::exit(1);
                 }
-                settings.lower = true;
+                config.lower = true;
             }
             "-t" | "--tabs" => {
-                if settings.tabs {
+                if config.tabs {
                     print_error("Tabs setting already defined.");
                     process::exit(1);
                 }
-                settings.tabs = true;
+                config.tabs = true;
             }
             "-s" | "--spaces" => {
                 if arg_type.is_some() {
                     print_error("Invalid arguments provided.");
                     process::exit(1);
                 }
-                if settings.tabs {
+                if config.tabs {
                     print_error("Tabs setting already defined.");
                     process::exit(1);
                 }
@@ -77,19 +77,19 @@ pub fn get_settings_from_args() -> Settings {
             }
             _ => match arg_type {
                 Some(ArgType::Input) => {
-                    if settings.input.is_some() {
+                    if config.input.is_some() {
                         print_error("Input was already defined.");
                         process::exit(1);
                     }
-                    settings.input = Some(arg);
+                    config.input = Some(arg);
                     arg_type = None;
                 }
                 Some(ArgType::Output) => {
-                    if settings.output.is_some() {
+                    if config.output.is_some() {
                         print_error("Output was already defined.");
                         process::exit(1);
                     }
-                    settings.output = Some(arg);
+                    config.output = Some(arg);
                     arg_type = None;
                 }
                 Some(ArgType::Spaces) => {
@@ -98,7 +98,7 @@ pub fn get_settings_from_args() -> Settings {
                         print_error("Invalid space count provided.");
                         process::exit(1);
                     }
-                    settings.spaces = spaces.unwrap();
+                    config.spaces = spaces.unwrap();
                     arg_type = None;
                 }
                 None => {
@@ -114,19 +114,19 @@ pub fn get_settings_from_args() -> Settings {
         process::exit(1);
     }
 
-    return settings;
+    return config;
 }
 
-pub fn get_input_sql(settings: &Settings) -> String {
+pub fn get_input_sql(config: &Configuration) -> String {
     let sql_input: Result<String, io::Error>;
     let stdin: Stdin = io::stdin();
     if stdin.is_terminal() {
-        if settings.input.is_none() {
+        if config.input.is_none() {
             print_error("Input file not provided.");
             process::exit(1);
         }
 
-        sql_input = fs::read_to_string(settings.input.as_ref().unwrap());
+        sql_input = fs::read_to_string(config.input.as_ref().unwrap());
     } else {
         sql_input = io::read_to_string(stdin);
     }
@@ -139,9 +139,9 @@ pub fn get_input_sql(settings: &Settings) -> String {
     return sql_input.unwrap();
 }
 
-pub fn output_result(settings: &Settings, sql_out: &String) {
-    if settings.output.is_some() {
-        match fs::write(settings.output.as_ref().unwrap(), sql_out) {
+pub fn output_result(config: &Configuration, sql_out: &String) {
+    if config.output.is_some() {
+        match fs::write(config.output.as_ref().unwrap(), sql_out) {
             Ok(_) => (),
             Err(_) => {
                 print_error("Error: Failed to write to output path.");
@@ -170,7 +170,7 @@ Options:
     -i, --input  <FILE_PATH> Define path to input SQL file
     -o, --output <FILE_PATH> Define path to output SQL file
 
-  Format Settings
+  Format Configuration
     -u, --upper        Uppercase keywords
     -l, --lower        Lowercase keywords
     -t, --tabs         Use tabs for indents
