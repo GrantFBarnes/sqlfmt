@@ -1,4 +1,4 @@
-use crate::format::{CaseSetting, Settings};
+use crate::Settings;
 
 use std::{
     env, fs,
@@ -44,18 +44,18 @@ pub fn get_settings_from_args() -> Settings {
                 arg_type = Some(ArgType::Output);
             }
             "-u" | "--upper" => {
-                if settings.case.is_some() {
+                if settings.upper || settings.lower {
                     print_error("Case setting already defined.");
                     process::exit(1);
                 }
-                settings.case = Some(CaseSetting::Upper);
+                settings.upper = true;
             }
             "-l" | "--lower" => {
-                if settings.case.is_some() {
+                if settings.upper || settings.lower {
                     print_error("Case setting already defined.");
                     process::exit(1);
                 }
-                settings.case = Some(CaseSetting::Lower);
+                settings.lower = true;
             }
             "-t" | "--tabs" => {
                 if settings.tabs {

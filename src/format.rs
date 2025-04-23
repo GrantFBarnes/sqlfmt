@@ -1,3 +1,4 @@
+use crate::Settings;
 use crate::token::*;
 
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
@@ -137,17 +138,15 @@ impl FormatState {
             match token.category {
                 Some(TokenCategory::Keyword)
                 | Some(TokenCategory::DataType)
-                | Some(TokenCategory::Method) => match settings.case {
-                    Some(CaseSetting::Upper) => {
+                | Some(TokenCategory::Method) => {
+                    if settings.upper {
                         result.push_str(token_value.to_uppercase().as_str());
                         continue;
-                    }
-                    Some(CaseSetting::Lower) => {
+                    } else if settings.lower {
                         result.push_str(token_value.to_lowercase().as_str());
                         continue;
                     }
-                    None => (),
-                },
+                }
                 _ => (),
             }
 
@@ -155,32 +154,6 @@ impl FormatState {
         }
         return result.trim().to_string();
     }
-}
-
-pub struct Settings {
-    pub input: Option<String>,
-    pub output: Option<String>,
-    pub case: Option<CaseSetting>,
-    pub tabs: bool,
-    pub spaces: usize,
-}
-
-impl Settings {
-    pub fn new() -> Settings {
-        Settings {
-            input: None,
-            output: None,
-            case: None,
-            tabs: false,
-            spaces: 4,
-        }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum CaseSetting {
-    Upper,
-    Lower,
 }
 
 pub fn get_formatted_sql(settings: &Settings, sql: String) -> String {
@@ -213,7 +186,7 @@ mod tests {
     #[test]
     fn test_get_formatted_sql_upper() {
         let mut settings: Settings = Settings::new();
-        settings.case = Some(CaseSetting::Upper);
+        settings.upper = true;
         assert_eq!(
             get_formatted_sql(&settings, String::from("select * from tbl1")),
             r#"SELECT * FROM tbl1"#
@@ -223,7 +196,7 @@ mod tests {
     #[test]
     fn test_get_formatted_sql_lower() {
         let mut settings: Settings = Settings::new();
-        settings.case = Some(CaseSetting::Lower);
+        settings.lower = true;
         assert_eq!(
             get_formatted_sql(&settings, String::from("SELECT * FROM TBL1")),
             r#"select * from TBL1"#
