@@ -3,6 +3,7 @@ use std::io::{self, IsTerminal};
 use std::process;
 
 mod arguments;
+mod configuration;
 mod format;
 mod token;
 

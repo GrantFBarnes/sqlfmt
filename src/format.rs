@@ -1,53 +1,11 @@
 use crate::arguments::Arguments;
+use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
     "SELECT", "INSERT", "DELETE", "UPDATE", "INTO", "FROM", "WHERE", "CASE", "BEGIN", "WHILE",
     "WITH", "(",
 ];
-
-struct Configuration {
-    case: ConfigCase,
-    tabs: ConfigTab,
-}
-
-impl Configuration {
-    #[allow(dead_code)]
-    fn new() -> Configuration {
-        Configuration {
-            case: ConfigCase::Unchanged,
-            tabs: ConfigTab::Space(4),
-        }
-    }
-
-    fn from(args: &Arguments) -> Configuration {
-        Configuration {
-            case: if args.upper {
-                ConfigCase::Uppercase
-            } else if args.lower {
-                ConfigCase::Lowercase
-            } else {
-                ConfigCase::Unchanged
-            },
-            tabs: if args.tabs {
-                ConfigTab::Tab
-            } else {
-                ConfigTab::Space(args.spaces)
-            },
-        }
-    }
-}
-
-enum ConfigCase {
-    Uppercase,
-    Lowercase,
-    Unchanged,
-}
-
-enum ConfigTab {
-    Tab,
-    Space(u8),
-}
 
 struct FormatState {
     tokens: Vec<Token>,
@@ -195,7 +153,7 @@ impl FormatState {
 }
 
 pub fn get_formatted_sql(args: &Arguments, sql: String) -> String {
-    let config: Configuration = Configuration::from(&args);
+    let config: Configuration = Configuration::from(args);
     let mut state: FormatState = FormatState::new();
 
     let tokens: Vec<Token> = get_sql_tokens(sql);
