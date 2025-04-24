@@ -1,5 +1,5 @@
 use std::fs;
-use std::io;
+use std::io::{self, IsTerminal};
 use std::process;
 
 mod arguments;
@@ -24,7 +24,7 @@ fn main() {
         process::exit(0);
     }
 
-    let sql_in: Result<String, io::Error> = arguments::get_input_sql(&args.input);
+    let sql_in: Result<String, io::Error> = get_input_sql(&args.input);
     if sql_in.is_err() {
         print_error(sql_in.err().unwrap().to_string().as_str());
         process::exit(1);
@@ -83,4 +83,19 @@ Options:
 fn print_version() {
     let version: &str = env!("CARGO_PKG_VERSION");
     println!("{version}");
+}
+
+fn get_input_sql(input: &Option<String>) -> Result<String, io::Error> {
+    let stdin: io::Stdin = io::stdin();
+    if stdin.is_terminal() {
+        if input.is_none() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Input file not defined.",
+            ));
+        }
+        return fs::read_to_string(input.as_ref().unwrap());
+    } else {
+        return io::read_to_string(stdin);
+    }
 }

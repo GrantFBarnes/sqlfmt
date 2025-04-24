@@ -1,7 +1,4 @@
-use std::{
-    env, fs,
-    io::{self, IsTerminal},
-};
+use std::env;
 
 pub struct Arguments {
     arg_type: Option<ArgType>,
@@ -110,19 +107,4 @@ pub fn get_arguments() -> Result<Arguments, &'static str> {
     }
 
     return Ok(arguments);
-}
-
-pub fn get_input_sql(input: &Option<String>) -> Result<String, io::Error> {
-    let stdin: io::Stdin = io::stdin();
-    if stdin.is_terminal() {
-        if input.is_none() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Input file not defined.",
-            ));
-        }
-        return fs::read_to_string(input.as_ref().unwrap());
-    } else {
-        return io::read_to_string(stdin);
-    }
 }
