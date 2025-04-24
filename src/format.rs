@@ -1,4 +1,4 @@
-use crate::input::Arguments;
+use crate::arguments::Arguments;
 use crate::token::*;
 
 const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[

@@ -2,17 +2,17 @@ use std::fs;
 use std::io;
 use std::process;
 
+mod arguments;
 mod format;
-mod input;
 mod token;
 
 fn main() {
-    let args: Result<input::Arguments, &str> = input::get_arguments();
+    let args: Result<arguments::Arguments, &str> = arguments::get_arguments();
     if args.is_err() {
         print_error(args.err().unwrap());
         process::exit(1);
     }
-    let args: input::Arguments = args.unwrap();
+    let args: arguments::Arguments = args.unwrap();
 
     if args.help {
         print_help();
@@ -24,7 +24,7 @@ fn main() {
         process::exit(0);
     }
 
-    let sql_in: Result<String, io::Error> = input::get_input_sql(&args.input);
+    let sql_in: Result<String, io::Error> = arguments::get_input_sql(&args.input);
     if sql_in.is_err() {
         print_error(sql_in.err().unwrap().to_string().as_str());
         process::exit(1);
