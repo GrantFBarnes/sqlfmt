@@ -69,8 +69,8 @@ impl FormatState {
         self.push(Token::new_space(String::from(" ")));
     }
 
-    fn increase_indent_stack(&mut self, token_value: String) {
-        let token_value: String = token_value.to_uppercase();
+    fn increase_indent_stack(&mut self, token: &Token) {
+        let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "WHERE" | "ORDER" | "GROUP"
             | "HAVING" | "CASE" | "BEGIN" | "INTO" | "SET" | "VALUE" | "VALUES" | "WHILE"
@@ -86,8 +86,8 @@ impl FormatState {
         }
     }
 
-    fn decrease_indent_stack(&mut self, token_value: String) {
-        let token_value: String = token_value.to_uppercase();
+    fn decrease_indent_stack(&mut self, token: &Token) {
+        let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
             "END" => self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN"]),
@@ -165,10 +165,10 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     let tokens: Vec<Token> = get_sql_tokens(sql);
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
-        state.decrease_indent_stack(token.value.clone());
+        state.decrease_indent_stack(token);
         state.add_pre_space(token, config);
         state.push(token.clone());
-        state.increase_indent_stack(token.value.clone());
+        state.increase_indent_stack(token);
     }
 
     return state.get_result(config);
