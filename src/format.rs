@@ -1,11 +1,6 @@
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
-const INDENT_INCREASE_TOKEN_VALUES: &[&str] = &[
-    "SELECT", "INSERT", "DELETE", "UPDATE", "INTO", "FROM", "WHERE", "CASE", "BEGIN", "WHILE",
-    "WITH", "(",
-];
-
 struct FormatState {
     tokens: Vec<Token>,
     indent_stack: Vec<String>,
@@ -76,8 +71,18 @@ impl FormatState {
 
     fn increase_indent_stack(&mut self, token_value: String) {
         let token_value: String = token_value.to_uppercase();
-        if INDENT_INCREASE_TOKEN_VALUES.contains(&token_value.as_str()) {
-            self.indent_stack.push(token_value);
+        match token_value.as_str() {
+            "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "WHERE" | "ORDER" | "GROUP"
+            | "HAVING" | "CASE" | "BEGIN" | "INTO" | "SET" | "VALUE" | "VALUES" | "WHILE"
+            | "WITH" | "DO" | "(" => {
+                self.indent_stack.push(token_value);
+            }
+            "THEN" => {
+                if self.indent_stack.last() != Some(&String::from("CASE")) {
+                    self.indent_stack.push(token_value);
+                }
+            }
+            _ => (),
         }
     }
 
@@ -85,19 +90,22 @@ impl FormatState {
         let token_value: String = token_value.to_uppercase();
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
-            "END" => self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE"]),
+            "END" => self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN"]),
             "INTO" => self.decrease_indent_stack_until(token_value, vec!["SELECT", "INSERT"]),
-            "SELECT" => self.decrease_indent_stack_until(
+            "SET" => self.decrease_indent_stack_until(token_value, vec!["UPDATE"]),
+            "VALUE" | "VALUES" => self.decrease_indent_stack_until(token_value, vec!["INTO"]),
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" => self.decrease_indent_stack_until(
                 token_value,
                 vec![
-                    "SELECT", "FROM", "WHERE", "GROUP", "HAVING", "INSERT", "WITH",
+                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
+                    "WITH", "WHILE", "SET",
                 ],
             ),
             "FROM" => self.decrease_indent_stack_until(
                 token_value,
                 vec!["SELECT", "DELETE", "UPDATE", "INTO"],
             ),
-            "WHERE" | "ORDER" | "GROUP" | "HAVING" | "WHILE" => {
+            "WHERE" | "ORDER" | "GROUP" | "HAVING" | "LIMIT" | "WHILE" => {
                 self.decrease_indent_stack_until(token_value, vec!["FROM"])
             }
             _ => (),
@@ -118,7 +126,7 @@ impl FormatState {
                 break;
             }
 
-            if top == "BEGIN" && token_value != "END" {
+            if (top == "BEGIN" || top == "DO" || top == "THEN") && token_value != "END" {
                 self.indent_stack.push(top);
                 break;
             }
@@ -758,12 +766,12 @@ INTO VAR_COUNT
 FROM TBL1;
 
 WHILE VAR_COUNT > 0 DO
-    DELETE FROM TBL1
-    WHERE ID = VAR_COUNT;
+        DELETE FROM TBL1
+        WHERE ID = VAR_COUNT;
 
-    SELECT COUNT(ID)
-    INTO VAR_COUNT
-    FROM TBL1;
+        SELECT COUNT(ID)
+        INTO VAR_COUNT
+        FROM TBL1;
 END WHILE;"#
         );
     }
