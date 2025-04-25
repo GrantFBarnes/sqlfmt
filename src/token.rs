@@ -1207,7 +1207,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 curr_token = Token::new();
                 continue;
             }
-            LESS_THAN | PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
+            LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
                     curr_token.category = curr_token.get_category();
                     tokens.push(curr_token);
@@ -1274,6 +1274,32 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 };
 
                 if next_ch != Some(EQUAL) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
+            }
+            PLUS | HYPHEN => {
+                if !curr_token.is_empty() {
+                    curr_token.category = curr_token.get_category();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+
+                if tokens.last().is_some_and(|t| t.category.is_some()) {
+                    continue;
+                }
+
+                curr_token.category = Some(TokenCategory::Operator);
+                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+                    Some(sql_bytes[i + 1].into())
+                } else {
+                    None
+                };
+
+                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1840,6 +1866,23 @@ Name'"#
                 },
                 Token {
                     value: String::from("3"),
+                    category: None,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_negative_number() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT -1")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("-1"),
                     category: None,
                 },
             ]
