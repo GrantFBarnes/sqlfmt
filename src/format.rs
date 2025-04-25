@@ -110,6 +110,17 @@ impl FormatState {
             }
             _ => (),
         }
+
+        match token.category {
+            Some(TokenCategory::Comment) => self.decrease_indent_stack_until(
+                String::new(),
+                vec![
+                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
+                    "WITH", "WHILE", "SET",
+                ],
+            ),
+            _ => (),
+        }
     }
 
     fn decrease_indent_stack_until(&mut self, token_value: String, find_values: Vec<&str>) {
@@ -443,8 +454,43 @@ LIMIT 1"#
             ),
             r#"-- top comment
 SELECT C1 --inline comment
-    -- after comment
+-- after comment
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_single_comment_new_statement() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    -- comment
+                    SELECT
+                        C1,
+                        C2
+                    FROM TBL1;
+
+                    -- comment
+                    SELECT
+                        C1,
+                        C2
+                    FROM TBL1;
+                "#,
+                )
+            ),
+            r#"-- comment
+SELECT
+    C1,
+    C2
+FROM TBL1;
+
+-- comment
+SELECT
+    C1,
+    C2
+FROM TBL1;"#
         );
     }
 
@@ -470,7 +516,7 @@ FROM TBL1"#
             ),
             r#"/* top comment */
 SELECT C1 /* inline comment */
-    /*
+/*
 
                     after
 
