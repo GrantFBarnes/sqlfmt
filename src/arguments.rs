@@ -14,7 +14,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    pub fn new() -> Arguments {
+    fn new() -> Arguments {
         Arguments {
             arg_type: None,
 

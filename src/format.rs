@@ -1,4 +1,3 @@
-use crate::arguments::Arguments;
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
@@ -152,20 +151,19 @@ impl FormatState {
     }
 }
 
-pub fn get_formatted_sql(args: &Arguments, sql: String) -> String {
-    let config: Configuration = Configuration::from(args);
+pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     let mut state: FormatState = FormatState::new();
 
     let tokens: Vec<Token> = get_sql_tokens(sql);
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
         state.decrease_indent_stack(token.value.clone());
-        state.add_pre_space(token, &config);
+        state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token.value.clone());
     }
 
-    return state.get_result(&config);
+    return state.get_result(config);
 }
 
 #[cfg(test)]
@@ -175,27 +173,27 @@ mod tests {
     #[test]
     fn test_get_formatted_sql_select_simple() {
         assert_eq!(
-            get_formatted_sql(&Arguments::new(), String::from("SELECT * FROM TBL1")),
+            get_formatted_sql(&Configuration::new(), String::from("SELECT * FROM TBL1")),
             r#"SELECT * FROM TBL1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_upper() {
-        let mut args: Arguments = Arguments::new();
-        args.upper = true;
+        let mut config: Configuration = Configuration::new();
+        config.case = ConfigCase::Uppercase;
         assert_eq!(
-            get_formatted_sql(&args, String::from("select * from tbl1")),
+            get_formatted_sql(&config, String::from("select * from tbl1")),
             r#"SELECT * FROM tbl1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_lower() {
-        let mut args: Arguments = Arguments::new();
-        args.lower = true;
+        let mut config: Configuration = Configuration::new();
+        config.case = ConfigCase::Lowercase;
         assert_eq!(
-            get_formatted_sql(&args, String::from("SELECT * FROM TBL1")),
+            get_formatted_sql(&config, String::from("SELECT * FROM TBL1")),
             r#"select * from TBL1"#
         );
     }
@@ -204,7 +202,7 @@ mod tests {
     fn test_get_formatted_sql_select_simple_newlines() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT  *
@@ -221,7 +219,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_select_multiple_columns_inline() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("SELECT C1,C2, C3 FROM TBL1")
             ),
             r#"SELECT C1, C2, C3 FROM TBL1"#
@@ -232,7 +230,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_multiple_columns_newlines() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT
@@ -255,7 +253,7 @@ FROM TBL1 AS T"#
     fn test_get_formatted_sql_sub_query_inline() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID
@@ -270,7 +268,7 @@ FROM TBL1 AS T"#
     fn test_get_formatted_sql_sub_query_multiline() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT (
@@ -293,7 +291,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_select_where_in() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT *
@@ -312,7 +310,7 @@ WHERE C1 IN (1, 2, 3)"#
     fn test_get_formatted_sql_select_group_by() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT C1,
@@ -333,7 +331,7 @@ GROUP BY C1"#
     fn test_get_formatted_sql_join() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT T1.C1, T1.C2,
@@ -354,7 +352,7 @@ FROM TBL1 AS T1
     fn test_get_formatted_sql_select_where() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT
@@ -381,7 +379,7 @@ WHERE C1 > 1
     fn test_get_formatted_sql_multi_join() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT DISTINCT
@@ -414,7 +412,7 @@ LIMIT 1"#
     fn test_get_formatted_sql_two_statements() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;")
             ),
             String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;")
@@ -425,7 +423,7 @@ LIMIT 1"#
     fn test_get_formatted_sql_single_comments() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     -- top comment
@@ -446,7 +444,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_multiline_comments() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     /* top comment */
@@ -479,7 +477,7 @@ SELECT C1 /* inline comment */
     fn test_get_formatted_sql_select_into() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT
@@ -504,7 +502,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_select_multiple_cte() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     WITH CTE1 AS
@@ -529,7 +527,7 @@ SELECT * FROM CTE1
     fn test_get_formatted_sql_select_if() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("SELECT IIF(C1>5,1,0) AS C1 FROM TBL1")
             ),
             r#"SELECT IIF(C1 > 5, 1, 0) AS C1 FROM TBL1"#
@@ -540,7 +538,7 @@ SELECT * FROM CTE1
     fn test_get_formatted_sql_case() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     SELECT
@@ -567,7 +565,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_insert_simple() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("INSERT INTO TBL1(ID)VALUES(1)")
             ),
             r#"INSERT INTO TBL1 (ID) VALUES (1)"#
@@ -578,7 +576,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_insert_multiple_columns() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
             ),
             r#"INSERT INTO TBL1 (C1, C2, C3) VALUES (1, 2, 3)"#
@@ -589,7 +587,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_insert_select() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     INSERT INTO TBL1 (C1,C2,C3)
@@ -608,7 +606,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_delete_simple() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("DELETE FROM TBL1 WHERE C<=1")
             ),
             r#"DELETE FROM TBL1 WHERE C <= 1"#
@@ -619,7 +617,7 @@ FROM TBL1"#
     fn test_get_formatted_sql_delete_newline() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                 DELETE
@@ -638,7 +636,7 @@ WHERE C <= 1"#
     fn test_get_formatted_sql_create_table_simple() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("CREATE TABLE TBL1 (C1 INT)")
             ),
             r#"CREATE TABLE TBL1 (C1 INT)"#
@@ -649,7 +647,7 @@ WHERE C <= 1"#
     fn test_get_formatted_sql_create_table_varchar() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")
             ),
             r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#
@@ -660,7 +658,7 @@ WHERE C <= 1"#
     fn test_get_formatted_sql_create_table_default() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     CREATE TABLE TBL1 (
@@ -679,7 +677,7 @@ WHERE C <= 1"#
     fn test_get_formatted_sql_create_table_complex() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     CREATE TABLE IF NOT EXISTS TBL1 (
@@ -706,7 +704,7 @@ WHERE C <= 1"#
     fn test_get_formatted_sql_trigger() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     CREATE TRIGGER IF NOT EXISTS TR1
@@ -733,7 +731,7 @@ AFTER INSERT
     fn test_get_formatted_sql_while_loop() {
         assert_eq!(
             get_formatted_sql(
-                &Arguments::new(),
+                &Configuration::new(),
                 String::from(
                     r#"
                     DECLARE VAR_COUNT INT;

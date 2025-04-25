@@ -26,13 +26,16 @@ fn main() {
         process::exit(0);
     }
 
+    let config: configuration::Configuration = configuration::Configuration::from(&args);
+
     let sql_in: Result<String, io::Error> = get_input_sql(&args.input);
     if sql_in.is_err() {
         print_error(sql_in.err().unwrap().to_string().as_str());
         process::exit(1);
     }
     let sql_in: String = sql_in.unwrap();
-    let sql_out: String = format::get_formatted_sql(&args, sql_in);
+
+    let sql_out: String = format::get_formatted_sql(&config, sql_in);
 
     if args.output.is_some() {
         match fs::write(args.output.unwrap(), &sql_out) {

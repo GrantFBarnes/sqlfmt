@@ -6,6 +6,14 @@ pub struct Configuration {
 }
 
 impl Configuration {
+    #[allow(dead_code)]
+    pub fn new() -> Configuration {
+        Configuration {
+            case: ConfigCase::Unchanged,
+            tabs: ConfigTab::Space(4),
+        }
+    }
+
     pub fn from(args: &Arguments) -> Configuration {
         Configuration {
             case: if args.upper {
