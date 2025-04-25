@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::io::{self, IsTerminal};
 use std::process;
@@ -8,7 +9,7 @@ mod format;
 mod token;
 
 fn main() {
-    let args: Result<arguments::Arguments, &str> = arguments::get_arguments();
+    let args: Result<arguments::Arguments, &str> = arguments::Arguments::from(env::args().skip(1));
     if args.is_err() {
         print_error(args.err().unwrap());
         process::exit(1);
