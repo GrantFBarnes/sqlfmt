@@ -74,7 +74,7 @@ impl FormatState {
         match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "WHERE" | "ORDER" | "GROUP"
             | "HAVING" | "CASE" | "BEGIN" | "INTO" | "SET" | "VALUE" | "VALUES" | "WHILE"
-            | "WITH" | "DO" | "(" => {
+            | "WITH" | "ELSE" | "DO" | "(" => {
                 self.indent_stack.push(token_value);
             }
             "THEN" => {
@@ -90,9 +90,12 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
-            "END" => self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN"]),
+            "END" => {
+                self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN", "ELSE"])
+            }
             "INTO" => self.decrease_indent_stack_until(token_value, vec!["SELECT", "INSERT"]),
             "SET" => self.decrease_indent_stack_until(token_value, vec!["UPDATE"]),
+            "ELSE" => self.decrease_indent_stack_until(token_value, vec!["THEN", "CASE"]),
             "VALUE" | "VALUES" => self.decrease_indent_stack_until(token_value, vec!["INTO"]),
             "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" => self.decrease_indent_stack_until(
                 token_value,
@@ -137,7 +140,10 @@ impl FormatState {
                 break;
             }
 
-            if (top == "BEGIN" || top == "DO" || top == "THEN") && token_value != "END" {
+            if (top == "BEGIN" || top == "DO" || top == "THEN" || top == "ELSE")
+                && token_value != "END"
+                && token_value != "ELSE"
+            {
                 self.indent_stack.push(top);
                 break;
             }
@@ -609,7 +615,7 @@ SELECT * FROM CTE1
     C1,
     CASE WHEN C1 <= 1 THEN 'small'
         WHEN C1 <= 3 THEN 'medium'
-        ELSE 'large' END AS C2,
+    ELSE 'large' END AS C2,
     C3
 FROM TBL1"#
         );
