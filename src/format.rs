@@ -73,8 +73,8 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "WHERE" | "ORDER" | "GROUP"
-            | "HAVING" | "CASE" | "BEGIN" | "INTO" | "SET" | "VALUE" | "VALUES" | "WHILE"
-            | "WITH" | "ELSE" | "DO" | "(" => {
+            | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "SET" | "VALUE" | "VALUES"
+            | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => {
                 self.indent_stack.push(token_value);
             }
             "THEN" => {
@@ -90,6 +90,7 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
             ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
+            "CLOSE" => self.decrease_indent_stack_until(token_value, vec!["OPEN"]),
             "END" => {
                 self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN", "ELSE"])
             }
@@ -97,13 +98,14 @@ impl FormatState {
             "SET" => self.decrease_indent_stack_until(token_value, vec!["UPDATE"]),
             "ELSE" => self.decrease_indent_stack_until(token_value, vec!["THEN", "CASE"]),
             "VALUE" | "VALUES" => self.decrease_indent_stack_until(token_value, vec!["INTO"]),
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" => self.decrease_indent_stack_until(
-                token_value,
-                vec![
-                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "WITH", "WHILE", "SET",
-                ],
-            ),
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" => self
+                .decrease_indent_stack_until(
+                    token_value,
+                    vec![
+                        "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
+                        "WITH", "WHILE", "SET",
+                    ],
+                ),
             "FROM" => self.decrease_indent_stack_until(
                 token_value,
                 vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -136,6 +138,11 @@ impl FormatState {
             let top: String = top.unwrap();
 
             if top == "(" && token_value != ")" {
+                self.indent_stack.push(top);
+                break;
+            }
+
+            if top == "OPEN" && token_value != "CLOSE" {
                 self.indent_stack.push(top);
                 break;
             }
