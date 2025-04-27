@@ -142,6 +142,7 @@ mod tests {
             String::from("in.sql"),
             String::from("-o"),
             String::from("out.sql"),
+            String::from("-n"),
             String::from("-u"),
             String::from("-l"),
             String::from("-t"),
@@ -155,7 +156,7 @@ mod tests {
         assert_eq!(arguments.version, true);
         assert_eq!(arguments.input, Some(String::from("in.sql")));
         assert_eq!(arguments.output, Some(String::from("out.sql")));
-        assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.newlines, true);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, true);
@@ -292,6 +293,40 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.upper, false);
+        assert_eq!(arguments.lower, false);
+        assert_eq!(arguments.tabs, false);
+        assert_eq!(arguments.spaces, 4);
+    }
+
+    #[test]
+    fn test_get_arguments_newlines_short() {
+        let args: Vec<String> = vec![String::from("-n")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+        assert_eq!(arguments.help, false);
+        assert_eq!(arguments.version, false);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, true);
+        assert_eq!(arguments.upper, false);
+        assert_eq!(arguments.lower, false);
+        assert_eq!(arguments.tabs, false);
+        assert_eq!(arguments.spaces, 4);
+    }
+
+    #[test]
+    fn test_get_arguments_newlines_long() {
+        let args: Vec<String> = vec![String::from("--newlines")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+        assert_eq!(arguments.help, false);
+        assert_eq!(arguments.version, false);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, true);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);

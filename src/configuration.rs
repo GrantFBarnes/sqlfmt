@@ -18,7 +18,7 @@ impl Configuration {
 
     pub fn from(args: &Arguments) -> Configuration {
         Configuration {
-            newlines: false,
+            newlines: args.newlines,
             case: if args.upper {
                 ConfigCase::Uppercase
             } else if args.lower {
@@ -61,6 +61,19 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.case, ConfigCase::Unchanged);
+        assert_eq!(config.tabs, ConfigTab::Space(4));
+    }
+
+    #[test]
+    fn test_get_configuration_newlines() {
+        let args: Vec<String> = vec![String::from("-n")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+
+        let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, true);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
     }
