@@ -7,6 +7,7 @@ pub struct Arguments {
     pub input: Option<String>,
     pub output: Option<String>,
 
+    pub newlines: bool,
     pub upper: bool,
     pub lower: bool,
     pub tabs: bool,
@@ -24,6 +25,7 @@ impl Arguments {
             input: None,
             output: None,
 
+            newlines: false,
             upper: false,
             lower: false,
             tabs: false,
@@ -53,6 +55,9 @@ impl Arguments {
                         return Err("Invalid arguments provided.");
                     }
                     arguments.arg_type = Some(ArgType::Output);
+                }
+                "-n" | "--newlines" => {
+                    arguments.newlines = true;
                 }
                 "-u" | "--upper" => {
                     arguments.upper = true;
@@ -121,6 +126,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -149,6 +155,7 @@ mod tests {
         assert_eq!(arguments.version, true);
         assert_eq!(arguments.input, Some(String::from("in.sql")));
         assert_eq!(arguments.output, Some(String::from("out.sql")));
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, true);
@@ -165,6 +172,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -181,6 +189,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -197,6 +206,7 @@ mod tests {
         assert_eq!(arguments.version, true);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -213,6 +223,7 @@ mod tests {
         assert_eq!(arguments.version, true);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -229,6 +240,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -245,6 +257,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -261,6 +274,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -277,6 +291,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -293,6 +308,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -309,6 +325,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -325,6 +342,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
@@ -341,6 +359,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
@@ -357,6 +376,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
@@ -373,6 +393,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
@@ -389,6 +410,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -405,6 +427,7 @@ mod tests {
         assert_eq!(arguments.version, false);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);

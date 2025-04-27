@@ -78,6 +78,7 @@ Options:
     -o, --output <FILE_PATH> Define path to output SQL file
 
   Format Configuration
+    -n, --newlines     Replace newlines
     -u, --upper        Uppercase keywords
     -l, --lower        Lowercase keywords
     -t, --tabs         Use tabs for indents

@@ -1,6 +1,7 @@
 use crate::arguments::Arguments;
 
 pub struct Configuration {
+    pub newlines: bool,
     pub case: ConfigCase,
     pub tabs: ConfigTab,
 }
@@ -9,6 +10,7 @@ impl Configuration {
     #[allow(dead_code)]
     pub fn new() -> Configuration {
         Configuration {
+            newlines: false,
             case: ConfigCase::Unchanged,
             tabs: ConfigTab::Space(4),
         }
@@ -16,6 +18,7 @@ impl Configuration {
 
     pub fn from(args: &Arguments) -> Configuration {
         Configuration {
+            newlines: false,
             case: if args.upper {
                 ConfigCase::Uppercase
             } else if args.lower {
@@ -57,6 +60,7 @@ mod tests {
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
     }
@@ -69,6 +73,7 @@ mod tests {
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Uppercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
     }
@@ -81,6 +86,7 @@ mod tests {
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Lowercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
     }
@@ -93,6 +99,7 @@ mod tests {
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Tab);
     }
@@ -105,6 +112,7 @@ mod tests {
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(2));
     }
