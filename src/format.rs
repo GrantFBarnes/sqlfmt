@@ -87,76 +87,69 @@ impl FormatState {
     }
 
     fn decrease_indent_stack(&mut self, token: &Token) {
+        let mut find_values: Vec<&str> = vec![];
         let token_value: String = token.value.to_uppercase();
         match token_value.as_str() {
-            ")" => self.decrease_indent_stack_until(token_value, vec!["("]),
-            "CLOSE" => self.decrease_indent_stack_until(token_value, vec!["OPEN"]),
-            "END" => {
-                self.decrease_indent_stack_until(token_value, vec!["BEGIN", "CASE", "THEN", "ELSE"])
+            ")" => find_values = vec!["("],
+            "CLOSE" => find_values = vec!["OPEN"],
+            "END" => find_values = vec!["BEGIN", "CASE", "THEN", "ELSE"],
+            "INTO" => find_values = vec!["SELECT", "INSERT"],
+            "SET" => find_values = vec!["UPDATE"],
+            "ELSE" => find_values = vec!["THEN", "CASE"],
+            "VALUE" | "VALUES" => find_values = vec!["INTO"],
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" => {
+                find_values = vec![
+                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
+                    "WITH", "WHILE", "SET",
+                ]
             }
-            "INTO" => self.decrease_indent_stack_until(token_value, vec!["SELECT", "INSERT"]),
-            "SET" => self.decrease_indent_stack_until(token_value, vec!["UPDATE"]),
-            "ELSE" => self.decrease_indent_stack_until(token_value, vec!["THEN", "CASE"]),
-            "VALUE" | "VALUES" => self.decrease_indent_stack_until(token_value, vec!["INTO"]),
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" => self
-                .decrease_indent_stack_until(
-                    token_value,
-                    vec![
-                        "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                        "WITH", "WHILE", "SET",
-                    ],
-                ),
-            "FROM" => self.decrease_indent_stack_until(
-                token_value,
-                vec!["SELECT", "DELETE", "UPDATE", "INTO"],
-            ),
+            "FROM" => find_values = vec!["SELECT", "DELETE", "UPDATE", "INTO"],
             "WHERE" | "ORDER" | "GROUP" | "HAVING" | "LIMIT" | "WHILE" => {
-                self.decrease_indent_stack_until(token_value, vec!["FROM"])
+                find_values = vec!["FROM"]
             }
             _ => (),
         }
 
         match token.category {
-            Some(TokenCategory::Comment) => self.decrease_indent_stack_until(
-                String::new(),
-                vec![
+            Some(TokenCategory::Comment) => {
+                find_values = vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
                     "WITH", "WHILE", "SET",
-                ],
-            ),
+                ];
+            }
             _ => (),
         }
-    }
 
-    fn decrease_indent_stack_until(&mut self, token_value: String, find_values: Vec<&str>) {
-        loop {
-            let top: Option<String> = self.indent_stack.pop();
-            if top.is_none() {
-                break;
-            }
+        if !find_values.is_empty() {
+            loop {
+                let top: Option<String> = self.indent_stack.pop();
+                if top.is_none() {
+                    break;
+                }
 
-            let top: String = top.unwrap();
+                let top: String = top.unwrap();
 
-            if top == "(" && token_value != ")" {
-                self.indent_stack.push(top);
-                break;
-            }
+                if top == "(" && token_value != ")" {
+                    self.indent_stack.push(top);
+                    break;
+                }
 
-            if top == "OPEN" && token_value != "CLOSE" {
-                self.indent_stack.push(top);
-                break;
-            }
+                if top == "OPEN" && token_value != "CLOSE" {
+                    self.indent_stack.push(top);
+                    break;
+                }
 
-            if (top == "BEGIN" || top == "DO" || top == "THEN" || top == "ELSE")
-                && token_value != "END"
-                && token_value != "ELSE"
-            {
-                self.indent_stack.push(top);
-                break;
-            }
+                if (top == "BEGIN" || top == "DO" || top == "THEN" || top == "ELSE")
+                    && token_value != "END"
+                    && token_value != "ELSE"
+                {
+                    self.indent_stack.push(top);
+                    break;
+                }
 
-            if find_values.contains(&top.as_str()) {
-                break;
+                if find_values.contains(&top.as_str()) {
+                    break;
+                }
             }
         }
     }
