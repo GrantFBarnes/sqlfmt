@@ -78,7 +78,8 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" | "PIVOT" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" | "PIVOT"
+            | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
                     "WITH", "WHILE", "SET", "PIVOT",
@@ -879,6 +880,55 @@ PIVOT (
     AVG(StandardCost) FOR DaysToManufacture IN
     ([0], [1], [2], [3], [4])
 ) AS PivotTable;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_cursor() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    DECLARE @ID INT, @NAME NVARCHAR(50);
+
+                    DECLARE SAMPLE_CURSOR CURSOR FOR
+                    SELECT ID, NAME
+                    FROM TBL1;
+
+                    OPEN SAMPLE_CURSOR
+
+                    FETCH NEXT FROM SAMPLE_CURSOR
+                    INTO @ID, @NAME
+
+                    WHILE @@FETCH_STATUS = 0
+                    BEGIN
+                    FETCH NEXT FROM SAMPLE_CURSOR
+                    INTO @VENDOR_ID, @VENDOR_NAME
+                    END
+                    CLOSE SAMPLE_CURSOR;
+                    DEALLOCATE SAMPLE_CURSOR;
+                    "#,
+                ),
+            ),
+            r#"DECLARE @ID INT, @NAME NVARCHAR(50);
+
+DECLARE SAMPLE_CURSOR CURSOR FOR
+SELECT ID, NAME
+FROM TBL1;
+
+OPEN SAMPLE_CURSOR
+
+    FETCH NEXT FROM SAMPLE_CURSOR
+    INTO @ID, @NAME
+
+    WHILE @@FETCH_STATUS = 0
+        BEGIN
+            FETCH NEXT FROM SAMPLE_CURSOR
+            INTO @VENDOR_ID, @VENDOR_NAME
+        END
+CLOSE SAMPLE_CURSOR;
+DEALLOCATE SAMPLE_CURSOR;"#
         );
     }
 }
