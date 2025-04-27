@@ -78,10 +78,10 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" | "PIVOT" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "WITH", "WHILE", "SET",
+                    "WITH", "WHILE", "SET", "PIVOT",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -846,6 +846,39 @@ WHILE VAR_COUNT > 0 DO
         INTO VAR_COUNT
         FROM TBL1;
 END WHILE;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_pivot() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT 'AverageCost' AS CostSortedByProductionDays,
+                        [0],[1],[2],[3],[4]
+                    FROM (
+                        SELECT DaysToManufacture, StandardCost
+                        FROM Production.Product
+                    ) AS SourceTable
+                    PIVOT (
+                        AVG(StandardCost) FOR DaysToManufacture IN
+                        ([0],[1],[2],[3],[4])
+                    ) AS PivotTable;
+                    "#
+                )
+            ),
+            r#"SELECT 'AverageCost' AS CostSortedByProductionDays,
+    [0], [1], [2], [3], [4]
+FROM (
+        SELECT DaysToManufacture, StandardCost
+        FROM Production.Product
+    ) AS SourceTable
+PIVOT (
+    AVG(StandardCost) FOR DaysToManufacture IN
+    ([0], [1], [2], [3], [4])
+) AS PivotTable;"#
         );
     }
 }
