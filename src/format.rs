@@ -282,10 +282,10 @@ FROM TBL1"#
                     r#"
                     SELECT
                     C1 AS 'Column 1',
-                    C2 AS 'Column 2',
+                      C2 AS 'Column 2',
                     C3
                     FROM TBL1 AS T
-                "#
+                    "#
                 )
             ),
             r#"SELECT
@@ -301,11 +301,7 @@ FROM TBL1 AS T"#
         assert_eq!(
             get_formatted_sql(
                 &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID
-                "#
-                )
+                String::from(r#" SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID "#)
             ),
             r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#
         );
@@ -323,7 +319,7 @@ FROM TBL1 AS T"#
                     ) AS ID,
                     C1
                     FROM TBL1
-                "#
+                    "#
                 )
             ),
             r#"SELECT (
@@ -344,7 +340,7 @@ FROM TBL1"#
                     SELECT *
                     FROM TBL1
                     WHERE C1 IN (1,2,3)
-                "#,
+                    "#,
                 )
             ),
             r#"SELECT *
@@ -364,7 +360,7 @@ WHERE C1 IN (1, 2, 3)"#
                     COUNT(*) AS CNT
                     FROM TBL1
                     GROUP BY C1
-                "#,
+                    "#,
                 )
             ),
             r#"SELECT C1,
@@ -385,7 +381,7 @@ GROUP BY C1"#
                     T2.C2
                     FROM TBL1 AS T1
                     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
-                "#
+                    "#
                 )
             ),
             r#"SELECT T1.C1, T1.C2,
@@ -409,7 +405,7 @@ FROM TBL1 AS T1
                     FROM TBL1
                     WHERE C1>1
                     AND C2 IS NOT NULL
-                "#
+                    "#
                 )
             ),
             r#"SELECT
@@ -439,7 +435,7 @@ WHERE C1 > 1
                     WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
                     ORDER BY T1.C1
                     LIMIT 1
-                "#
+                    "#
                 )
             ),
             r#"SELECT DISTINCT
@@ -477,7 +473,7 @@ LIMIT 1"#
                     SELECT C1--inline comment
                     -- after comment
                     FROM TBL1
-                "#,
+                    "#,
                 )
             ),
             r#"-- top comment
@@ -505,7 +501,7 @@ FROM TBL1"#
                         C1,
                         C2
                     FROM TBL1;
-                "#,
+                    "#,
                 )
             ),
             r#"-- comment
@@ -539,7 +535,7 @@ FROM TBL1;"#
                       indent
 
                     */FROM TBL1
-                "#,
+                    "#,
                 )
             ),
             r#"/* top comment */
@@ -568,7 +564,7 @@ SELECT C1 /* inline comment */
                     C3
                     INTO TBL2
                     FROM TBL1
-                "#,
+                    "#,
                 )
             ),
             r#"SELECT
@@ -593,7 +589,7 @@ FROM TBL1"#
                     (SELECT C2 FROM TBL2)
                     SELECT * FROM CTE1
                     INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1
-                "#,
+                    "#,
                 )
             ),
             r#"WITH CTE1 AS
@@ -630,7 +626,7 @@ SELECT * FROM CTE1
                     ELSE 'large' END AS C2,
                     C3
                     FROM TBL1
-                "#
+                    "#
                 )
             ),
             r#"SELECT
@@ -675,7 +671,7 @@ FROM TBL1"#
                     INSERT INTO TBL1 (C1,C2,C3)
                     SELECT C1,C2,C3
                     FROM TBL1
-                "#,
+                    "#,
                 )
             ),
             r#"INSERT INTO TBL1 (C1, C2, C3)
@@ -702,10 +698,10 @@ FROM TBL1"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                DELETE
-                FROM TBL1
-                WHERE C<=1
-                "#
+                    DELETE
+                    FROM TBL1
+                    WHERE C<=1
+                    "#
                 )
             ),
             r#"DELETE
@@ -746,7 +742,7 @@ WHERE C <= 1"#
                     CREATE TABLE TBL1 (
                       ID UUID NOT NULL DEFAULT UUID()
                     )
-                "#
+                    "#
                 )
             ),
             r#"CREATE TABLE TBL1 (
@@ -769,7 +765,7 @@ WHERE C <= 1"#
                         I1 INT,
                         PRIMARY KEY (ID)
                     )
-                "#
+                    "#
                 )
             ),
             r#"CREATE TABLE IF NOT EXISTS TBL1 (
@@ -790,13 +786,13 @@ WHERE C <= 1"#
                 String::from(
                     r#"
                     CREATE TRIGGER IF NOT EXISTS TR1
-                        AFTER INSERT
-                        ON TBL1
-                        FOR EACH ROW
+                    AFTER INSERT
+                    ON TBL1
+                    FOR EACH ROW
                     BEGIN
-                        CALL SP1(NEW.ID);
+                    CALL SP1(NEW.ID);
                     END;
-                "#
+                    "#
                 )
             ),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
@@ -823,14 +819,14 @@ AFTER INSERT
                     FROM TBL1;
 
                     WHILE VAR_COUNT > 0 DO
-                        DELETE FROM TBL1
-                        WHERE ID = VAR_COUNT;
+                    DELETE FROM TBL1
+                    WHERE ID = VAR_COUNT;
 
-                        SELECT COUNT(ID)
-                        INTO VAR_COUNT
-                        FROM TBL1;
+                    SELECT COUNT(ID)
+                    INTO VAR_COUNT
+                    FROM TBL1;
                     END WHILE;
-                "#
+                    "#
                 )
             ),
             r#"DECLARE VAR_COUNT INT;
@@ -858,14 +854,14 @@ END WHILE;"#
                 String::from(
                     r#"
                     SELECT 'AverageCost' AS CostSortedByProductionDays,
-                        [0],[1],[2],[3],[4]
+                    [0],[1],[2],[3],[4]
                     FROM (
-                        SELECT DaysToManufacture, StandardCost
-                        FROM Production.Product
+                    SELECT DaysToManufacture, StandardCost
+                    FROM Production.Product
                     ) AS SourceTable
                     PIVOT (
-                        AVG(StandardCost) FOR DaysToManufacture IN
-                        ([0],[1],[2],[3],[4])
+                    AVG(StandardCost) FOR DaysToManufacture IN
+                    ([0],[1],[2],[3],[4])
                     ) AS PivotTable;
                     "#
                 )
