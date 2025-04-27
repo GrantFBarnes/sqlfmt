@@ -207,10 +207,56 @@ mod tests {
                     r#"
                     SELECT  *
                     FROM  TBL1
-                "#
+                    "#
                 )
             ),
             r#"SELECT *
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_tabs() {
+        let mut config: Configuration = Configuration::new();
+        config.tabs = ConfigTab::Tab;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT
+                        C1,
+                        C2
+                    FROM TBL1
+                    "#
+                )
+            ),
+            r#"SELECT
+	C1,
+	C2
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_spaces() {
+        let mut config: Configuration = Configuration::new();
+        config.tabs = ConfigTab::Space(2);
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT
+                        C1,
+                        C2
+                    FROM TBL1
+                    "#
+                )
+            ),
+            r#"SELECT
+  C1,
+  C2
 FROM TBL1"#
         );
     }
