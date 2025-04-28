@@ -1,6 +1,45 @@
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
+pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
+    let mut state: FormatState = FormatState::new();
+
+    let tokens: Vec<Token> = get_sql_tokens(sql);
+    for i in 0..tokens.len() {
+        let token: &Token = &tokens[i];
+
+        if config.newlines {
+            if token.category == Some(TokenCategory::NewLine) {
+                continue;
+            }
+        }
+
+        if token.category == Some(TokenCategory::ParenOpen) {
+            for p in 0..3 {
+                let t: Option<&Token> = state.tokens.iter().nth_back(p);
+                if t.is_some_and(|t| {
+                    t.category == Some(TokenCategory::Method)
+                        || t.category == Some(TokenCategory::DataType)
+                }) {
+                    state.in_method = true;
+                    break;
+                }
+            }
+        }
+
+        state.decrease_indent_stack(token);
+        state.add_pre_space(token, config);
+        state.push(token.clone());
+        state.increase_indent_stack(token);
+
+        if token.category == Some(TokenCategory::ParenClose) {
+            state.in_method = false;
+        }
+    }
+
+    return state.get_result(config);
+}
+
 struct FormatState {
     tokens: Vec<Token>,
     indent_stack: Vec<String>,
@@ -13,13 +52,6 @@ impl FormatState {
             tokens: vec![],
             indent_stack: vec![],
             in_method: false,
-        }
-    }
-
-    fn get_indent(&self, config: &Configuration) -> String {
-        match config.tabs {
-            ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-            ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
         }
     }
 
@@ -46,7 +78,10 @@ impl FormatState {
         };
 
         if prev_token_category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_space(self.get_indent(config)));
+            self.push(Token::new_space(match config.tabs {
+                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+            }));
             return;
         }
 
@@ -256,45 +291,6 @@ impl FormatState {
         }
         return result.trim().to_string();
     }
-}
-
-pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
-    let mut state: FormatState = FormatState::new();
-
-    let tokens: Vec<Token> = get_sql_tokens(sql);
-    for i in 0..tokens.len() {
-        let token: &Token = &tokens[i];
-
-        if config.newlines {
-            if token.category == Some(TokenCategory::NewLine) {
-                continue;
-            }
-        }
-
-        if token.category == Some(TokenCategory::ParenOpen) {
-            for p in 0..3 {
-                let t: Option<&Token> = state.tokens.iter().nth_back(p);
-                if t.is_some_and(|t| {
-                    t.category == Some(TokenCategory::Method)
-                        || t.category == Some(TokenCategory::DataType)
-                }) {
-                    state.in_method = true;
-                    break;
-                }
-            }
-        }
-
-        state.decrease_indent_stack(token);
-        state.add_pre_space(token, config);
-        state.push(token.clone());
-        state.increase_indent_stack(token);
-
-        if token.category == Some(TokenCategory::ParenClose) {
-            state.in_method = false;
-        }
-    }
-
-    return state.get_result(config);
 }
 
 #[cfg(test)]
