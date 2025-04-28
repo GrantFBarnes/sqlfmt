@@ -42,6 +42,13 @@ impl Token {
         }
     }
 
+    pub fn newline() -> Token {
+        Token {
+            value: "\n".to_string(),
+            category: Some(TokenCategory::NewLine),
+        }
+    }
+
     fn len(&self) -> usize {
         self.value.len()
     }
@@ -129,7 +136,6 @@ impl Token {
             "BYTE" => Some(TokenCategory::Keyword),
             "BYTEINT" => Some(TokenCategory::Keyword),
             "BYTES" => Some(TokenCategory::Keyword),
-            "CALL" => Some(TokenCategory::Keyword),
             "CALLED" => Some(TokenCategory::Keyword),
             "CAPTURE" => Some(TokenCategory::Keyword),
             "CARDINALITY" => Some(TokenCategory::Keyword),
@@ -427,7 +433,6 @@ impl Token {
             "JSON_TABLE_PRIMITIVE" => Some(TokenCategory::Keyword),
             "JSON_VALUE" => Some(TokenCategory::Keyword),
             "KEEP" => Some(TokenCategory::Keyword),
-            "KEY" => Some(TokenCategory::Keyword),
             "KEYS" => Some(TokenCategory::Keyword),
             "KILL" => Some(TokenCategory::Keyword),
             "KURTOSIS" => Some(TokenCategory::Keyword),
@@ -932,6 +937,7 @@ impl Token {
             "FLOAT" => Some(TokenCategory::DataType),
             "INT" => Some(TokenCategory::DataType),
             "INTEGER" => Some(TokenCategory::DataType),
+            "KEY" => Some(TokenCategory::DataType),
             "LONGBLOB" => Some(TokenCategory::DataType),
             "LONGTEXT" => Some(TokenCategory::DataType),
             "MEDIUMBLOB" => Some(TokenCategory::DataType),
@@ -973,6 +979,7 @@ impl Token {
             "ATAN2" => Some(TokenCategory::Method),
             "AVG" => Some(TokenCategory::Method),
             "BIN" => Some(TokenCategory::Method),
+            "CALL" => Some(TokenCategory::Method),
             "CAST" => Some(TokenCategory::Method),
             "CEIL" => Some(TokenCategory::Method),
             "CEILING" => Some(TokenCategory::Method),
