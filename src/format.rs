@@ -27,7 +27,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             }
         }
 
-        state.decrease_indent_stack(token);
+        state.decrease_indent_stack(token, tokens.get(i + 1), tokens.get(i + 2));
         state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token);
@@ -199,9 +199,9 @@ impl FormatState {
     fn increase_indent_stack(&mut self, token: &Token) {
         let token_value: String = token.value.to_uppercase();
         if match token_value.as_str() {
-            "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "WHERE" | "ORDER" | "GROUP"
-            | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "SET" | "VALUE" | "VALUES"
-            | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => true,
+            "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "JOIN" | "WHERE" | "ORDER"
+            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "SET" | "VALUE"
+            | "VALUES" | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => true,
             "THEN" => self.indent_stack.last() != Some(&String::from("CASE")),
             _ => false,
         } {
@@ -209,7 +209,28 @@ impl FormatState {
         }
     }
 
-    fn decrease_indent_stack(&mut self, token: &Token) {
+    fn decrease_indent_stack(
+        &mut self,
+        token: &Token,
+        next1_token: Option<&Token>,
+        next2_token: Option<&Token>,
+    ) {
+        if self.indent_stack.is_empty() {
+            return;
+        }
+
+        let top_of_stack: &String = self.indent_stack.last().unwrap();
+        let decrease_if_found: Vec<&str> = vec!["JOIN"];
+        if decrease_if_found.contains(&top_of_stack.as_str()) {
+            if &token.value.to_uppercase() == top_of_stack
+                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
+                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
+            {
+                self.indent_stack.pop();
+                return;
+            }
+        }
+
         let token_value: String = token.value.to_uppercase();
         let decrease_until_match: Vec<&str> = match token_value.as_str() {
             ")" => vec!["("],
@@ -718,7 +739,9 @@ WHERE C1 > 1
                     T2.C2 AS C2,
                     T3.C3 AS C3
                     FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                    INNER JOIN TBL2 AS T2
+                    ON T2.C1 = T1.C1
+                    AND T2.C2 = T1.C2
                     INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
                     WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
                     ORDER BY T1.C1
@@ -731,7 +754,9 @@ WHERE C1 > 1
     T2.C2 AS C2,
     T3.C3 AS C3
 FROM TBL1 AS T1
-    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+    INNER JOIN TBL2 AS T2
+        ON T2.C1 = T1.C1
+        AND T2.C2 = T1.C2
     INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
 WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
 ORDER BY T1.C1
@@ -753,7 +778,9 @@ LIMIT 1"#
                     T2.C2 AS C2,
                     T3.C3 AS C3
                     FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                    INNER JOIN TBL2 AS T2
+                    ON T2.C1 = T1.C1
+                    AND T2.C2 = T1.C2
                     INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
                     WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
                     ORDER BY T1.C1
@@ -767,6 +794,7 @@ LIMIT 1"#
     T3.C3 AS C3
 FROM TBL1 AS T1
     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+        AND T2.C2 = T1.C2
     INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
 WHERE (
         T1.C2 <> T2.C2
