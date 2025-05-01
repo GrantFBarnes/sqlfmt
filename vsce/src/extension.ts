@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const sql_in = editor.document.getText(textRange);
 
-    let args = [];
+    let args: string[] = [];
 
     let config = vscode.workspace.getConfiguration();
 
@@ -54,8 +54,11 @@ export function activate(context: vscode.ExtensionContext) {
     if (config.get("sqlfmt.useTabs")) {
       args.push("-t");
     } else {
-      args.push("-s");
-      args.push(config.get("sqlfmt.setSpaceCount"));
+      let count = config.get("sqlfmt.setSpaceCount");
+      if (typeof count == "number") {
+        args.push("-s");
+        args.push(count.toString());
+      }
     }
 
     let p = cp.spawn("sqlfmt", args);
