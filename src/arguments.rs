@@ -11,7 +11,7 @@ pub struct Arguments {
     pub upper: bool,
     pub lower: bool,
     pub tabs: bool,
-    pub spaces: u8,
+    pub spaces: Option<u8>,
 }
 
 impl Arguments {
@@ -29,7 +29,7 @@ impl Arguments {
             upper: false,
             lower: false,
             tabs: false,
-            spaces: 4,
+            spaces: None,
         }
     }
 
@@ -88,7 +88,7 @@ impl Arguments {
                         if spaces.is_err() {
                             return Err("Invalid space size provided (must be 0-255).");
                         }
-                        arguments.spaces = spaces.unwrap();
+                        arguments.spaces = Some(spaces.unwrap());
                         arguments.arg_type = None;
                     }
                     None => {
@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, true);
-        assert_eq!(arguments.spaces, 2);
+        assert_eq!(arguments.spaces, Some(2));
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -194,7 +194,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -211,7 +211,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -228,7 +228,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -279,7 +279,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -296,7 +296,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod tests {
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -381,7 +381,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -415,7 +415,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -432,7 +432,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
-        assert_eq!(arguments.spaces, 4);
+        assert_eq!(arguments.spaces, None);
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 2);
+        assert_eq!(arguments.spaces, Some(2));
     }
 
     #[test]
@@ -466,7 +466,7 @@ mod tests {
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
-        assert_eq!(arguments.spaces, 2);
+        assert_eq!(arguments.spaces, Some(2));
     }
 
     #[test]
