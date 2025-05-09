@@ -123,7 +123,7 @@ impl FormatState {
         }
 
         match prev_token.value.to_uppercase().as_str() {
-            "BEGIN" | "CASE" | "DISTINCT" | "DO" | "SET" => {
+            "BEGIN" | "CASE" | "DISTINCT" | "DO" => {
                 self.push(Token::newline());
                 return;
             }
@@ -532,6 +532,89 @@ FROM TBL1"#
     ) AS ID,
     C1
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_set() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SET C1 = 1
+                    SET C2 = 2
+                    "#,
+                )
+            ),
+            r#"SET C1 = 1
+SET C2 = 2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_set_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SET C1 = 1
+                    SET C2 = 2
+                    "#,
+                )
+            ),
+            r#"SET C1 = 1
+SET C2 = 2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_update() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    UPDATE TBL1
+                    SET
+                    C1 = 1,
+                    C2 = 2
+                    WHERE C3 = 3
+                    "#,
+                )
+            ),
+            r#"UPDATE TBL1
+SET
+    C1 = 1,
+    C2 = 2
+WHERE C3 = 3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_update_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    UPDATE TBL1
+                    SET
+                    C1 = 1,
+                    C2 = 2
+                    WHERE C3 = 3
+                    "#,
+                )
+            ),
+            r#"UPDATE TBL1
+SET C1 = 1,
+    C2 = 2
+WHERE C3 = 3"#
         );
     }
 
