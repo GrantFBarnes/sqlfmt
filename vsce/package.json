@@ -28,12 +28,20 @@
       "title": "sqlfmt",
       "type": "object",
       "properties": {
+        "sqlfmt.useConfigFile": {
+          "order": 0,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Controls whether to use a configuration file (`.sqlfmt`) for settings.\n\n#### If Enabled\n\n- all other settings for this extension have no effect and will be **ignored**\n- program will run as if no override arguments are provided\n  - default settings are used\n  - a configuration file _(if found)_ can change defaults\n\n#### If Disabled\n\n- all other settings for this extension will override any defaults/config file\n- if a setting below is the default value, a config file _(if found)_ could override"
+        },
         "sqlfmt.replaceNewlines": {
+          "order": 1,
           "type": "boolean",
           "default": false,
-          "description": "Replace newlines"
+          "description": "Replace newlines when formatting."
         },
         "sqlfmt.changeKeywordCase": {
+          "order": 2,
           "type": "string",
           "enum": [
             "none",
@@ -51,19 +59,21 @@
             "Lowercase keywords when formatting"
           ],
           "default": "none",
-          "description": "Change case on keywords"
+          "description": "Change case on keywords when formatting."
+        },
+        "sqlfmt.useTabs": {
+          "order": 3,
+          "type": "boolean",
+          "default": false,
+          "description": "Use tabs instead of spaces for indentation."
         },
         "sqlfmt.setSpaceCount": {
+          "order": 4,
           "type": "number",
           "default": 4,
           "minimum": 0,
           "maximum": 255,
-          "description": "Set amont of spaces for each level of indent"
-        },
-        "sqlfmt.useTabs": {
-          "type": "boolean",
-          "default": false,
-          "description": "Use tabs instead of spaces for indentation"
+          "description": "Set amont of spaces for each level of indent."
         }
       }
     }

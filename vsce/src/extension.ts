@@ -34,30 +34,32 @@ export function activate(context: vscode.ExtensionContext) {
 
     let config = vscode.workspace.getConfiguration();
 
-    if (config.get("sqlfmt.replaceNewlines")) {
-      args.push("-n");
-    }
+    if (!config.get("sqlfmt.useConfigFile")) {
+      if (config.get("sqlfmt.replaceNewlines")) {
+        args.push("-n");
+      }
 
-    switch (config.get("sqlfmt.changeKeywordCase")) {
-      case "uppercase":
-        args.push("-u");
-        break;
+      switch (config.get("sqlfmt.changeKeywordCase")) {
+        case "uppercase":
+          args.push("-u");
+          break;
 
-      case "lowercase":
-        args.push("-l");
-        break;
+        case "lowercase":
+          args.push("-l");
+          break;
 
-      default:
-        break;
-    }
+        default:
+          break;
+      }
 
-    if (config.get("sqlfmt.useTabs")) {
-      args.push("-t");
-    } else {
-      let count = config.get("sqlfmt.setSpaceCount");
-      if (typeof count == "number") {
-        args.push("-s");
-        args.push(count.toString());
+      if (config.get("sqlfmt.useTabs")) {
+        args.push("-t");
+      } else {
+        let count = config.get("sqlfmt.setSpaceCount");
+        if (typeof count == "number") {
+          args.push("-s");
+          args.push(count.toString());
+        }
       }
     }
 

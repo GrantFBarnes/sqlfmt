@@ -10,10 +10,11 @@ The extension assumes `sqlfmt` is already an executable program on your system.
 
 This extension contributes the following settings:
 
-- `sqlfmt.changeKeywordCase`: Change case on keywords
+- `sqlfmt.useConfigFile`: Controls whether to use config file or settings below
 - `sqlfmt.replaceNewlines`: Replace newlines
-- `sqlfmt.setSpaceCount`: Set amont of spaces for each level of indent
+- `sqlfmt.changeKeywordCase`: Change case on keywords
 - `sqlfmt.useTabs`: Use tabs instead of spaces for indentation
+- `sqlfmt.setSpaceCount`: Set amont of spaces for each level of indent
 
 ## Installation
 
