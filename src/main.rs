@@ -68,7 +68,7 @@ Usage:
   sqlfmt -i <INPUT_FILE_PATH>
   <INPUT_STREAM> | sqlfmt
 
-Options:
+Arguments:
   Basic
     -h, --help    Print this message
     -v, --version Print version
@@ -82,7 +82,21 @@ Options:
     -u, --upper        Uppercase keywords
     -l, --lower        Lowercase keywords
     -t, --tabs         Use tabs for indents
-    -s, --spaces <INT> Define amount of spaces per indent"
+    -s, --spaces <INT> Define amount of spaces per indent
+
+Config File:
+  .sqlfmt
+
+  Program will look for file in current working directory and up (until root).
+  If found, file content sets the default configuration values.
+  Any configuration arguments provided will override these defaults.
+
+  Format Configuration
+    newlines
+    upper
+    lower
+    tabs
+    spaces=<INT>"
     );
 }
 

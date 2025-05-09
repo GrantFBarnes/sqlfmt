@@ -2,13 +2,15 @@
 
 Command line SQL formatter.
 
-Usage:
+## Usage
+
 ```sh
   sqlfmt -i $INPUT_FILE_PATH
   $INPUT_STREAM | sqlfmt
 ```
 
-Options:
+## Arguments
+
 ```
   Basic
     -h, --help    Print help message
@@ -24,4 +26,22 @@ Options:
     -l, --lower        Lowercase keywords
     -t, --tabs         Use tabs for indents
     -s, --spaces <INT> Define amount of spaces per indent
+```
+
+## Config File
+
+`.sqlfmt`
+
+Program will look for file in current working directory and up (until root).
+If found, file content sets the default configuration values.
+Any configuration arguments provided will override these defaults.
+
+Format Configuration
+
+```
+newlines
+upper
+lower
+tabs
+spaces=<INT>
 ```
