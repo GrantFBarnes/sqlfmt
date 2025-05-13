@@ -61,6 +61,7 @@ impl FormatState {
 
     fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
         if config.newlines {
+            self.remove_extra_newline(token);
             self.add_pre_newline(token);
         }
 
@@ -193,6 +194,19 @@ impl FormatState {
                 }
             }
             _ => (),
+        }
+    }
+
+    fn remove_extra_newline(&mut self, token: &Token) {
+        if token.category == Some(TokenCategory::Delimiter) {
+            for i in (1..self.tokens.len()).rev() {
+                if self.tokens[i].category == Some(TokenCategory::NewLine) {
+                    if self.tokens[i - 1].category == Some(TokenCategory::NewLine) {
+                        self.tokens.remove(i);
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -532,6 +546,32 @@ FROM TBL1"#
     ) AS ID,
     C1
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
+            ),
+            r#"DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
+            ),
+            r#"DECLARE C1 = 1;
+DECLARE C2 = 2;
+DECLARE C3 = 3;"#
         );
     }
 
@@ -1669,7 +1709,6 @@ AFTER INSERT ON TBL1
     FOR EACH ROW
     BEGIN
         CALL SP1 (NEW.ID);
-
     END;"#
         );
     }
@@ -1760,7 +1799,6 @@ WHILE VAR_COUNT > 0
         INTO
             VAR_COUNT
         FROM TBL1;
-
 END WHILE;"#
         );
     }
@@ -1949,7 +1987,6 @@ OPEN SAMPLE_CURSOR
                 @VENDOR_NAME
         END
 CLOSE SAMPLE_CURSOR;
-
 DEALLOCATE SAMPLE_CURSOR;"#
         );
     }
