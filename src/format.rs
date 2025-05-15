@@ -16,13 +16,13 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
 
         if token.category == Some(TokenCategory::ParenOpen) {
             for p in 0..3 {
-                let t: Option<&Token> = state.tokens.iter().nth_back(p);
-                if t.is_some_and(|t| {
-                    t.category == Some(TokenCategory::Method)
+                if let Some(t) = state.tokens.iter().nth_back(p) {
+                    if t.category == Some(TokenCategory::Method)
                         || t.category == Some(TokenCategory::DataType)
-                }) {
-                    state.in_method = true;
-                    break;
+                    {
+                        state.in_method = true;
+                        break;
+                    }
                 }
             }
         }
@@ -75,6 +75,10 @@ impl FormatState {
     }
 
     fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
+        if self.tokens.is_empty() {
+            return;
+        }
+
         if config.newlines {
             self.remove_extra_newline(token);
             self.add_pre_newline(token);
@@ -86,38 +90,46 @@ impl FormatState {
             return;
         }
 
-        let prev_token_category: Option<TokenCategory> = if self.tokens.len() > 0 {
-            self.tokens.last().unwrap().category.clone()
-        } else {
-            None
-        };
+        let prev_token: &Token = self
+            .tokens
+            .last()
+            .expect("should always have a previous token");
 
-        if prev_token_category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_space(match config.tabs {
-                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-            }));
-            return;
+        match prev_token.category {
+            Some(TokenCategory::NewLine) => {
+                self.push(Token::new_space(match config.tabs {
+                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+                }));
+                return;
+            }
+            Some(TokenCategory::ParenOpen) => return,
+            _ => (),
         }
 
-        match (&prev_token_category, &token.category) {
-            (Some(TokenCategory::ParenOpen), _)
-            | (_, Some(TokenCategory::ParenClose))
-            | (_, Some(TokenCategory::Comma))
-            | (Some(TokenCategory::DataType), Some(TokenCategory::ParenOpen))
-            | (Some(TokenCategory::Method), Some(TokenCategory::ParenOpen)) => return,
-            (_, _) => (),
+        match token.category {
+            Some(TokenCategory::Comma) => return,
+            Some(TokenCategory::ParenClose) => return,
+            Some(TokenCategory::ParenOpen) => {
+                if self.in_method {
+                    return;
+                }
+            }
+            _ => (),
         }
 
         self.push(Token::new_space(String::from(" ")));
     }
 
     fn add_pre_newline(&mut self, token: &Token) {
-        let prev_token: Option<&Token> = self.tokens.last();
-        if prev_token.is_none() {
+        if self.tokens.is_empty() {
             return;
         }
-        let prev_token: &Token = prev_token.unwrap();
+
+        let prev_token: &Token = self
+            .tokens
+            .last()
+            .expect("should always have a previous token");
 
         match prev_token.category {
             Some(TokenCategory::Delimiter) => {
@@ -1786,13 +1798,13 @@ WHERE C <= 1"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    EXEC SP_NAME();EXEC SP_NAME();
-                    EXEC SP_NAME();
+                    EXEC SP1();EXEC SP1();
+                    EXEC SP1();
                     "#
                 )
             ),
-            r#"EXEC SP_NAME (); EXEC SP_NAME ();
-EXEC SP_NAME ();"#
+            r#"EXEC SP1(); EXEC SP1();
+EXEC SP1();"#
         );
     }
 
@@ -1805,14 +1817,14 @@ EXEC SP_NAME ();"#
                 &config,
                 String::from(
                     r#"
-                    EXEC SP_NAME();EXEC SP_NAME();
-                    EXEC SP_NAME();
+                    EXEC SP1();EXEC SP1();
+                    EXEC SP1();
                     "#
                 )
             ),
-            r#"EXEC SP_NAME ();
-EXEC SP_NAME ();
-EXEC SP_NAME ();"#
+            r#"EXEC SP1();
+EXEC SP1();
+EXEC SP1();"#
         );
     }
 
@@ -1980,7 +1992,7 @@ AFTER INSERT
     ON TBL1
     FOR EACH ROW
     BEGIN
-        CALL SP1 (NEW.ID);
+        CALL SP1(NEW.ID);
     END;"#
         );
     }
@@ -2008,7 +2020,7 @@ AFTER INSERT
 AFTER INSERT ON TBL1
     FOR EACH ROW
     BEGIN
-        CALL SP1 (NEW.ID);
+        CALL SP1(NEW.ID);
     END;"#
         );
     }
