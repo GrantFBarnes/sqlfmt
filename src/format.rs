@@ -492,6 +492,73 @@ FROM TBL1 AS T"#
     }
 
     #[test]
+    fn test_get_formatted_sql_alias() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(r#"SELECT C1 AS 'Column 1' FROM TBL1"#)
+            ),
+            r#"SELECT C1 AS 'Column 1' FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_alias_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(r#"SELECT C1 AS 'Column 1' FROM TBL1"#)
+            ),
+            r#"SELECT
+    C1 AS 'Column 1'
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_curly_string() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM {tableNames[i]}
+                    WHERE C1 = 1
+                    "#,
+                )
+            ),
+            r#"SELECT *
+FROM {tableNames[i]}
+WHERE C1 = 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_curly_string_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM {tableNames[i]}
+                    WHERE C1 = 1
+                    "#,
+                )
+            ),
+            r#"SELECT
+    *
+FROM {tableNames[i]}
+WHERE C1 = 1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_sub_query_inline() {
         assert_eq!(
             get_formatted_sql(
@@ -798,6 +865,47 @@ WHERE C3 = 3"#
 SET C1 = 1,
     C2 = 2
 WHERE C3 = 3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_where_quote() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM TBL1
+                    WHERE C1 = 'some value'
+                    "#,
+                )
+            ),
+            r#"SELECT *
+FROM TBL1
+WHERE C1 = 'some value'"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_where_quote_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM TBL1
+                    WHERE C1 = 'some value'
+                    "#,
+                )
+            ),
+            r#"SELECT
+    *
+FROM TBL1
+WHERE C1 = 'some value'"#
         );
     }
 

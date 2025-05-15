@@ -5,6 +5,8 @@ const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
 const CIRCUMFLEX: char = '^';
 const COMMA: char = ',';
+const CURLY_BRACKET_CLOSE: char = '}';
+const CURLY_BRACKET_OPEN: char = '{';
 const DELIMITER: char = ';';
 const EQUAL: char = '=';
 const FULL_STOP: char = '.';
@@ -1135,6 +1137,7 @@ enum QuoteCategory {
     QuoteSingle,
     QuoteDouble,
     Bracket,
+    CurlyBracket,
 }
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
@@ -1422,6 +1425,12 @@ fn get_in_quote(
                     }
                     return in_quote.clone();
                 }
+                QuoteCategory::CurlyBracket => {
+                    if prev1_ch == CURLY_BRACKET_CLOSE {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
             }
         }
         None => {
@@ -1430,6 +1439,7 @@ fn get_in_quote(
                 QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
                 QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
                 BRACKET_OPEN => Some(QuoteCategory::Bracket),
+                CURLY_BRACKET_OPEN => Some(QuoteCategory::CurlyBracket),
                 _ => None,
             };
         }
@@ -1713,6 +1723,31 @@ mod tests {
                 },
                 Token {
                     value: String::from("[S].[TBL1]"),
+                    category: Some(TokenCategory::Quote),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_curly_bracket() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]}")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("FROM"),
+                    category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("{tableNames[i]}"),
                     category: Some(TokenCategory::Quote),
                 },
             ]
