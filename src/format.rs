@@ -124,7 +124,7 @@ impl FormatState {
         }
 
         match prev_token.value.to_uppercase().as_str() {
-            "BEGIN" | "CASE" | "DISTINCT" | "DO" => {
+            "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
                 self.push(Token::newline());
                 return;
             }
@@ -175,9 +175,9 @@ impl FormatState {
 
         match token.value.to_uppercase().as_str() {
             "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CASE" | "CLOSE" | "CROSS" | "DO" | "ELSE"
-            | "END" | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "OPEN"
-            | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RIGHT" | "SELECT" | "SET" | "WHEN"
-            | "WHERE" => {
+            | "END" | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION"
+            | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RIGHT" | "SELECT" | "SET"
+            | "WHEN" | "WHERE" => {
                 self.push(Token::newline());
                 return;
             }
@@ -254,11 +254,11 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "CALL" | "DECLARE" | "IF" | "PIVOT"
-            | "OPEN" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "CALL" | "DECLARE" | "IF"
+            | "PIVOT" | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "WITH", "WHILE", "SET", "PIVOT",
+                    "UNION", "WITH", "WHILE", "SET", "PIVOT",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -268,7 +268,7 @@ impl FormatState {
             _ => match token.category {
                 Some(TokenCategory::Comment) => vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "WITH", "WHILE", "SET",
+                    "UNION", "WITH", "WHILE", "SET",
                 ],
                 _ => vec![],
             },
@@ -495,6 +495,79 @@ FROM TBL1 AS T"#
             ID
         FROM TBL1
     ) AS ID"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_union() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("SELECT C1 UNION SELECT C2")
+            ),
+            r#"SELECT C1 UNION SELECT C2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_union_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("SELECT C1 UNION SELECT C2")),
+            r#"SELECT
+    C1
+UNION
+SELECT
+    C2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_union_complex() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT C1 FROM TBL1
+                    UNION SELECT C2 FROM TBL2
+                    UNION SELECT C3 FROM TBL3
+                    "#
+                )
+            ),
+            r#"SELECT C1 FROM TBL1
+UNION SELECT C2 FROM TBL2
+UNION SELECT C3 FROM TBL3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_union_complex_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT C1 FROM TBL1
+                    UNION SELECT C2 FROM TBL2
+                    UNION SELECT C3 FROM TBL3
+                    "#
+                )
+            ),
+            r#"SELECT
+    C1
+FROM TBL1
+UNION
+SELECT
+    C2
+FROM TBL2
+UNION
+SELECT
+    C3
+FROM TBL3"#
         );
     }
 
