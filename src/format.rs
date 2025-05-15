@@ -151,7 +151,7 @@ impl FormatState {
         }
 
         match prev_token.value.to_uppercase().as_str() {
-            "DECLARE" | "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
+            "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
                 self.push(Token::newline());
                 return;
             }
@@ -791,14 +791,9 @@ FROM TBL1"#
                 &config,
                 String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
             ),
-            r#"DECLARE
-    C1 = 1;
-
-DECLARE
-    C2 = 2;
-
-DECLARE
-    C3 = 3;"#
+            r#"DECLARE C1 = 1;
+DECLARE C2 = 2;
+DECLARE C3 = 3;"#
         );
     }
 
@@ -819,8 +814,7 @@ DECLARE
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("DECLARE C1 = 1, C2 = 2, C3 = 3;")),
-            r#"DECLARE
-    C1 = 1,
+            r#"DECLARE C1 = 1,
     C2 = 2,
     C3 = 3;"#
         );
@@ -2121,8 +2115,7 @@ END WHILE;"#
                     "#
                 )
             ),
-            r#"DECLARE
-    VAR_COUNT INT;
+            r#"DECLARE VAR_COUNT INT;
 
 SELECT
     COUNT(ID)
@@ -2304,12 +2297,10 @@ DEALLOCATE SAMPLE_CURSOR;"#
                     "#,
                 ),
             ),
-            r#"DECLARE
-    @ID INT,
+            r#"DECLARE @ID INT,
     @NAME NVARCHAR(50);
 
-DECLARE
-    SAMPLE_CURSOR CURSOR
+DECLARE SAMPLE_CURSOR CURSOR
     FOR
 SELECT
     ID,
