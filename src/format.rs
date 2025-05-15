@@ -282,8 +282,8 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "CALL" | "DECLARE" | "IF"
-            | "PIVOT" | "OPEN" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "CALL" | "EXECUTE" | "EXEC"
+            | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
                     "UNION", "WITH", "WHILE", "SET", "PIVOT",
@@ -1776,6 +1776,43 @@ WHERE C <= 1"#
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    EXEC SP_NAME();EXEC SP_NAME();
+                    EXEC SP_NAME();
+                    "#
+                )
+            ),
+            r#"EXEC SP_NAME (); EXEC SP_NAME ();
+EXEC SP_NAME ();"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    EXEC SP_NAME();EXEC SP_NAME();
+                    EXEC SP_NAME();
+                    "#
+                )
+            ),
+            r#"EXEC SP_NAME ();
+EXEC SP_NAME ();
+EXEC SP_NAME ();"#
         );
     }
 
