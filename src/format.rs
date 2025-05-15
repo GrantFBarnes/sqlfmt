@@ -67,7 +67,6 @@ impl FormatState {
 
         if token.category == Some(TokenCategory::NewLine)
             || token.category == Some(TokenCategory::Delimiter)
-            || token.category == Some(TokenCategory::Comma)
         {
             return;
         }
@@ -89,6 +88,7 @@ impl FormatState {
         match (&prev_token_category, &token.category) {
             (Some(TokenCategory::ParenOpen), _)
             | (_, Some(TokenCategory::ParenClose))
+            | (_, Some(TokenCategory::Comma))
             | (Some(TokenCategory::DataType), Some(TokenCategory::ParenOpen))
             | (Some(TokenCategory::Method), Some(TokenCategory::ParenOpen)) => return,
             (_, _) => (),
@@ -495,6 +495,54 @@ FROM TBL1 AS T"#
             ID
         FROM TBL1
     ) AS ID"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_comma_start_multiline() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT
+                    C1
+                    ,C2
+                    ,C3
+                    FROM TBL1
+                    "#
+                )
+            ),
+            r#"SELECT
+    C1
+    , C2
+    , C3
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_comma_start_multiline_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT
+                    C1
+                    ,C2
+                    ,C3
+                    FROM TBL1
+                    "#
+                )
+            ),
+            r#"SELECT
+    C1,
+    C2,
+    C3
+FROM TBL1"#
         );
     }
 
