@@ -151,7 +151,7 @@ impl FormatState {
         }
 
         match prev_token.value.to_uppercase().as_str() {
-            "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
+            "DECLARE" | "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
                 self.push(Token::newline());
                 return;
             }
@@ -241,8 +241,8 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         if match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "JOIN" | "WHERE" | "ORDER"
-            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "SET" | "VALUE"
-            | "VALUES" | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => true,
+            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "DECLARE" | "SET"
+            | "VALUE" | "VALUES" | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => true,
             "THEN" => self.indent_stack.last() != Some(&String::from("CASE")),
             _ => false,
         } {
@@ -791,9 +791,38 @@ FROM TBL1"#
                 &config,
                 String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
             ),
-            r#"DECLARE C1 = 1;
-DECLARE C2 = 2;
-DECLARE C3 = 3;"#
+            r#"DECLARE
+    C1 = 1;
+
+DECLARE
+    C2 = 2;
+
+DECLARE
+    C3 = 3;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multiple_declare() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("DECLARE C1 = 1, C2 = 2, C3 = 3;")
+            ),
+            r#"DECLARE C1 = 1, C2 = 2, C3 = 3;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multiple_declare_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("DECLARE C1 = 1, C2 = 2, C3 = 3;")),
+            r#"DECLARE
+    C1 = 1,
+    C2 = 2,
+    C3 = 3;"#
         );
     }
 
@@ -2092,7 +2121,8 @@ END WHILE;"#
                     "#
                 )
             ),
-            r#"DECLARE VAR_COUNT INT;
+            r#"DECLARE
+    VAR_COUNT INT;
 
 SELECT
     COUNT(ID)
@@ -2274,11 +2304,13 @@ DEALLOCATE SAMPLE_CURSOR;"#
                     "#,
                 ),
             ),
-            r#"DECLARE @ID INT,
-@NAME NVARCHAR(50);
+            r#"DECLARE
+    @ID INT,
+    @NAME NVARCHAR(50);
 
-DECLARE SAMPLE_CURSOR CURSOR
-FOR
+DECLARE
+    SAMPLE_CURSOR CURSOR
+    FOR
 SELECT
     ID,
     NAME
