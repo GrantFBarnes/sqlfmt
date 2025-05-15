@@ -27,7 +27,22 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             }
         }
 
-        state.decrease_indent_stack(token, tokens.get(i + 1), tokens.get(i + 2));
+        let mut next_keyword_token: Option<&Token> = None;
+        if token.category == Some(TokenCategory::Comment) {
+            for n in i + 1..tokens.len() {
+                if tokens[n].category == Some(TokenCategory::Keyword) {
+                    next_keyword_token = Some(&tokens[n]);
+                    break;
+                }
+            }
+        }
+
+        state.decrease_indent_stack(
+            token,
+            tokens.get(i + 1),
+            tokens.get(i + 2),
+            next_keyword_token,
+        );
         state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token);
@@ -228,6 +243,7 @@ impl FormatState {
         token: &Token,
         next1_token: Option<&Token>,
         next2_token: Option<&Token>,
+        next_keyword_token: Option<&Token>,
     ) {
         if self.indent_stack.is_empty() {
             return;
@@ -240,6 +256,18 @@ impl FormatState {
                 || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
                 || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
             {
+                self.indent_stack.pop();
+                return;
+            }
+        }
+
+        if token.category == Some(TokenCategory::Comment) {
+            let decrease_comment_keywords: Vec<&str> = vec![
+                "SELECT", "INSERT", "UPDATE", "DELETE", "UNION", "WITH", "WHILE",
+            ];
+            if next_keyword_token.is_some_and(|nkt| {
+                decrease_comment_keywords.contains(&nkt.value.to_uppercase().as_str())
+            }) {
                 self.indent_stack.pop();
                 return;
             }
@@ -265,13 +293,7 @@ impl FormatState {
             "WHERE" | "ORDER" | "GROUP" | "HAVING" | "LIMIT" | "WHILE" => {
                 vec!["FROM"]
             }
-            _ => match token.category {
-                Some(TokenCategory::Comment) => vec![
-                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "UNION", "WITH", "WHILE", "SET",
-                ],
-                _ => vec![],
-            },
+            _ => vec![],
         };
 
         if !decrease_until_match.is_empty() {
@@ -1089,15 +1111,21 @@ FROM TBL1;"#
                 String::from(
                     r#"
                     -- top comment
-                    SELECT C1--inline comment
-                    -- after comment
+                    SELECT C1,--inline comment
+                    -- after comment 1
+                    -- after comment 2
+                    C2
+                    -- after comment 3
                     FROM TBL1
                     "#,
                 )
             ),
             r#"-- top comment
-SELECT C1 --inline comment
--- after comment
+SELECT C1, --inline comment
+    -- after comment 1
+    -- after comment 2
+    C2
+    -- after comment 3
 FROM TBL1"#
         );
     }
@@ -1112,17 +1140,23 @@ FROM TBL1"#
                 String::from(
                     r#"
                     -- top comment
-                    SELECT C1--inline comment
-                    -- after comment
+                    SELECT C1,--inline comment
+                    -- after comment 1
+                    -- after comment 2
+                    C2
+                    -- after comment 3
                     FROM TBL1
                     "#,
                 )
             ),
             r#"-- top comment
 SELECT
-    C1
---inline comment
--- after comment
+    C1,
+    --inline comment
+    -- after comment 1
+    -- after comment 2
+    C2
+    -- after comment 3
 FROM TBL1"#
         );
     }
@@ -1221,7 +1255,7 @@ FROM TBL1;"#
             ),
             r#"/* top comment */
 SELECT C1 /* inline comment */
-/*
+    /*
 
                     after
 
@@ -1257,8 +1291,8 @@ SELECT C1 /* inline comment */
             r#"/* top comment */
 SELECT
     C1
-/* inline comment */
-/*
+    /* inline comment */
+    /*
 
                     after
 
