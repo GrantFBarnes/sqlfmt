@@ -201,10 +201,10 @@ impl FormatState {
         }
 
         match token.value.to_uppercase().as_str() {
-            "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CASE" | "CLOSE" | "CROSS" | "DO" | "ELSE"
-            | "END" | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION"
-            | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RIGHT" | "SELECT" | "SET"
-            | "WHEN" | "WHERE" => {
+            "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CASE" | "CLOSE" | "CROSS" | "DECLARE"
+            | "DO" | "ELSE" | "END" | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT"
+            | "LIMIT" | "UNION" | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RIGHT"
+            | "SELECT" | "SET" | "WHEN" | "WHERE" => {
                 self.push(Token::newline());
                 return;
             }
@@ -794,6 +794,32 @@ FROM TBL1"#
             r#"DECLARE C1 = 1;
 DECLARE C2 = 2;
 DECLARE C3 = 3;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_declare_no_delimiter() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("DECLARE C1 = 1 DECLARE C2 = 2   DECLARE C3 = 3 ")
+            ),
+            r#"DECLARE C1 = 1 DECLARE C2 = 2 DECLARE C3 = 3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_declare_no_delimiter_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from("DECLARE C1 = 1 DECLARE C2 = 2   DECLARE C3 = 3 ")
+            ),
+            r#"DECLARE C1 = 1
+DECLARE C2 = 2
+DECLARE C3 = 3"#
         );
     }
 
