@@ -151,10 +151,17 @@ impl FormatState {
         }
 
         match prev_token.value.to_uppercase().as_str() {
-            "BEGIN" | "CASE" | "DISTINCT" | "UNION" | "DO" => {
+            "CASE" | "DISTINCT" | "UNION" | "DO" => {
                 self.push(Token::newline());
                 return;
             }
+            "BEGIN" => match token.value.to_uppercase().as_str() {
+                "TRY" | "CATCH" => return,
+                _ => {
+                    self.push(Token::newline());
+                    return;
+                }
+            },
             "SELECT" => match token.value.to_uppercase().as_str() {
                 "DISTINCT" | "TOP" => return,
                 _ => {
@@ -1943,6 +1950,58 @@ EXEC SP1()"#
             r#"CALL SP1()
 CALL SP1()
 CALL SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_try_catch() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    BEGIN TRY
+                        CALL SP1
+                    END TRY
+                    BEGIN CATCH
+                        CALL SP2
+                    END CATCH
+                    "#
+                )
+            ),
+            r#"BEGIN TRY
+    CALL SP1
+END TRY
+BEGIN CATCH
+    CALL SP2
+END CATCH"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_try_catch_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    BEGIN TRY
+                        CALL SP1
+                    END TRY
+                    BEGIN CATCH
+                        CALL SP2
+                    END CATCH
+                    "#
+                )
+            ),
+            r#"BEGIN TRY
+    CALL SP1
+END TRY
+BEGIN CATCH
+    CALL SP2
+END CATCH"#
         );
     }
 
