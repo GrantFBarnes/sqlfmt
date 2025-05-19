@@ -201,10 +201,10 @@ impl FormatState {
         }
 
         match token.value.to_uppercase().as_str() {
-            "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CASE" | "CLOSE" | "CROSS" | "DECLARE"
-            | "DO" | "ELSE" | "END" | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT"
-            | "LIMIT" | "UNION" | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RIGHT"
-            | "SELECT" | "SET" | "WHEN" | "WHERE" => {
+            "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CALL" | "CASE" | "CLOSE" | "CROSS"
+            | "DECLARE" | "DO" | "ELSE" | "END" | "EXEC" | "EXECUTE" | "FETCH" | "FOR" | "FROM"
+            | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION" | "OPEN" | "OR" | "ORDER"
+            | "OUTER" | "PRIMARY" | "RIGHT" | "SELECT" | "SET" | "WHEN" | "WHERE" => {
                 self.push(Token::newline());
                 return;
             }
@@ -1897,6 +1897,52 @@ EXEC SP1();"#
             r#"EXEC SP1();
 EXEC SP1();
 EXEC SP1();"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute_no_delimiter() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("EXEC SP1() EXEC SP1() EXEC SP1()")
+            ),
+            r#"EXEC SP1() EXEC SP1() EXEC SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute_no_delimiter_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("EXEC SP1() EXEC SP1() EXEC SP1()")),
+            r#"EXEC SP1()
+EXEC SP1()
+EXEC SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_call_no_delimiter() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("CALL SP1() CALL SP1() CALL SP1()")
+            ),
+            r#"CALL SP1() CALL SP1() CALL SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_call_no_delimiter_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("CALL SP1() CALL SP1() CALL SP1()")),
+            r#"CALL SP1()
+CALL SP1()
+CALL SP1()"#
         );
     }
 
