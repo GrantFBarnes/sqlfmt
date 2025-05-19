@@ -211,7 +211,7 @@ impl FormatState {
             "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CALL" | "CASE" | "CLOSE" | "CROSS"
             | "DECLARE" | "DO" | "ELSE" | "END" | "EXEC" | "EXECUTE" | "FETCH" | "FOR" | "FROM"
             | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION" | "OPEN" | "OR" | "ORDER"
-            | "OUTER" | "PRIMARY" | "RIGHT" | "SELECT" | "SET" | "WHEN" | "WHERE" => {
+            | "OUTER" | "PRIMARY" | "RETURN" | "RIGHT" | "SELECT" | "SET" | "WHEN" | "WHERE" => {
                 self.push(Token::newline());
                 return;
             }
@@ -1964,8 +1964,9 @@ CALL SP1()"#
                         CALL SP1
                     END TRY
                     BEGIN CATCH
-                        CALL SP2
+                        RETURN 1
                     END CATCH
+                    RETURN 0
                     "#
                 )
             ),
@@ -1973,8 +1974,9 @@ CALL SP1()"#
     CALL SP1
 END TRY
 BEGIN CATCH
-    CALL SP2
-END CATCH"#
+    RETURN 1
+END CATCH
+RETURN 0"#
         );
     }
 
@@ -1991,8 +1993,9 @@ END CATCH"#
                         CALL SP1
                     END TRY
                     BEGIN CATCH
-                        CALL SP2
+                        RETURN 1
                     END CATCH
+                    RETURN 0
                     "#
                 )
             ),
@@ -2000,8 +2003,9 @@ END CATCH"#
     CALL SP1
 END TRY
 BEGIN CATCH
-    CALL SP2
-END CATCH"#
+    RETURN 1
+END CATCH
+RETURN 0"#
         );
     }
 
