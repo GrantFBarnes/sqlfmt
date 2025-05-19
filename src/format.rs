@@ -847,6 +847,29 @@ DECLARE C3 = 3"#
     }
 
     #[test]
+    fn test_get_formatted_sql_set_no_delimiter() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("SET C1 = 1 SET C2 = 2   SET C3 = 3 ")
+            ),
+            r#"SET C1 = 1 SET C2 = 2 SET C3 = 3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_set_no_delimiter_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("SET C1 = 1 SET C2 = 2   SET C3 = 3 ")),
+            r#"SET C1 = 1
+SET C2 = 2
+SET C3 = 3"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_set() {
         assert_eq!(
             get_formatted_sql(
