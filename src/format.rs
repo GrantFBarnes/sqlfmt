@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
@@ -296,6 +298,15 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         let top_of_stack: &String = self.indent_stack.last().unwrap();
 
+        let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
+            ("(", vec![")"]),
+            ("OPEN", vec!["CLOSE"]),
+            ("BEGIN", vec!["END"]),
+            ("DO", vec!["END"]),
+            ("THEN", vec!["END", "ELSE"]),
+            ("ELSE", vec!["END"]),
+        ]);
+
         if token.category == Some(TokenCategory::Comment) {
             let decrease_comment_keywords: Vec<&str> = vec![
                 "SELECT", "INSERT", "UPDATE", "DELETE", "UNION", "WITH", "WHILE",
@@ -303,7 +314,9 @@ impl FormatState {
             if next_keyword_token.is_some_and(|nkt| {
                 decrease_comment_keywords.contains(&nkt.value.to_uppercase().as_str())
             }) {
-                self.indent_stack.pop();
+                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+                    self.indent_stack.pop();
+                }
                 return;
             }
         }
@@ -314,7 +327,9 @@ impl FormatState {
                 || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
                 || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
             {
-                self.indent_stack.pop();
+                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+                    self.indent_stack.pop();
+                }
                 return;
             }
         }
@@ -325,7 +340,9 @@ impl FormatState {
         };
         if !decrease_if_match.is_empty() {
             if decrease_if_match.contains(&top_of_stack.as_str()) {
-                self.indent_stack.pop();
+                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+                    self.indent_stack.pop();
+                }
                 return;
             }
         }
@@ -359,21 +376,15 @@ impl FormatState {
                 }
                 let top: String = top.unwrap();
 
-                let required_to_decrease: Vec<&str> = match top.as_str() {
-                    "(" => vec![")"],
-                    "OPEN" => vec!["CLOSE"],
-                    "BEGIN" => vec!["END"],
-                    "DO" => vec!["END"],
-                    "THEN" => vec!["END", "ELSE"],
-                    "ELSE" => vec!["END"],
-                    _ => vec![],
-                };
-
-                if !required_to_decrease.is_empty()
-                    && !required_to_decrease.contains(&token_value.as_str())
-                {
-                    self.indent_stack.push(top);
-                    break;
+                if required_to_decrease.contains_key(top.as_str()) {
+                    if !required_to_decrease
+                        .get(top.as_str())
+                        .unwrap()
+                        .contains(&token_value.as_str())
+                    {
+                        self.indent_stack.push(top);
+                        break;
+                    }
                 }
 
                 if decrease_until_match.contains(&top.as_str()) {
@@ -2080,6 +2091,76 @@ RETURN 0"#
 
 BEGIN TRY
     CALL SP1;
+END TRY
+BEGIN CATCH
+    RETURN 1
+END CATCH
+RETURN 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_try_catch_insert() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SET V1 = 0;
+                    BEGIN TRY
+                        -- COMMENT
+                        INSERT INTO TBL1 (C1) VALUES (1)
+                    END TRY
+                    BEGIN CATCH
+                        RETURN 1
+                    END CATCH
+                    RETURN 0
+                    "#
+                )
+            ),
+            r#"SET V1 = 0;
+BEGIN TRY
+    -- COMMENT
+    INSERT INTO TBL1 (C1) VALUES (1)
+END TRY
+BEGIN CATCH
+    RETURN 1
+END CATCH
+RETURN 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_try_catch_insert_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SET V1 = 0;
+                    BEGIN TRY
+                        -- COMMENT
+                        INSERT INTO TBL1 (C1) VALUES (1)
+                    END TRY
+                    BEGIN CATCH
+                        RETURN 1
+                    END CATCH
+                    RETURN 0
+                    "#
+                )
+            ),
+            r#"SET V1 = 0;
+
+BEGIN TRY
+    -- COMMENT
+    INSERT INTO
+        TBL1 (
+            C1
+        ) VALUES (
+            1
+        )
 END TRY
 BEGIN CATCH
     RETURN 1
