@@ -59,6 +59,10 @@ impl Token {
         self.value.is_empty()
     }
 
+    fn count(&self, find: char) -> usize {
+        self.value.match_indices(find).count()
+    }
+
     fn get_category(&self) -> Option<TokenCategory> {
         if self.category.is_some() {
             return self.category.clone();
@@ -1150,10 +1154,32 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
-        let curr_token_len: usize = curr_token.len();
+
+        let prev2_ch: Option<char> = if i >= 2 {
+            Some(sql_bytes[i - 2].into())
+        } else {
+            None
+        };
+        let prev_ch: Option<char> = if i >= 1 {
+            Some(sql_bytes[i - 1].into())
+        } else {
+            None
+        };
+        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+            Some(sql_bytes[i + 1].into())
+        } else {
+            None
+        };
 
         let was_in_comment: Option<CommentCategory> = in_comment.clone();
-        in_comment = get_in_comment(&in_comment, sql_bytes, i, curr_token_len);
+        in_comment = get_in_comment(
+            &in_comment,
+            prev2_ch,
+            prev_ch,
+            curr_ch,
+            next_ch,
+            curr_token.len(),
+        );
         if in_comment.is_some() {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
@@ -1174,7 +1200,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-        in_quote = get_in_quote(&in_quote, sql_bytes, i, curr_token_len);
+        in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, &curr_token);
         if in_quote.is_some() {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
@@ -1235,12 +1261,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     _ => None,
                 };
 
-                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-                    Some(sql_bytes[i + 1].into())
-                } else {
-                    None
-                };
-
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
@@ -1249,12 +1269,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 continue;
             }
             EQUAL | GREATER_THAN => {
-                let prev_ch: Option<char> = if i >= 1 {
-                    Some(sql_bytes[i - 1].into())
-                } else {
-                    None
-                };
-
                 if !curr_token.is_empty()
                     && prev_ch != Some(LESS_THAN)
                     && prev_ch != Some(GREATER_THAN)
@@ -1278,12 +1292,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     _ => Some(TokenCategory::Compare),
                 };
 
-                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-                    Some(sql_bytes[i + 1].into())
-                } else {
-                    None
-                };
-
                 if next_ch != Some(EQUAL) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
@@ -1304,11 +1312,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 }
 
                 curr_token.category = Some(TokenCategory::Operator);
-                let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-                    Some(sql_bytes[i + 1].into())
-                } else {
-                    None
-                };
 
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
@@ -1342,40 +1345,42 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
 fn get_in_comment(
     in_comment: &Option<CommentCategory>,
-    sql_bytes: &[u8],
-    curr_idx: usize,
+    prev2_ch: Option<char>,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    next_ch: Option<char>,
     curr_token_len: usize,
 ) -> Option<CommentCategory> {
-    let curr_ch: char = sql_bytes[curr_idx].into();
     match in_comment {
-        Some(CommentCategory::SingleLine) => {
-            if curr_ch == NEW_LINE {
-                return None;
+        Some(cc) => {
+            if curr_token_len <= 1 {
+                return in_comment.clone();
             }
-            return Some(CommentCategory::SingleLine);
-        }
-        Some(CommentCategory::MultiLine) => {
-            if curr_idx >= 2 && curr_token_len > 1 {
-                let prev2_ch: char = sql_bytes[curr_idx - 2].into();
-                let prev1_ch: char = sql_bytes[curr_idx - 1].into();
-                if prev2_ch == ASTERISK && prev1_ch == SLASH_FORWARD {
-                    return None;
-                }
-            }
-            return Some(CommentCategory::MultiLine);
-        }
-        None => {
-            if (curr_idx + 1) < sql_bytes.len() {
-                let next_ch: char = sql_bytes[curr_idx + 1].into();
 
-                if curr_ch == HYPHEN && next_ch == HYPHEN {
+            match cc {
+                CommentCategory::SingleLine => {
+                    if curr_ch == NEW_LINE {
+                        return None;
+                    }
                     return Some(CommentCategory::SingleLine);
                 }
-
-                if curr_ch == SLASH_FORWARD && next_ch == ASTERISK {
+                CommentCategory::MultiLine => {
+                    if prev2_ch == Some(ASTERISK) && prev_ch == Some(SLASH_FORWARD) {
+                        return None;
+                    }
                     return Some(CommentCategory::MultiLine);
                 }
             }
+        }
+        None => {
+            if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
+                return Some(CommentCategory::SingleLine);
+            }
+
+            if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+                return Some(CommentCategory::MultiLine);
+            }
+
             return None;
         }
     }
@@ -1383,50 +1388,45 @@ fn get_in_comment(
 
 fn get_in_quote(
     in_quote: &Option<QuoteCategory>,
-    sql_bytes: &[u8],
-    curr_idx: usize,
-    curr_token_len: usize,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    curr_token: &Token,
 ) -> Option<QuoteCategory> {
-    let curr_ch: char = sql_bytes[curr_idx].into();
     match in_quote {
-        Some(qt) => {
-            if curr_token_len <= 1 {
+        Some(qc) => {
+            if curr_token.len() <= 1 {
                 return in_quote.clone();
             }
-            // at least 2 characters in current token
 
-            let prev1_ch: char = sql_bytes[curr_idx - 1].into();
-            let prev2_ch: char = sql_bytes[curr_idx - 2].into();
-            match qt {
+            match qc {
                 QuoteCategory::Backtick => {
-                    if prev1_ch == BACKTICK {
+                    if prev_ch == Some(BACKTICK) {
                         return None;
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::QuoteSingle => {
-                    if prev1_ch == QUOTE_SINGLE
-                        && prev2_ch != QUOTE_SINGLE
-                        && curr_ch != QUOTE_SINGLE
-                    {
-                        return None;
+                    if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
+                        if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
+                            return None;
+                        }
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::QuoteDouble => {
-                    if prev1_ch == QUOTE_DOUBLE {
+                    if prev_ch == Some(QUOTE_DOUBLE) {
                         return None;
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::Bracket => {
-                    if prev1_ch == BRACKET_CLOSE && curr_ch != FULL_STOP {
+                    if prev_ch == Some(BRACKET_CLOSE) && curr_ch != FULL_STOP {
                         return None;
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::CurlyBracket => {
-                    if prev1_ch == CURLY_BRACKET_CLOSE {
+                    if prev_ch == Some(CURLY_BRACKET_CLOSE) {
                         return None;
                     }
                     return in_quote.clone();
@@ -1757,15 +1757,56 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_empty() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT ''")),
+            get_sql_tokens(String::from("DECLARE V1 = '';")),
             vec![
                 Token {
-                    value: String::from("SELECT"),
+                    value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("V1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("="),
+                    category: Some(TokenCategory::Compare),
                 },
                 Token {
                     value: String::from("''"),
                     category: Some(TokenCategory::Quote),
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_of_empty() {
+        assert_eq!(
+            get_sql_tokens(String::from("DECLARE V1 = '''';")),
+            vec![
+                Token {
+                    value: String::from("DECLARE"),
+                    category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("V1"),
+                    category: None,
+                },
+                Token {
+                    value: String::from("="),
+                    category: Some(TokenCategory::Compare),
+                },
+                Token {
+                    value: String::from("''''"),
+                    category: Some(TokenCategory::Quote),
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
                 },
             ]
         );
