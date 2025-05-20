@@ -211,9 +211,10 @@ impl FormatState {
 
         match token.value.to_uppercase().as_str() {
             "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CALL" | "CASE" | "CLOSE" | "CROSS"
-            | "DECLARE" | "DO" | "ELSE" | "END" | "EXEC" | "EXECUTE" | "FETCH" | "FOR" | "FROM"
-            | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION" | "OPEN" | "OR" | "ORDER"
-            | "OUTER" | "PRIMARY" | "RETURN" | "RIGHT" | "SELECT" | "SET" | "WHEN" | "WHERE" => {
+            | "DELETE" | "DROP" | "DECLARE" | "DO" | "ELSE" | "END" | "EXEC" | "EXECUTE"
+            | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION"
+            | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RETURN" | "RIGHT" | "SELECT"
+            | "SET" | "WHEN" | "WHERE" => {
                 self.push(Token::newline());
                 return;
             }
@@ -311,7 +312,7 @@ impl FormatState {
 
         if token.category == Some(TokenCategory::Comment) {
             let decrease_comment_keywords: Vec<&str> = vec![
-                "SELECT", "INSERT", "UPDATE", "DELETE", "UNION", "WITH", "WHILE",
+                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "UNION", "WITH", "WHILE",
             ];
             if next_keyword_token.is_some_and(|nkt| {
                 decrease_comment_keywords.contains(&nkt.value.to_uppercase().as_str())
@@ -357,11 +358,11 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "BEGIN" | "CALL" | "EXECUTE"
-            | "EXEC" | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "DROP" | "UNION" | "BEGIN" | "CALL"
+            | "EXECUTE" | "EXEC" | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
                 vec![
-                    "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
-                    "UNION", "WITH", "WHILE", "SET", "PIVOT",
+                    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE", "GROUP",
+                    "HAVING", "UNION", "WITH", "WHILE", "SET", "PIVOT",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -1937,6 +1938,43 @@ WHERE C <= 1"#
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_drop_table() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    DROP TABLE TBL1 DROP TABLE TBL2
+                    DROP TABLE TBL3
+                    "#
+                )
+            ),
+            r#"DROP TABLE TBL1 DROP TABLE TBL2
+DROP TABLE TBL3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_drop_table_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    DROP TABLE TBL1 DROP TABLE TBL2
+                    DROP TABLE TBL3
+                    "#
+                )
+            ),
+            r#"DROP TABLE TBL1
+DROP TABLE TBL2
+DROP TABLE TBL3"#
         );
     }
 
