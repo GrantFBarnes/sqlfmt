@@ -1200,7 +1200,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-        in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, &curr_token);
+        in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
         if in_quote.is_some() {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
@@ -1390,6 +1390,7 @@ fn get_in_quote(
     in_quote: &Option<QuoteCategory>,
     prev_ch: Option<char>,
     curr_ch: char,
+    next_ch: Option<char>,
     curr_token: &Token,
 ) -> Option<QuoteCategory> {
     match in_quote {
@@ -1440,6 +1441,12 @@ fn get_in_quote(
                 QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
                 BRACKET_OPEN => Some(QuoteCategory::Bracket),
                 CURLY_BRACKET_OPEN => Some(QuoteCategory::CurlyBracket),
+                'N' => {
+                    if next_ch == Some(QUOTE_SINGLE) {
+                        return Some(QuoteCategory::QuoteSingle);
+                    }
+                    return None;
+                }
                 _ => None,
             };
         }
@@ -1807,6 +1814,23 @@ mod tests {
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_n() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT N'Column Name'")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                },
+                Token {
+                    value: String::from("N'Column Name'"),
+                    category: Some(TokenCategory::Quote),
                 },
             ]
         );
