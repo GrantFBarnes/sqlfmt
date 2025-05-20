@@ -22,7 +22,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                     if t.category == Some(TokenCategory::Method)
                         || t.category == Some(TokenCategory::DataType)
                     {
-                        state.in_method = true;
+                        state.method_count += 1;
                         break;
                     }
                 }
@@ -50,7 +50,9 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
         state.increase_indent_stack(token);
 
         if token.category == Some(TokenCategory::ParenClose) {
-            state.in_method = false;
+            if state.method_count > 0 {
+                state.method_count -= 1;
+            }
         }
     }
 
@@ -60,7 +62,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
 struct FormatState {
     tokens: Vec<Token>,
     indent_stack: Vec<String>,
-    in_method: bool,
+    method_count: usize,
 }
 
 impl FormatState {
@@ -68,7 +70,7 @@ impl FormatState {
         FormatState {
             tokens: vec![],
             indent_stack: vec![],
-            in_method: false,
+            method_count: 0,
         }
     }
 
@@ -113,7 +115,7 @@ impl FormatState {
             Some(TokenCategory::Comma) => return,
             Some(TokenCategory::ParenClose) => return,
             Some(TokenCategory::ParenOpen) => {
-                if self.in_method {
+                if self.method_count > 0 {
                     return;
                 }
             }
@@ -145,7 +147,7 @@ impl FormatState {
                 return;
             }
             Some(TokenCategory::ParenOpen) | Some(TokenCategory::Comma) => {
-                if !self.in_method {
+                if self.method_count == 0 {
                     self.push(Token::newline());
                 }
                 return;
@@ -199,7 +201,7 @@ impl FormatState {
                 return;
             }
             Some(TokenCategory::ParenClose) => {
-                if !self.in_method {
+                if self.method_count == 0 {
                     self.push(Token::newline());
                 }
                 return;
@@ -580,6 +582,27 @@ FROM TBL1 AS T"#
             r#"SELECT
     C1 AS 'Column 1'
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_convert() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("CONVERT(NVARCHAR(36), ID)")
+            ),
+            r#"CONVERT(NVARCHAR(36), ID)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_convert_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("CONVERT(NVARCHAR(36), ID)")),
+            r#"CONVERT(NVARCHAR(36), ID)"#
         );
     }
 
