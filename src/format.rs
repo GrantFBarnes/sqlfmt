@@ -355,8 +355,8 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "CALL" | "EXECUTE" | "EXEC"
-            | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
+            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "UNION" | "BEGIN" | "CALL" | "EXECUTE"
+            | "EXEC" | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "GROUP", "HAVING",
                     "UNION", "WITH", "WHILE", "SET", "PIVOT",
@@ -2332,9 +2332,9 @@ RETURN 0"#
 AFTER INSERT
     ON TBL1
     FOR EACH ROW
-    BEGIN
-        CALL SP1(NEW.ID);
-    END;"#
+BEGIN
+    CALL SP1(NEW.ID);
+END;"#
         );
     }
 
@@ -2360,9 +2360,9 @@ AFTER INSERT
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER INSERT ON TBL1
     FOR EACH ROW
-    BEGIN
-        CALL SP1(NEW.ID);
-    END;"#
+BEGIN
+    CALL SP1(NEW.ID);
+END;"#
         );
     }
 
@@ -2576,10 +2576,10 @@ OPEN SAMPLE_CURSOR
     INTO @ID, @NAME
 
     WHILE @@FETCH_STATUS = 0
-        BEGIN
-            FETCH NEXT FROM SAMPLE_CURSOR
-            INTO @VENDOR_ID, @VENDOR_NAME
-        END
+    BEGIN
+        FETCH NEXT FROM SAMPLE_CURSOR
+        INTO @VENDOR_ID, @VENDOR_NAME
+    END
 CLOSE SAMPLE_CURSOR;
 DEALLOCATE SAMPLE_CURSOR;"#
         );
@@ -2632,13 +2632,13 @@ OPEN SAMPLE_CURSOR
         @ID,
         @NAME
     WHILE @@FETCH_STATUS = 0
-        BEGIN
-            FETCH NEXT
-            FROM SAMPLE_CURSOR
-            INTO
-                @VENDOR_ID,
-                @VENDOR_NAME
-        END
+    BEGIN
+        FETCH NEXT
+        FROM SAMPLE_CURSOR
+        INTO
+            @VENDOR_ID,
+            @VENDOR_NAME
+    END
 CLOSE SAMPLE_CURSOR;
 DEALLOCATE SAMPLE_CURSOR;"#
         );
