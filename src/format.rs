@@ -289,17 +289,8 @@ impl FormatState {
             return;
         }
 
+        let token_value: String = token.value.to_uppercase();
         let top_of_stack: &String = self.indent_stack.last().unwrap();
-        let decrease_if_found: Vec<&str> = vec!["JOIN"];
-        if decrease_if_found.contains(&top_of_stack.as_str()) {
-            if &token.value.to_uppercase() == top_of_stack
-                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
-                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
-            {
-                self.indent_stack.pop();
-                return;
-            }
-        }
 
         if token.category == Some(TokenCategory::Comment) {
             let decrease_comment_keywords: Vec<&str> = vec![
@@ -313,7 +304,28 @@ impl FormatState {
             }
         }
 
-        let token_value: String = token.value.to_uppercase();
+        let decrease_if_found: Vec<&str> = vec!["JOIN"];
+        if decrease_if_found.contains(&top_of_stack.as_str()) {
+            if &token.value.to_uppercase() == top_of_stack
+                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
+                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
+            {
+                self.indent_stack.pop();
+                return;
+            }
+        }
+
+        let decrease_if_match: Vec<&str> = match token_value.as_str() {
+            ";" => vec!["DECLARE", "SET"],
+            _ => vec![],
+        };
+        if !decrease_if_match.is_empty() {
+            if decrease_if_match.contains(&top_of_stack.as_str()) {
+                self.indent_stack.pop();
+                return;
+            }
+        }
+
         let decrease_until_match: Vec<&str> = match token_value.as_str() {
             ")" => vec!["("],
             "CLOSE" => vec!["OPEN"],
@@ -335,7 +347,6 @@ impl FormatState {
             }
             _ => vec![],
         };
-
         if !decrease_until_match.is_empty() {
             loop {
                 let top: Option<String> = self.indent_stack.pop();
@@ -1981,8 +1992,9 @@ CALL SP1()"#
                 &Configuration::new(),
                 String::from(
                     r#"
+                    SET V1 = 0;
                     BEGIN TRY
-                        CALL SP1
+                        CALL SP1;
                     END TRY
                     BEGIN CATCH
                         RETURN 1
@@ -1991,8 +2003,9 @@ CALL SP1()"#
                     "#
                 )
             ),
-            r#"BEGIN TRY
-    CALL SP1
+            r#"SET V1 = 0;
+BEGIN TRY
+    CALL SP1;
 END TRY
 BEGIN CATCH
     RETURN 1
@@ -2010,6 +2023,7 @@ RETURN 0"#
                 &config,
                 String::from(
                     r#"
+                    SET V1 = 0;
                     BEGIN TRY
                         CALL SP1;
                     END TRY
@@ -2020,7 +2034,9 @@ RETURN 0"#
                     "#
                 )
             ),
-            r#"BEGIN TRY
+            r#"SET V1 = 0;
+
+BEGIN TRY
     CALL SP1;
 END TRY
 BEGIN CATCH
