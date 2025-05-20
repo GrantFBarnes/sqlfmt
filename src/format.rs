@@ -74,28 +74,14 @@ impl FormatState {
         self.tokens.push(token);
     }
 
-    fn get_last_line_indent(&self, config: &Configuration) -> usize {
-        for i in (1..self.tokens.len()).rev() {
-            if self.tokens[i].category == Some(TokenCategory::Space) {
-                if self.tokens[i - 1].category == Some(TokenCategory::NewLine) {
-                    return match config.tabs {
-                        ConfigTab::Tab => self.tokens[i].value.len(),
-                        ConfigTab::Space(c) => self.tokens[i].value.len() / c as usize,
-                    };
-                }
-            }
-        }
-        return 0;
-    }
-
     fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
         if self.tokens.is_empty() {
             return;
         }
 
         if config.newlines {
-            self.remove_extra_newline(token);
             self.add_pre_newline(token);
+            self.remove_extra_newline(token);
         }
 
         if token.category == Some(TokenCategory::NewLine)
@@ -111,19 +97,6 @@ impl FormatState {
 
         match prev_token.category {
             Some(TokenCategory::NewLine) => {
-                // if last two tokens are new lines
-                if self
-                    .tokens
-                    .iter()
-                    .nth_back(1)
-                    .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
-                {
-                    // if current line indent is less than previous line indent
-                    if self.indent_stack.len() < self.get_last_line_indent(config) {
-                        // remove one new line
-                        self.tokens.pop();
-                    }
-                }
                 self.push(Token::new_space(match config.tabs {
                     ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
                     ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
@@ -259,6 +232,7 @@ impl FormatState {
     }
 
     fn remove_extra_newline(&mut self, token: &Token) {
+        // remove double newline for two consecutive single delimiter lines
         if token.category == Some(TokenCategory::Delimiter) {
             for i in (1..self.tokens.len()).rev() {
                 if self.tokens[i].category == Some(TokenCategory::NewLine) {
@@ -267,6 +241,26 @@ impl FormatState {
                     }
                     break;
                 }
+            }
+        }
+
+        // remove double newline for end of section
+        if self
+            .tokens
+            .iter()
+            .nth_back(0)
+            .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+            && self
+                .tokens
+                .iter()
+                .nth_back(1)
+                .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+        {
+            match token.value.to_uppercase().as_str() {
+                "END" => {
+                    self.tokens.pop();
+                }
+                _ => (),
             }
         }
     }
@@ -2484,6 +2478,7 @@ DEALLOCATE SAMPLE_CURSOR;"#
             ),
             r#"DECLARE @ID INT,
     @NAME NVARCHAR(50);
+
 DECLARE SAMPLE_CURSOR CURSOR
     FOR
 SELECT
