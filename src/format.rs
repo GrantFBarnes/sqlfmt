@@ -312,7 +312,7 @@ impl FormatState {
 
         if token.category == Some(TokenCategory::Comment) {
             let decrease_comment_keywords: Vec<&str> = vec![
-                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "UNION", "WITH", "WHILE",
+                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "DECLARE", "UNION", "WITH", "WHILE",
             ];
             if next_keyword_token.is_some_and(|nkt| {
                 decrease_comment_keywords.contains(&nkt.value.to_uppercase().as_str())
