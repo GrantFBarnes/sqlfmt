@@ -278,8 +278,9 @@ impl FormatState {
         let token_value: String = token.value.to_uppercase();
         if match token_value.as_str() {
             "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "JOIN" | "WHERE" | "ORDER"
-            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "DECLARE" | "SET"
-            | "VALUE" | "VALUES" | "WHILE" | "WITH" | "ELSE" | "DO" | "(" => true,
+            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "DECLARE" | "CALL"
+            | "EXEC" | "EXECUTE" | "SET" | "VALUE" | "VALUES" | "WHILE" | "WITH" | "ELSE"
+            | "DO" | "(" => true,
             "THEN" => self.indent_stack.last() != Some(&String::from("CASE")),
             _ => false,
         } {
@@ -312,7 +313,8 @@ impl FormatState {
 
         if token.category == Some(TokenCategory::Comment) {
             let decrease_comment_keywords: Vec<&str> = vec![
-                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "DECLARE", "UNION", "WITH", "WHILE",
+                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "DECLARE", "CALL", "EXEC",
+                "EXECUTE", "UNION", "WITH", "WHILE",
             ];
             if next_keyword_token.is_some_and(|nkt| {
                 decrease_comment_keywords.contains(&nkt.value.to_uppercase().as_str())
@@ -338,7 +340,7 @@ impl FormatState {
         }
 
         let decrease_if_match: Vec<&str> = match token_value.as_str() {
-            ";" => vec!["DECLARE", "SET"],
+            ";" => vec!["DECLARE", "CALL", "EXEC", "EXECUTE", "SET"],
             _ => vec![],
         };
         if !decrease_if_match.is_empty() {
@@ -2035,6 +2037,35 @@ EXEC SP1();"#
             r#"EXEC SP1()
 EXEC SP1()
 EXEC SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute_parameters() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from("EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3")
+            ),
+            r#"EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_execute_parameters_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from("EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3")
+            ),
+            r#"EXEC SP1 P1,
+    P2,
+    P3
+EXEC SP1 P1,
+    P2,
+    P3"#
         );
     }
 
