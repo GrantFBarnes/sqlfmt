@@ -126,12 +126,13 @@ impl FormatState {
             return;
         }
 
-        let prev_token: &Token = self
+        let prev1_token: &Token = self
             .tokens
-            .last()
+            .iter()
+            .nth_back(0)
             .expect("should always have a previous token");
 
-        match prev_token.category {
+        match prev1_token.category {
             Some(TokenCategory::Delimiter) => {
                 self.push(Token::newline());
                 self.push(Token::newline());
@@ -150,7 +151,7 @@ impl FormatState {
             _ => (),
         }
 
-        match prev_token.value.to_uppercase().as_str() {
+        match prev1_token.value.to_uppercase().as_str() {
             "CASE" | "DISTINCT" | "UNION" | "DO" => {
                 self.push(Token::newline());
                 return;
@@ -183,14 +184,11 @@ impl FormatState {
             _ => (),
         }
 
-        if let Some(prev2_token) = self.tokens.iter().nth_back(2) {
-            match prev2_token.value.to_uppercase().as_str() {
-                "TOP" => {
-                    self.push(Token::newline());
-                    return;
-                }
-                _ => (),
-            }
+        let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
+
+        if prev3_token.is_some_and(|t| t.value.to_uppercase() == "TOP") {
+            self.push(Token::newline());
+            return;
         }
 
         match &token.category {
@@ -215,14 +213,20 @@ impl FormatState {
                 self.push(Token::newline());
                 return;
             }
+            "IF" => {
+                if prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE") {
+                    self.push(Token::newline());
+                    return;
+                }
+            }
             "WHILE" => {
-                if prev_token.value.to_uppercase().as_str() != "END" {
+                if prev1_token.value.to_uppercase() != "END" {
                     self.push(Token::newline());
                     return;
                 }
             }
             "INTO" => {
-                if prev_token.value.to_uppercase().as_str() != "INSERT" {
+                if prev1_token.value.to_uppercase() != "INSERT" {
                     self.push(Token::newline());
                     return;
                 }
@@ -1982,6 +1986,44 @@ EXEC SP1()"#
             r#"CALL SP1()
 CALL SP1()
 CALL SP1()"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    IF V1 IS NULL SET V1 = 0
+                    IF V2 IS NULL SET V2 = 0
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL SET V1 = 0
+IF V2 IS NULL SET V2 = 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    IF V1 IS NULL SET V1 = 0
+                    IF V2 IS NULL SET V2 = 0
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL
+SET V1 = 0
+IF V2 IS NULL
+SET V2 = 0"#
         );
     }
 
