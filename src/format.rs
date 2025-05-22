@@ -155,11 +155,12 @@ impl FormatState {
             _ => (),
         }
 
+        if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
+            self.push(Token::newline());
+            return;
+        }
+
         match prev1_token.value.to_uppercase().as_str() {
-            "CASE" | "DISTINCT" | "UNION" | "DO" => {
-                self.push(Token::newline());
-                return;
-            }
             "BEGIN" => match token.value.to_uppercase().as_str() {
                 "TRY" | "CATCH" => return,
                 _ => {
@@ -209,15 +210,12 @@ impl FormatState {
             _ => (),
         }
 
+        if token.behavior.contains(&TokenBehavior::NewLineBefore) {
+            self.push(Token::newline());
+            return;
+        }
+
         match token.value.to_uppercase().as_str() {
-            "AFTER" | "AND" | "BEFORE" | "BEGIN" | "CALL" | "CASE" | "CLOSE" | "CROSS"
-            | "DELETE" | "DROP" | "DECLARE" | "DO" | "ELSE" | "END" | "EXEC" | "EXECUTE"
-            | "FETCH" | "FOR" | "FROM" | "GROUP" | "INNER" | "LEFT" | "LIMIT" | "UNION"
-            | "OPEN" | "OR" | "ORDER" | "OUTER" | "PRIMARY" | "RETURN" | "RIGHT" | "SELECT"
-            | "SET" | "WHEN" | "WHERE" => {
-                self.push(Token::newline());
-                return;
-            }
             "IF" => {
                 if prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE") {
                     self.push(Token::newline());

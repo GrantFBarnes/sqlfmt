@@ -27,6 +27,7 @@ const VERTICAL_BAR: char = '|';
 pub struct Token {
     pub value: String,
     pub category: Option<TokenCategory>,
+    pub behavior: Vec<TokenBehavior>,
 }
 
 impl Token {
@@ -34,6 +35,7 @@ impl Token {
         Token {
             value: String::new(),
             category: None,
+            behavior: vec![],
         }
     }
 
@@ -41,6 +43,7 @@ impl Token {
         Token {
             value: space,
             category: Some(TokenCategory::Space),
+            behavior: vec![],
         }
     }
 
@@ -48,6 +51,7 @@ impl Token {
         Token {
             value: "\n".to_string(),
             category: Some(TokenCategory::NewLine),
+            behavior: vec![],
         }
     }
 
@@ -61,6 +65,11 @@ impl Token {
 
     fn count(&self, find: char) -> usize {
         self.value.match_indices(find).count()
+    }
+
+    fn setup(&mut self) {
+        self.set_category();
+        self.set_behavior();
     }
 
     fn set_category(&mut self) {
@@ -1110,6 +1119,66 @@ impl Token {
             _ => (),
         };
     }
+
+    fn set_behavior(&mut self) {
+        let mut behavior: Vec<TokenBehavior> = vec![];
+
+        match self.category {
+            Some(TokenCategory::Delimiter) => (),
+            _ => (),
+        }
+
+        match self.value.to_uppercase().as_str() {
+            "AFTER" => behavior.push(TokenBehavior::NewLineBefore),
+            "AND" => behavior.push(TokenBehavior::NewLineBefore),
+            "BEFORE" => behavior.push(TokenBehavior::NewLineBefore),
+            "BEGIN" => behavior.push(TokenBehavior::NewLineBefore),
+            "CALL" => behavior.push(TokenBehavior::NewLineBefore),
+            "CASE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
+            "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
+            "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
+            "DECLARE" => behavior.push(TokenBehavior::NewLineBefore),
+            "DELETE" => behavior.push(TokenBehavior::NewLineBefore),
+            "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
+            "DO" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
+            "DROP" => behavior.push(TokenBehavior::NewLineBefore),
+            "ELSE" => behavior.push(TokenBehavior::NewLineBefore),
+            "END" => behavior.push(TokenBehavior::NewLineBefore),
+            "EXEC" => behavior.push(TokenBehavior::NewLineBefore),
+            "EXECUTE" => behavior.push(TokenBehavior::NewLineBefore),
+            "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
+            "FOR" => behavior.push(TokenBehavior::NewLineBefore),
+            "FROM" => behavior.push(TokenBehavior::NewLineBefore),
+            "GROUP" => behavior.push(TokenBehavior::NewLineBefore),
+            "INNER" => behavior.push(TokenBehavior::NewLineBefore),
+            "LEFT" => behavior.push(TokenBehavior::NewLineBefore),
+            "LIMIT" => behavior.push(TokenBehavior::NewLineBefore),
+            "OPEN" => behavior.push(TokenBehavior::NewLineBefore),
+            "OR" => behavior.push(TokenBehavior::NewLineBefore),
+            "ORDER" => behavior.push(TokenBehavior::NewLineBefore),
+            "OUTER" => behavior.push(TokenBehavior::NewLineBefore),
+            "PRIMARY" => behavior.push(TokenBehavior::NewLineBefore),
+            "RETURN" => behavior.push(TokenBehavior::NewLineBefore),
+            "RIGHT" => behavior.push(TokenBehavior::NewLineBefore),
+            "SELECT" => behavior.push(TokenBehavior::NewLineBefore),
+            "SET" => behavior.push(TokenBehavior::NewLineBefore),
+            "UNION" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
+            "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
+            "WHERE" => behavior.push(TokenBehavior::NewLineBefore),
+            _ => (),
+        };
+
+        self.behavior = behavior;
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -1128,6 +1197,12 @@ pub enum TokenCategory {
     Keyword,
     DataType,
     Method,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenBehavior {
+    NewLineBefore,
+    NewLineAfter,
 }
 
 #[derive(Clone)]
@@ -1185,7 +1260,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1206,7 +1281,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1225,7 +1300,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             DELIMITER | NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1247,7 +1322,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1279,7 +1354,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     && prev_ch != Some(SLASH_FORWARD)
                     && prev_ch != Some(PERCENT)
                 {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1302,7 +1377,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             PLUS | HYPHEN => {
                 if !curr_token.is_empty() {
-                    curr_token.set_category();
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1326,7 +1401,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
         if curr_ch.is_whitespace() {
             if !curr_token.is_empty() {
-                curr_token.set_category();
+                curr_token.setup();
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
@@ -1337,7 +1412,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     if !curr_token.is_empty() {
-        curr_token.set_category();
+        curr_token.setup();
         tokens.push(curr_token);
     }
 
@@ -1466,18 +1541,22 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("TBL1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -1491,14 +1570,17 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("--comment inline"),
                     category: Some(TokenCategory::Comment),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1516,30 +1598,37 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("-- comment newline"),
                     category: Some(TokenCategory::Comment),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("TBL1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -1553,22 +1642,27 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("/*multi inline*/"),
                     category: Some(TokenCategory::Comment),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("TBL1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -1582,14 +1676,17 @@ mod tests {
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("/*multi odd*/"),
                     category: Some(TokenCategory::Comment),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1610,14 +1707,17 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(
@@ -1627,18 +1727,22 @@ mod tests {
                 */"#
                     ),
                     category: Some(TokenCategory::Comment),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("TBL1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -1652,10 +1756,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("`Column 1`"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1669,10 +1775,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("'Column 1'"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1686,10 +1794,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("\"Column 1\""),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1703,10 +1813,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("[Column 1]"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1720,18 +1832,22 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("[S].[TBL1]"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1745,18 +1861,22 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("{tableNames[i]}"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1770,22 +1890,27 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("V1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("''"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1799,22 +1924,27 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("V1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("''''"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1828,10 +1958,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("N'Column Name'"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1845,10 +1977,12 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("'Column''s Name'"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1865,6 +1999,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from(
@@ -1872,6 +2007,7 @@ Name'"#
 Name'"#
                     ),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1885,10 +2021,12 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("'Column"),
                     category: Some(TokenCategory::Quote),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1902,14 +2040,17 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1923,26 +2064,32 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
                 },
             ]
         );
@@ -1956,26 +2103,32 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(","),
                     category: Some(TokenCategory::Comma),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(","),
                     category: Some(TokenCategory::Comma),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -1989,10 +2142,12 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("-1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2006,18 +2161,22 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("MIN"),
                     category: Some(TokenCategory::Method),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("("),
                     category: Some(TokenCategory::ParenOpen),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(")"),
                     category: Some(TokenCategory::ParenClose),
+                    behavior: vec![],
                 },
             ]
         );
@@ -2031,22 +2190,27 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("("),
                     category: Some(TokenCategory::ParenOpen),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(")"),
                     category: Some(TokenCategory::ParenClose),
+                    behavior: vec![],
                 },
             ]
         );
@@ -2060,22 +2224,27 @@ Name'"#
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("+"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("+"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2089,22 +2258,27 @@ Name'"#
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("-"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("-"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2118,22 +2292,27 @@ Name'"#
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2147,22 +2326,27 @@ Name'"#
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("/"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("/"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2176,22 +2360,27 @@ Name'"#
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("%"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("%"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2205,14 +2394,17 @@ Name'"#
                 Token {
                     value: String::from("V"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("+="),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2226,14 +2418,17 @@ Name'"#
                 Token {
                     value: String::from("V"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("-="),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2247,14 +2442,17 @@ Name'"#
                 Token {
                     value: String::from("V"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("*="),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2268,14 +2466,17 @@ Name'"#
                 Token {
                     value: String::from("V"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("/="),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2289,14 +2490,17 @@ Name'"#
                 Token {
                     value: String::from("V"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("%="),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2310,14 +2514,17 @@ Name'"#
                 Token {
                     value: String::from("V1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("&"),
                     category: Some(TokenCategory::Bitwise),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("V2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2331,14 +2538,17 @@ Name'"#
                 Token {
                     value: String::from("V1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("|"),
                     category: Some(TokenCategory::Bitwise),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("V2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2352,14 +2562,17 @@ Name'"#
                 Token {
                     value: String::from("V1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("^"),
                     category: Some(TokenCategory::Bitwise),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("V2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2373,34 +2586,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2414,34 +2635,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(">"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(">"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2455,34 +2684,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2496,34 +2733,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<>"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<>"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2537,34 +2782,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(">="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(">="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
@@ -2578,34 +2831,42 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("<="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C2"),
                     category: None,
+                    behavior: vec![],
                 },
             ]
         );
