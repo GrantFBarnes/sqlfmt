@@ -99,6 +99,10 @@ impl FormatState {
             .last()
             .expect("should always have a previous token");
 
+        if prev_token.behavior.contains(&TokenBehavior::NoSpaceAfter) {
+            return;
+        }
+
         match prev_token.category {
             Some(TokenCategory::NewLine) => {
                 self.push(Token::new_space(match config.tabs {
@@ -107,13 +111,14 @@ impl FormatState {
                 }));
                 return;
             }
-            Some(TokenCategory::ParenOpen) => return,
             _ => (),
         }
 
+        if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
+            return;
+        }
+
         match token.category {
-            Some(TokenCategory::Comma) => return,
-            Some(TokenCategory::ParenClose) => return,
             Some(TokenCategory::ParenOpen) => {
                 if self.method_count > 0 {
                     return;
@@ -136,13 +141,14 @@ impl FormatState {
             .nth_back(0)
             .expect("should always have a previous token");
 
+        if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
+            self.push(Token::newline());
+            return;
+        }
+
         match prev1_token.category {
             Some(TokenCategory::Delimiter) => {
                 self.push(Token::newline());
-                self.push(Token::newline());
-                return;
-            }
-            Some(TokenCategory::Comment) => {
                 self.push(Token::newline());
                 return;
             }
@@ -153,11 +159,6 @@ impl FormatState {
                 return;
             }
             _ => (),
-        }
-
-        if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            self.push(Token::newline());
-            return;
         }
 
         match prev1_token.value.to_uppercase().as_str() {
@@ -196,11 +197,12 @@ impl FormatState {
             return;
         }
 
+        if token.behavior.contains(&TokenBehavior::NewLineBefore) {
+            self.push(Token::newline());
+            return;
+        }
+
         match &token.category {
-            Some(TokenCategory::Comment) => {
-                self.push(Token::newline());
-                return;
-            }
             Some(TokenCategory::ParenClose) => {
                 if self.method_count == 0 {
                     self.push(Token::newline());
@@ -208,11 +210,6 @@ impl FormatState {
                 return;
             }
             _ => (),
-        }
-
-        if token.behavior.contains(&TokenBehavior::NewLineBefore) {
-            self.push(Token::newline());
-            return;
         }
 
         match token.value.to_uppercase().as_str() {
