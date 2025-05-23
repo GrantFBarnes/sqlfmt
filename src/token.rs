@@ -1168,6 +1168,7 @@ impl Token {
             "CALL" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "CASE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1179,6 +1180,7 @@ impl Token {
             "DECLARE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "DELETE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1199,10 +1201,12 @@ impl Token {
             "EXEC" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "EXECUTE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
             "FOR" => behavior.push(TokenBehavior::NewLineBefore),
@@ -1244,6 +1248,7 @@ impl Token {
             "SET" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "UNION" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1292,6 +1297,7 @@ pub enum TokenBehavior {
     NoSpaceAfter,
     IncreaseIndent,
     DecreaseIndentIfFound,
+    DecreaseIndentOnSingleLine,
 }
 
 #[derive(Clone)]
@@ -1964,7 +1970,11 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                    behavior: vec![
+                        TokenBehavior::NewLineBefore,
+                        TokenBehavior::IncreaseIndent,
+                        TokenBehavior::DecreaseIndentOnSingleLine
+                    ],
                 },
                 Token {
                     value: String::from("V1"),
@@ -1998,7 +2008,11 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                    behavior: vec![
+                        TokenBehavior::NewLineBefore,
+                        TokenBehavior::IncreaseIndent,
+                        TokenBehavior::DecreaseIndentOnSingleLine
+                    ],
                 },
                 Token {
                     value: String::from("V1"),

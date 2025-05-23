@@ -312,16 +312,30 @@ impl FormatState {
             ("ELSE", vec!["END"]),
         ]);
 
-        if token.category == Some(TokenCategory::Comment) {
-            if next_keyword_token.is_some_and(|t| {
-                t.behavior.contains(&TokenBehavior::IncreaseIndent)
-                    && t.value.to_uppercase() != "FROM"
-            }) {
-                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
-                    self.indent_stack.pop();
+        match token.category {
+            Some(TokenCategory::Comment) => {
+                if next_keyword_token.is_some_and(|t| {
+                    t.behavior.contains(&TokenBehavior::IncreaseIndent)
+                        && t.value.to_uppercase() != "FROM"
+                }) {
+                    if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
+                        self.indent_stack.pop();
+                    }
+                    return;
                 }
-                return;
             }
+            Some(TokenCategory::Delimiter) => {
+                if top_of_stack
+                    .behavior
+                    .contains(&TokenBehavior::DecreaseIndentOnSingleLine)
+                {
+                    if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
+                        self.indent_stack.pop();
+                    }
+                    return;
+                }
+            }
+            _ => (),
         }
 
         if top_of_stack
@@ -332,19 +346,6 @@ impl FormatState {
                 || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
                 || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
             {
-                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
-                    self.indent_stack.pop();
-                }
-                return;
-            }
-        }
-
-        let decrease_if_match: Vec<&str> = match token_value.as_str() {
-            ";" => vec!["DECLARE", "CALL", "EXEC", "EXECUTE", "SET"],
-            _ => vec![],
-        };
-        if !decrease_if_match.is_empty() {
-            if decrease_if_match.contains(&top_of_stack_value.as_str()) {
                 if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
                     self.indent_stack.pop();
                 }
