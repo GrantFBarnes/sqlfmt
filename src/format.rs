@@ -362,7 +362,7 @@ impl FormatState {
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
             "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "DROP" | "UNION" | "BEGIN" | "CALL"
-            | "EXECUTE" | "EXEC" | "DECLARE" | "IF" | "PIVOT" | "OPEN" => {
+            | "EXECUTE" | "EXEC" | "DECLARE" | "RETURN" | "IF" | "PIVOT" | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE", "GROUP",
                     "HAVING", "UNION", "WITH", "WHILE", "SET", "PIVOT",
@@ -2258,6 +2258,47 @@ END TRY
 BEGIN CATCH
     RETURN 1
 END CATCH
+RETURN 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_return() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM TBL
+                    RETURN 0
+                    "#
+                )
+            ),
+            r#"SELECT *
+FROM TBL
+RETURN 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_return_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT *
+                    FROM TBL
+                    RETURN 0
+                    "#
+                )
+            ),
+            r#"SELECT
+    *
+FROM TBL
 RETURN 0"#
         );
     }
