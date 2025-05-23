@@ -300,7 +300,8 @@ impl FormatState {
         }
 
         let token_value: String = token.value.to_uppercase();
-        let top_of_stack: &String = &self.indent_stack.last().unwrap().value.to_uppercase();
+        let top_of_stack: &Token = self.indent_stack.last().unwrap();
+        let top_of_stack_value: &String = &top_of_stack.value.to_uppercase();
 
         let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
             ("(", vec![")"]),
@@ -316,20 +317,22 @@ impl FormatState {
                 t.behavior.contains(&TokenBehavior::IncreaseIndent)
                     && t.value.to_uppercase() != "FROM"
             }) {
-                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
                     self.indent_stack.pop();
                 }
                 return;
             }
         }
 
-        let decrease_if_found: Vec<&str> = vec!["JOIN"];
-        if decrease_if_found.contains(&top_of_stack.as_str()) {
-            if &token.value.to_uppercase() == top_of_stack
-                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
-                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack)
+        if top_of_stack
+            .behavior
+            .contains(&TokenBehavior::DecreaseIndentIfFound)
+        {
+            if &token.value.to_uppercase() == top_of_stack_value
+                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
+                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
             {
-                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
                     self.indent_stack.pop();
                 }
                 return;
@@ -341,8 +344,8 @@ impl FormatState {
             _ => vec![],
         };
         if !decrease_if_match.is_empty() {
-            if decrease_if_match.contains(&top_of_stack.as_str()) {
-                if !required_to_decrease.contains_key(top_of_stack.as_str()) {
+            if decrease_if_match.contains(&top_of_stack_value.as_str()) {
+                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
                     self.indent_stack.pop();
                 }
                 return;

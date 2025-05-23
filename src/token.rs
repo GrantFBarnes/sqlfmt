@@ -1218,7 +1218,10 @@ impl Token {
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
             "INSERT" => behavior.push(TokenBehavior::IncreaseIndent),
             "INTO" => behavior.push(TokenBehavior::IncreaseIndent),
-            "JOIN" => behavior.push(TokenBehavior::IncreaseIndent),
+            "JOIN" => {
+                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentIfFound);
+            }
             "LEFT" => behavior.push(TokenBehavior::NewLineBefore),
             "LIMIT" => behavior.push(TokenBehavior::NewLineBefore),
             "OPEN" => {
@@ -1288,6 +1291,7 @@ pub enum TokenBehavior {
     NoSpaceBefore,
     NoSpaceAfter,
     IncreaseIndent,
+    DecreaseIndentIfFound,
 }
 
 #[derive(Clone)]
