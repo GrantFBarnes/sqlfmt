@@ -20,7 +20,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             for p in 0..3 {
                 if let Some(t) = state.tokens.iter().nth_back(p) {
                     if t.category == Some(TokenCategory::Method)
-                        || t.category == Some(TokenCategory::DataType)
+                        || (p == 0 && t.category == Some(TokenCategory::DataType))
                     {
                         state.method_count += 1;
                         break;
@@ -2300,6 +2300,51 @@ RETURN 0"#
     *
 FROM TBL
 RETURN 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_declare_select() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    DECLARE V1 INT = (
+                    SELECT C1
+                    FROM TBL
+                    );
+                    "#
+                )
+            ),
+            r#"DECLARE V1 INT = (
+        SELECT C1
+        FROM TBL
+    );"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_declare_select_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    DECLARE V1 INT = (
+                    SELECT C1
+                    FROM TBL
+                    );
+                    "#
+                )
+            ),
+            r#"DECLARE V1 INT = (
+        SELECT
+            C1
+        FROM TBL
+    );"#
         );
     }
 
