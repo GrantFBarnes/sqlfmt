@@ -61,7 +61,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
 
 struct FormatState {
     tokens: Vec<Token>,
-    indent_stack: Vec<String>,
+    indent_stack: Vec<Token>,
     method_count: usize,
 }
 
@@ -270,15 +270,21 @@ impl FormatState {
     }
 
     fn increase_indent_stack(&mut self, token: &Token) {
-        let token_value: String = token.value.to_uppercase();
         if token.behavior.contains(&TokenBehavior::IncreaseIndent) {
-            self.indent_stack.push(token_value);
+            self.indent_stack.push(token.clone());
             return;
         }
 
-        if token_value == "THEN" && self.indent_stack.last() != Some(&String::from("CASE")) {
-            self.indent_stack.push(token_value);
-            return;
+        match token.value.to_uppercase().as_str() {
+            "THEN" => {
+                if let Some(t) = self.indent_stack.last() {
+                    if t.value.to_uppercase() != "CASE" {
+                        self.indent_stack.push(token.clone());
+                        return;
+                    }
+                }
+            }
+            _ => (),
         }
     }
 
@@ -294,7 +300,7 @@ impl FormatState {
         }
 
         let token_value: String = token.value.to_uppercase();
-        let top_of_stack: &String = self.indent_stack.last().unwrap();
+        let top_of_stack: &String = &self.indent_stack.last().unwrap().value.to_uppercase();
 
         let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
             ("(", vec![")"]),
@@ -369,15 +375,15 @@ impl FormatState {
         };
         if !decrease_until_match.is_empty() {
             loop {
-                let top: Option<String> = self.indent_stack.pop();
+                let top: Option<Token> = self.indent_stack.pop();
                 if top.is_none() {
                     break;
                 }
-                let top: String = top.unwrap();
+                let top: Token = top.unwrap();
 
-                if required_to_decrease.contains_key(top.as_str()) {
+                if required_to_decrease.contains_key(top.value.as_str()) {
                     if !required_to_decrease
-                        .get(top.as_str())
+                        .get(top.value.as_str())
                         .unwrap()
                         .contains(&token_value.as_str())
                     {
@@ -386,7 +392,7 @@ impl FormatState {
                     }
                 }
 
-                if decrease_until_match.contains(&top.as_str()) {
+                if decrease_until_match.contains(&top.value.as_str()) {
                     break;
                 }
             }
