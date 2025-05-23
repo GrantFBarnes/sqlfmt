@@ -271,15 +271,14 @@ impl FormatState {
 
     fn increase_indent_stack(&mut self, token: &Token) {
         let token_value: String = token.value.to_uppercase();
-        if match token_value.as_str() {
-            "SELECT" | "INSERT" | "DELETE" | "UPDATE" | "FROM" | "JOIN" | "WHERE" | "ORDER"
-            | "GROUP" | "HAVING" | "CASE" | "BEGIN" | "OPEN" | "INTO" | "DECLARE" | "CALL"
-            | "EXEC" | "EXECUTE" | "SET" | "VALUE" | "VALUES" | "WHILE" | "WITH" | "ELSE"
-            | "DO" | "(" => true,
-            "THEN" => self.indent_stack.last() != Some(&String::from("CASE")),
-            _ => false,
-        } {
+        if token.behavior.contains(&TokenBehavior::IncreaseIndent) {
             self.indent_stack.push(token_value);
+            return;
+        }
+
+        if token_value == "THEN" && self.indent_stack.last() != Some(&String::from("CASE")) {
+            self.indent_stack.push(token_value);
+            return;
         }
     }
 

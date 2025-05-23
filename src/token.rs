@@ -1144,7 +1144,10 @@ impl Token {
         let mut behavior: Vec<TokenBehavior> = vec![];
 
         match self.category {
-            Some(TokenCategory::ParenOpen) => behavior.push(TokenBehavior::NoSpaceAfter),
+            Some(TokenCategory::ParenOpen) => {
+                behavior.push(TokenBehavior::NoSpaceAfter);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             Some(TokenCategory::ParenClose) => behavior.push(TokenBehavior::NoSpaceBefore),
             Some(TokenCategory::Comma) => behavior.push(TokenBehavior::NoSpaceBefore),
             Some(TokenCategory::Comment) => {
@@ -1158,48 +1161,101 @@ impl Token {
             "AFTER" => behavior.push(TokenBehavior::NewLineBefore),
             "AND" => behavior.push(TokenBehavior::NewLineBefore),
             "BEFORE" => behavior.push(TokenBehavior::NewLineBefore),
-            "BEGIN" => behavior.push(TokenBehavior::NewLineBefore),
-            "CALL" => behavior.push(TokenBehavior::NewLineBefore),
+            "BEGIN" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "CALL" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "CASE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::IncreaseIndent);
             }
             "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
             "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
-            "DECLARE" => behavior.push(TokenBehavior::NewLineBefore),
-            "DELETE" => behavior.push(TokenBehavior::NewLineBefore),
+            "DECLARE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "DELETE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
             "DO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::IncreaseIndent);
             }
             "DROP" => behavior.push(TokenBehavior::NewLineBefore),
-            "ELSE" => behavior.push(TokenBehavior::NewLineBefore),
+            "ELSE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "END" => behavior.push(TokenBehavior::NewLineBefore),
-            "EXEC" => behavior.push(TokenBehavior::NewLineBefore),
-            "EXECUTE" => behavior.push(TokenBehavior::NewLineBefore),
+            "EXEC" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "EXECUTE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
             "FOR" => behavior.push(TokenBehavior::NewLineBefore),
-            "FROM" => behavior.push(TokenBehavior::NewLineBefore),
-            "GROUP" => behavior.push(TokenBehavior::NewLineBefore),
+            "FROM" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "GROUP" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "HAVING" => behavior.push(TokenBehavior::IncreaseIndent),
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
+            "INSERT" => behavior.push(TokenBehavior::IncreaseIndent),
+            "INTO" => behavior.push(TokenBehavior::IncreaseIndent),
+            "JOIN" => behavior.push(TokenBehavior::IncreaseIndent),
             "LEFT" => behavior.push(TokenBehavior::NewLineBefore),
             "LIMIT" => behavior.push(TokenBehavior::NewLineBefore),
-            "OPEN" => behavior.push(TokenBehavior::NewLineBefore),
+            "OPEN" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "OR" => behavior.push(TokenBehavior::NewLineBefore),
-            "ORDER" => behavior.push(TokenBehavior::NewLineBefore),
+            "ORDER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "OUTER" => behavior.push(TokenBehavior::NewLineBefore),
             "PRIMARY" => behavior.push(TokenBehavior::NewLineBefore),
             "RETURN" => behavior.push(TokenBehavior::NewLineBefore),
             "RIGHT" => behavior.push(TokenBehavior::NewLineBefore),
-            "SELECT" => behavior.push(TokenBehavior::NewLineBefore),
-            "SET" => behavior.push(TokenBehavior::NewLineBefore),
+            "SELECT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "SET" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "UNION" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
+            "UPDATE" => behavior.push(TokenBehavior::IncreaseIndent),
+            "VALUE" => behavior.push(TokenBehavior::IncreaseIndent),
+            "VALUES" => behavior.push(TokenBehavior::IncreaseIndent),
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
-            "WHERE" => behavior.push(TokenBehavior::NewLineBefore),
+            "WHERE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
+            "WHILE" => behavior.push(TokenBehavior::IncreaseIndent),
+            "WITH" => behavior.push(TokenBehavior::IncreaseIndent),
             _ => (),
         };
 
@@ -1231,6 +1287,7 @@ pub enum TokenBehavior {
     NewLineAfter,
     NoSpaceBefore,
     NoSpaceAfter,
+    IncreaseIndent,
 }
 
 #[derive(Clone)]
@@ -1554,7 +1611,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("*"),
@@ -1564,7 +1621,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1583,7 +1640,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -1611,7 +1668,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("*"),
@@ -1636,7 +1693,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1655,7 +1712,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("*"),
@@ -1670,7 +1727,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1720,7 +1777,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("*"),
@@ -1750,7 +1807,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1769,7 +1826,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("`Column 1`"),
@@ -1788,7 +1845,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("'Column 1'"),
@@ -1807,7 +1864,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("\"Column 1\""),
@@ -1826,7 +1883,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("[Column 1]"),
@@ -1845,7 +1902,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("*"),
@@ -1855,7 +1912,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("[S].[TBL1]"),
@@ -1874,7 +1931,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -1884,7 +1941,7 @@ mod tests {
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("{tableNames[i]}"),
@@ -1903,7 +1960,7 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("V1"),
@@ -1937,7 +1994,7 @@ mod tests {
                 Token {
                     value: String::from("DECLARE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("V1"),
@@ -1971,7 +2028,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("N'Column Name'"),
@@ -1990,7 +2047,7 @@ mod tests {
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("'Column''s Name'"),
@@ -2012,7 +2069,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from(
@@ -2034,7 +2091,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("'Column"),
@@ -2053,7 +2110,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -2077,7 +2134,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -2092,7 +2149,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -2116,7 +2173,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -2155,7 +2212,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("-1"),
@@ -2174,7 +2231,7 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("MIN"),
@@ -2184,7 +2241,7 @@ Name'"#
                 Token {
                     value: String::from("("),
                     category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter],
+                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from(")"),
@@ -2203,17 +2260,17 @@ Name'"#
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("("),
                     category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter],
+                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("1"),
@@ -2599,7 +2656,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -2648,7 +2705,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -2697,7 +2754,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -2746,7 +2803,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -2795,7 +2852,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
@@ -2844,7 +2901,7 @@ Name'"#
                 Token {
                     value: String::from("WHERE"),
                     category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
                     value: String::from("C1"),
