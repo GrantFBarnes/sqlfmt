@@ -1195,10 +1195,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "DROP" => behavior.push(TokenBehavior::NewLineBefore),
-            "ELSE" => {
-                behavior.push(TokenBehavior::NewLineBefore);
-                behavior.push(TokenBehavior::IncreaseIndent);
-            }
+            "ELSE" => behavior.push(TokenBehavior::NewLineBefore),
             "END" => behavior.push(TokenBehavior::NewLineBefore),
             "EXEC" => {
                 behavior.push(TokenBehavior::NewLineBefore);

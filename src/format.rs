@@ -308,8 +308,8 @@ impl FormatState {
             ("OPEN", vec!["CLOSE"]),
             ("BEGIN", vec!["END"]),
             ("DO", vec!["END"]),
-            ("THEN", vec!["END", "ELSE"]),
-            ("ELSE", vec!["END"]),
+            ("CASE", vec!["END"]),
+            ("THEN", vec!["END"]),
         ]);
 
         match token.category {
@@ -359,14 +359,14 @@ impl FormatState {
             "END" => vec!["BEGIN", "CASE", "THEN", "ELSE"],
             "INTO" => vec!["SELECT", "INSERT"],
             "SET" => vec!["UPDATE"],
-            "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "DROP" | "UNION" | "BEGIN" | "CALL"
-            | "EXECUTE" | "EXEC" | "DECLARE" | "WITH" | "RETURN" | "FOR" | "IF" | "PIVOT"
-            | "OPEN" => {
+            "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DROP" | "ELSE" | "EXEC" | "EXECUTE"
+            | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT" | "UNION"
+            | "UPDATE" | "WITH" => {
                 vec![
-                    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE", "GROUP",
-                    "HAVING", "UNION", "WITH", "FOR", "WHILE", "SET", "PIVOT",
+                    "BEGIN", "CALL", "DECLARE", "DELETE", "DROP", "EXEC", "EXECUTE", "ELSE", "FOR",
+                    "FROM", "GROUP", "HAVING", "IF", "INSERT", "OPEN", "PIVOT", "RETURN", "SELECT",
+                    "SET", "UNION", "UPDATE", "WHERE", "WHILE", "WITH",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -1841,7 +1841,7 @@ FROM TBL1"#
     C1,
     CASE WHEN C1 <= 1 THEN 'small'
         WHEN C1 <= 3 THEN 'medium'
-    ELSE 'large' END AS C2,
+        ELSE 'large' END AS C2,
     C3
 FROM TBL1"#
         );
@@ -1871,7 +1871,7 @@ FROM TBL1"#
     CASE
         WHEN C1 <= 1 THEN 'small'
         WHEN C1 <= 3 THEN 'medium'
-    ELSE 'large'
+        ELSE 'large'
     END AS C2,
     C3
 FROM TBL1"#
@@ -2232,6 +2232,98 @@ IF V2 IS NULL SET V2 = 0"#
 SET V1 = 0
 IF V2 IS NULL
 SET V2 = 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_else() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    IF V1 IS NULL SET V1 = 0
+                    ELSE SET V2 = NULL
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL SET V1 = 0
+ELSE SET V2 = NULL"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_else_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    IF V1 IS NULL SET V1 = 0
+                    ELSE SET V2 = NULL
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL
+SET V1 = 0
+ELSE
+SET V2 = NULL"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_else_begin_end() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    IF V1 IS NULL BEGIN
+                    SET V1 = 0
+                    END
+                    ELSE BEGIN
+                    SET V2 = NULL
+                    END
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL BEGIN
+    SET V1 = 0
+END
+ELSE BEGIN
+    SET V2 = NULL
+END"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_else_begin_end_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    IF V1 IS NULL BEGIN
+                    SET V1 = 0
+                    END
+                    ELSE BEGIN
+                    SET V2 = NULL
+                    END
+                    "#
+                )
+            ),
+            r#"IF V1 IS NULL
+BEGIN
+    SET V1 = 0
+END
+ELSE
+BEGIN
+    SET V2 = NULL
+END"#
         );
     }
 
