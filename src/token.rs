@@ -1175,6 +1175,7 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
+            "CATCH" => behavior.push(TokenBehavior::NewLineAfter),
             "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
             "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
             "DECLARE" => {

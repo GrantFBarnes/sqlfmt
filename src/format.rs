@@ -2314,6 +2314,41 @@ RETURN 0"#
     }
 
     #[test]
+    fn test_get_formatted_sql_catch_update() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1
+                    "#
+                )
+            ),
+            r#"BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_catch_update_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1
+                    "#
+                )
+            ),
+            r#"BEGIN CATCH
+END CATCH
+UPDATE TBL1
+SET C1 = 1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_return() {
         assert_eq!(
             get_formatted_sql(
