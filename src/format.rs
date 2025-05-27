@@ -1508,6 +1508,58 @@ FROM TBL1;"#
     }
 
     #[test]
+    fn test_get_formatted_sql_single_comment_before_set() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT C1
+                    FROM TBL1
+                    ORDER BY C1
+
+                    -- COMMENT
+                    SET V1 = 1
+                    "#,
+                )
+            ),
+            r#"SELECT C1
+FROM TBL1
+ORDER BY C1
+
+-- COMMENT
+SET V1 = 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_single_comment_before_set_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT C1
+                    FROM TBL1
+                    ORDER BY C1
+
+                    -- COMMENT
+                    SET V1 = 1
+                    "#,
+                )
+            ),
+            r#"SELECT
+    C1
+FROM TBL1
+ORDER BY C1
+-- COMMENT
+SET V1 = 1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_multiline_comments() {
         assert_eq!(
             get_formatted_sql(
