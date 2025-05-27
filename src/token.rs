@@ -1263,7 +1263,10 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "WHILE" => behavior.push(TokenBehavior::IncreaseIndent),
-            "WITH" => behavior.push(TokenBehavior::IncreaseIndent),
+            "WITH" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             _ => (),
         };
 

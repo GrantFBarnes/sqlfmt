@@ -362,7 +362,7 @@ impl FormatState {
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
             "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "DROP" | "UNION" | "BEGIN" | "CALL"
-            | "EXECUTE" | "EXEC" | "DECLARE" | "RETURN" | "IF" | "PIVOT" | "OPEN" => {
+            | "EXECUTE" | "EXEC" | "DECLARE" | "WITH" | "RETURN" | "IF" | "PIVOT" | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE", "GROUP",
                     "HAVING", "UNION", "WITH", "WHILE", "SET", "PIVOT",
@@ -1627,6 +1627,57 @@ FROM TBL1"#
 INTO
     TBL2
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_cte_after_select() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT C1 FROM TBL1
+                    WITH CTE2 AS
+                    (SELECT C2 FROM TBL2)
+                    SELECT * FROM CTE2
+                    "#,
+                )
+            ),
+            r#"SELECT C1 FROM TBL1
+WITH CTE2 AS
+    (SELECT C2 FROM TBL2)
+SELECT * FROM CTE2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_cte_after_select_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT C1 FROM TBL1
+                    WITH CTE2 AS
+                    (SELECT C2 FROM TBL2)
+                    SELECT * FROM CTE2
+                    "#,
+                )
+            ),
+            r#"SELECT
+    C1
+FROM TBL1
+WITH CTE2 AS (
+        SELECT
+            C2
+        FROM TBL2
+    )
+SELECT
+    *
+FROM CTE2"#
         );
     }
 
