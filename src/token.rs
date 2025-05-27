@@ -675,7 +675,6 @@ impl Token {
             "RANGE" => Some(TokenCategory::Keyword),
             "RANGE_N" => Some(TokenCategory::Keyword),
             "RANK" => Some(TokenCategory::Keyword),
-            "RAW" => Some(TokenCategory::Keyword),
             "READ" => Some(TokenCategory::Keyword),
             "READS" => Some(TokenCategory::Keyword),
             "READTEXT" => Some(TokenCategory::Keyword),
@@ -825,7 +824,6 @@ impl Token {
             "STRAIGHT_JOIN" => Some(TokenCategory::Keyword),
             "STRING_CS" => Some(TokenCategory::Keyword),
             "STRUCTURE" => Some(TokenCategory::Keyword),
-            "STUFF" => Some(TokenCategory::Keyword),
             "STYLE" => Some(TokenCategory::Keyword),
             "SUBMULTISET" => Some(TokenCategory::Keyword),
             "SUBSCRIBER" => Some(TokenCategory::Keyword),
@@ -1096,10 +1094,12 @@ impl Token {
             "QUARTER" => Some(TokenCategory::Method),
             "RADIANS" => Some(TokenCategory::Method),
             "RAND" => Some(TokenCategory::Method),
+            "RAW" => Some(TokenCategory::Method),
             "REPEAT" => Some(TokenCategory::Method),
             "REPLACE" => Some(TokenCategory::Method),
             "REVERSE" => Some(TokenCategory::Method),
             "RIGHT" => Some(TokenCategory::Method),
+            "ROOT" => Some(TokenCategory::Method),
             "ROUND" => Some(TokenCategory::Method),
             "ROW_NUMBER" => Some(TokenCategory::Method),
             "RPAD" => Some(TokenCategory::Method),
@@ -1113,6 +1113,7 @@ impl Token {
             "SQRT" => Some(TokenCategory::Method),
             "STRCMP" => Some(TokenCategory::Method),
             "STR_TO_DATE" => Some(TokenCategory::Method),
+            "STUFF" => Some(TokenCategory::Method),
             "SUBDATE" => Some(TokenCategory::Method),
             "SUBSTR" => Some(TokenCategory::Method),
             "SUBSTRING" => Some(TokenCategory::Method),
@@ -1210,7 +1211,10 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
-            "FOR" => behavior.push(TokenBehavior::NewLineBefore),
+            "FOR" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "FROM" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);

@@ -362,10 +362,11 @@ impl FormatState {
             "ELSE" => vec!["THEN", "CASE"],
             "VALUE" | "VALUES" => vec!["INTO"],
             "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "DROP" | "UNION" | "BEGIN" | "CALL"
-            | "EXECUTE" | "EXEC" | "DECLARE" | "WITH" | "RETURN" | "IF" | "PIVOT" | "OPEN" => {
+            | "EXECUTE" | "EXEC" | "DECLARE" | "WITH" | "RETURN" | "FOR" | "IF" | "PIVOT"
+            | "OPEN" => {
                 vec![
                     "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "FROM", "WHERE", "GROUP",
-                    "HAVING", "UNION", "WITH", "WHILE", "SET", "PIVOT",
+                    "HAVING", "UNION", "WITH", "FOR", "WHILE", "SET", "PIVOT",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -2435,6 +2436,51 @@ RETURN 0"#
     }
 
     #[test]
+    fn test_get_formatted_sql_xml() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT C1 AS ID
+                    FROM TBL1
+                    FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64
+                    "#
+                )
+            ),
+            r#"SELECT C1 AS ID
+FROM TBL1
+FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_xml_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT C1 AS ID
+                    FROM TBL1
+                    FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64
+                    "#
+                )
+            ),
+            r#"SELECT
+    C1 AS ID
+FROM TBL1
+FOR XML RAW('ITEM'),
+    TYPE,
+    ELEMENTS,
+    ROOT('VALUES'),
+    BINARY BASE64"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_create_table_simple() {
         assert_eq!(
             get_formatted_sql(
@@ -2596,7 +2642,7 @@ RETURN 0"#
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER INSERT
     ON TBL1
-    FOR EACH ROW
+FOR EACH ROW
 BEGIN
     CALL SP1(NEW.ID);
 END;"#
@@ -2624,7 +2670,7 @@ END;"#
             ),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER INSERT ON TBL1
-    FOR EACH ROW
+FOR EACH ROW
 BEGIN
     CALL SP1(NEW.ID);
 END;"#
@@ -2749,7 +2795,7 @@ FROM (
     ) AS SourceTable
 PIVOT (
     AVG(StandardCost) FOR DaysToManufacture IN
-    ([0], [1], [2], [3], [4])
+        ([0], [1], [2], [3], [4])
 ) AS PivotTable;"#
         );
     }
@@ -2791,12 +2837,12 @@ FROM (
     ) AS SourceTable PIVOT (
     AVG(StandardCost)
     FOR DaysToManufacture IN (
-        [0],
-        [1],
-        [2],
-        [3],
-        [4]
-    )
+            [0],
+            [1],
+            [2],
+            [3],
+            [4]
+        )
 ) AS PivotTable;"#
         );
     }
@@ -2884,7 +2930,7 @@ DEALLOCATE SAMPLE_CURSOR;"#
     @NAME NVARCHAR(50);
 
 DECLARE SAMPLE_CURSOR CURSOR
-    FOR
+FOR
 SELECT
     ID,
     NAME
