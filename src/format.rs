@@ -303,14 +303,21 @@ impl FormatState {
         let top_of_stack: &Token = self.indent_stack.last().unwrap();
         let top_of_stack_value: &String = &top_of_stack.value.to_uppercase();
 
-        let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
-            ("(", vec![")"]),
-            ("OPEN", vec!["CLOSE"]),
-            ("BEGIN", vec!["END"]),
-            ("DO", vec!["END"]),
-            ("CASE", vec!["END"]),
-            ("THEN", vec!["END"]),
+        let required_to_decrease: HashMap<&str, &str> = HashMap::from([
+            ("(", ")"),
+            ("OPEN", "CLOSE"),
+            ("BEGIN", "END"),
+            ("DO", "END"),
+            ("CASE", "END"),
+            ("THEN", "END"),
         ]);
+
+        if let Some(v) = required_to_decrease.get(top_of_stack_value.as_str()) {
+            if &token_value == v {
+                self.indent_stack.pop();
+            }
+            return;
+        }
 
         match token.category {
             Some(TokenCategory::Comment) => {
@@ -318,9 +325,7 @@ impl FormatState {
                     t.behavior.contains(&TokenBehavior::IncreaseIndent)
                         && t.value.to_uppercase() != "FROM"
                 }) {
-                    if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
-                        self.indent_stack.pop();
-                    }
+                    self.indent_stack.pop();
                     return;
                 }
             }
@@ -329,9 +334,7 @@ impl FormatState {
                     .behavior
                     .contains(&TokenBehavior::DecreaseIndentOnSingleLine)
                 {
-                    if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
-                        self.indent_stack.pop();
-                    }
+                    self.indent_stack.pop();
                     return;
                 }
             }
@@ -346,9 +349,7 @@ impl FormatState {
                 || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
                 || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
             {
-                if !required_to_decrease.contains_key(top_of_stack_value.as_str()) {
-                    self.indent_stack.pop();
-                }
+                self.indent_stack.pop();
                 return;
             }
         }
@@ -383,15 +384,11 @@ impl FormatState {
                 }
                 let top: Token = top.unwrap();
 
-                if required_to_decrease.contains_key(top.value.as_str()) {
-                    if !required_to_decrease
-                        .get(top.value.as_str())
-                        .unwrap()
-                        .contains(&token_value.as_str())
-                    {
+                if let Some(v) = required_to_decrease.get(top.value.as_str()) {
+                    if &token_value != v {
                         self.indent_stack.push(top);
-                        break;
                     }
+                    return;
                 }
 
                 if decrease_until_match.contains(&top.value.as_str()) {
@@ -2858,7 +2855,7 @@ WHILE VAR_COUNT > 0 DO
         SELECT COUNT(ID)
         INTO VAR_COUNT
         FROM TBL1;
-END WHILE;"#
+    END WHILE;"#
         );
     }
 
@@ -2907,7 +2904,7 @@ WHILE VAR_COUNT > 0
         INTO
             VAR_COUNT
         FROM TBL1;
-END WHILE;"#
+    END WHILE;"#
         );
     }
 
