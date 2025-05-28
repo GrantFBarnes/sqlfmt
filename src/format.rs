@@ -142,7 +142,9 @@ impl FormatState {
             .expect("should always have a previous token");
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            self.push(Token::newline());
+            if self.method_count == 0 {
+                self.push(Token::newline());
+            }
             return;
         }
 
@@ -1114,6 +1116,43 @@ WHERE C1 IN (
         2,
         3
     )"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_count_distinct() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT COUNT(DISTINCT YEAR(D1))
+                    FROM TBL1
+                    "#,
+                )
+            ),
+            r#"SELECT COUNT(DISTINCT YEAR(D1))
+FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_count_distinct_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT COUNT(DISTINCT YEAR(D1))
+                    FROM TBL1
+                    "#,
+                )
+            ),
+            r#"SELECT
+    COUNT(DISTINCT YEAR(D1))
+FROM TBL1"#
         );
     }
 
