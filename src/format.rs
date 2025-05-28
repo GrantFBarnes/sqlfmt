@@ -381,12 +381,12 @@ impl FormatState {
             "SET" => vec!["UPDATE"],
             "VALUE" | "VALUES" => vec!["INTO"],
             "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DROP" | "ELSE" | "EXEC" | "EXECUTE"
-            | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT" | "UNION"
-            | "UPDATE" | "WITH" => {
+            | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT" | "TRUNCATE"
+            | "UNION" | "UPDATE" | "WITH" => {
                 vec![
                     "BEGIN", "CALL", "DECLARE", "DELETE", "DROP", "EXEC", "EXECUTE", "ELSE", "FOR",
                     "FROM", "GROUP", "HAVING", "IF", "INSERT", "OPEN", "PIVOT", "RETURN", "SELECT",
-                    "SET", "UNION", "UPDATE", "WHERE", "WHILE", "WITH",
+                    "SET", "TRUNCATE", "UNION", "UPDATE", "WHERE", "WHILE", "WITH",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -2146,6 +2146,43 @@ WHERE C <= 1"#
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_truncate_table() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
+                    TRUNCATE TABLE TBL3
+                    "#
+                )
+            ),
+            r#"TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
+TRUNCATE TABLE TBL3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_truncate_table_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
+                    TRUNCATE TABLE TBL3
+                    "#
+                )
+            ),
+            r#"TRUNCATE TABLE TBL1
+TRUNCATE TABLE TBL2
+TRUNCATE TABLE TBL3"#
         );
     }
 
