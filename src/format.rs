@@ -179,14 +179,14 @@ impl FormatState {
                 }
             },
             "INTO" => {
-                if let Some(prev2_token) = self.tokens.iter().nth_back(1) {
-                    match prev2_token.value.to_uppercase().as_str() {
-                        "INSERT" => (),
-                        _ => {
-                            self.push(Token::newline());
-                            return;
-                        }
-                    }
+                if self
+                    .tokens
+                    .iter()
+                    .nth_back(2)
+                    .is_some_and(|t| t.value.to_uppercase() != "INSERT")
+                {
+                    self.push(Token::newline());
+                    return;
                 }
             }
             _ => (),
@@ -278,6 +278,17 @@ impl FormatState {
         }
 
         match token.value.to_uppercase().as_str() {
+            "INTO" => {
+                if self
+                    .tokens
+                    .iter()
+                    .nth_back(2)
+                    .is_some_and(|t| t.value.to_uppercase() != "INSERT")
+                {
+                    self.indent_stack.push(token.clone());
+                    return;
+                }
+            }
             "THEN" => {
                 if let Some(t) = self.indent_stack.last() {
                     if t.value.to_uppercase() != "CASE" {
@@ -1931,12 +1942,11 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("INSERT INTO TBL1(ID)VALUES(1)")),
-            r#"INSERT INTO
-    TBL1 (
-        ID
-    ) VALUES (
-        1
-    )"#
+            r#"INSERT INTO TBL1 (
+    ID
+) VALUES (
+    1
+)"#
         );
     }
 
@@ -1960,16 +1970,15 @@ FROM TBL1"#
                 &config,
                 String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
             ),
-            r#"INSERT INTO
-    TBL1 (
-        C1,
-        C2,
-        C3
-    ) VALUES (
-        1,
-        2,
-        3
-    )"#
+            r#"INSERT INTO TBL1 (
+    C1,
+    C2,
+    C3
+) VALUES (
+    1,
+    2,
+    3
+)"#
         );
     }
 
@@ -2007,12 +2016,11 @@ FROM TBL1"#
                     "#,
                 )
             ),
-            r#"INSERT INTO
-    TBL1 (
-        C1,
-        C2,
-        C3
-    )
+            r#"INSERT INTO TBL1 (
+    C1,
+    C2,
+    C3
+)
 SELECT
     C1,
     C2,
@@ -2480,12 +2488,11 @@ RETURN 0"#
 
 BEGIN TRY
     -- COMMENT
-    INSERT INTO
-        TBL1 (
-            C1
-        ) VALUES (
-            1
-        )
+    INSERT INTO TBL1 (
+        C1
+    ) VALUES (
+        1
+    )
 END TRY
 BEGIN CATCH
     RETURN 1
