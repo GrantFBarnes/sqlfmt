@@ -227,6 +227,12 @@ impl FormatState {
                     return;
                 }
             }
+            "INSERT" | "UPDATE" => {
+                if prev1_token.value.to_uppercase() != "AFTER" {
+                    self.push(Token::newline());
+                    return;
+                }
+            }
             "INTO" => {
                 if prev1_token.value.to_uppercase() != "INSERT" {
                     self.push(Token::newline());
@@ -1778,6 +1784,57 @@ WITH CTE2 AS (
 SELECT
     *
 FROM CTE2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_after_cte() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    WITH CTE1 AS
+                    (SELECT C1 FROM TBL1)
+                    INSERT INTO TB2 (C1)
+                    SELECT C1 FROM CTE1
+                    "#,
+                )
+            ),
+            r#"WITH CTE1 AS
+    (SELECT C1 FROM TBL1)
+INSERT INTO TB2 (C1)
+SELECT C1 FROM CTE1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_after_cte_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    WITH CTE1 AS
+                    (SELECT C1 FROM TBL1)
+                    INSERT INTO TB2 (C1)
+                    SELECT C1 FROM CTE1
+                    "#,
+                )
+            ),
+            r#"WITH CTE1 AS (
+        SELECT
+            C1
+        FROM TBL1
+    )
+INSERT INTO TB2 (
+    C1
+)
+SELECT
+    C1
+FROM CTE1"#
         );
     }
 
