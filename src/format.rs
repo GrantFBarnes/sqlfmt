@@ -244,35 +244,46 @@ impl FormatState {
     }
 
     fn remove_extra_newline(&mut self, token: &Token) {
-        // remove double newline for two consecutive single delimiter lines
-        if token.category == Some(TokenCategory::Delimiter) {
-            for i in (1..self.tokens.len()).rev() {
-                if self.tokens[i].category == Some(TokenCategory::NewLine) {
-                    if self.tokens[i - 1].category == Some(TokenCategory::NewLine) {
-                        self.tokens.remove(i);
-                    }
+        let mut last_newline_positions: Vec<usize> = vec![];
+        let mut last_endline_categories: Vec<Option<TokenCategory>> = vec![];
+        for i in (1..self.tokens.len()).rev() {
+            if self.tokens[i].category == Some(TokenCategory::NewLine) {
+                last_newline_positions.push(i);
+                last_endline_categories.push(self.tokens[i - 1].category.clone());
+                if last_newline_positions.len() >= 3 {
                     break;
                 }
             }
         }
 
+        // need at least two newlines to remove extra
+        if last_newline_positions.len() < 2 {
+            return;
+        }
+
+        // last two newlines need to be next to each other
+        if last_newline_positions[0] != last_newline_positions[1] + 1 {
+            return;
+        }
+
         // remove double newline for end of section
-        if self
-            .tokens
-            .iter()
-            .nth_back(0)
-            .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
-            && self
-                .tokens
-                .iter()
-                .nth_back(1)
-                .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
-        {
-            match token.value.to_uppercase().as_str() {
-                "END" => {
-                    self.tokens.pop();
+        if token.value.to_uppercase() == "END" {
+            if self.tokens.len() == last_newline_positions[0] + 1 {
+                self.tokens.remove(last_newline_positions[0]);
+                return;
+            }
+        }
+
+        // remove double newline for two consecutive single delimiter lines
+        if token.category == Some(TokenCategory::Delimiter) {
+            if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
+                if last_endline_categories.len() == 2
+                    || last_endline_categories[2] == Some(TokenCategory::Delimiter)
+                    || last_endline_categories[2] == Some(TokenCategory::NewLine)
+                {
+                    self.tokens.remove(last_newline_positions[0]);
+                    return;
                 }
-                _ => (),
             }
         }
     }
@@ -942,9 +953,13 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(
                 &Configuration::new(),
-                String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
+                String::from(
+                    r#"
+                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2=2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    "#
+                )
             ),
-            r#"DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3;"#
+            r#"SELECT * FROM TBL1; DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
         );
     }
 
@@ -955,11 +970,26 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(
                 &config,
-                String::from("DECLARE C1 = 1;DECLARE C2 = 2;  DECLARE C3 = 3;")
+                String::from(
+                    r#"
+                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2=2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    "#
+                )
             ),
-            r#"DECLARE C1 = 1;
+            r#"SELECT
+    *
+FROM TBL1;
+
+DECLARE C1 = 1;
 DECLARE C2 = 2;
-DECLARE C3 = 3;"#
+DECLARE C3 = 3;
+
+SELECT
+    *
+FROM TBL1
+DECLARE C4 = 4;
+
+DECLARE C5 = 5;"#
         );
     }
 
@@ -3300,6 +3330,7 @@ OPEN SAMPLE_CURSOR
             @VENDOR_NAME
     END
 CLOSE SAMPLE_CURSOR;
+
 DEALLOCATE SAMPLE_CURSOR;"#
         );
     }
