@@ -1315,13 +1315,13 @@ enum QuoteCategory {
     QuoteSingle,
     QuoteDouble,
     Bracket,
-    CurlyBracket,
 }
 
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
     let mut curr_token: Token = Token::new();
+    let mut in_interpolation: bool = false;
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
 
@@ -1344,6 +1344,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         } else {
             None
         };
+
+        in_interpolation = get_in_interpolation(in_interpolation, prev_ch, curr_ch);
+        if in_interpolation {
+            curr_token.value.push(curr_ch);
+            continue;
+        }
 
         let was_in_comment: Option<CommentCategory> = in_comment.clone();
         in_comment = get_in_comment(
@@ -1502,6 +1508,19 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     return tokens;
 }
 
+fn get_in_interpolation(in_interpolation: bool, prev_ch: Option<char>, curr_ch: char) -> bool {
+    if in_interpolation {
+        if prev_ch == Some(CURLY_BRACKET_CLOSE) {
+            return false;
+        }
+    } else {
+        if curr_ch == CURLY_BRACKET_OPEN {
+            return true;
+        }
+    }
+    return in_interpolation;
+}
+
 fn get_in_comment(
     in_comment: &Option<CommentCategory>,
     prev2_ch: Option<char>,
@@ -1585,12 +1604,6 @@ fn get_in_quote(
                     }
                     return in_quote.clone();
                 }
-                QuoteCategory::CurlyBracket => {
-                    if prev_ch == Some(CURLY_BRACKET_CLOSE) {
-                        return None;
-                    }
-                    return in_quote.clone();
-                }
             }
         }
         None => {
@@ -1599,7 +1612,6 @@ fn get_in_quote(
                 QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
                 QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
                 BRACKET_OPEN => Some(QuoteCategory::Bracket),
-                CURLY_BRACKET_OPEN => Some(QuoteCategory::CurlyBracket),
                 'N' => {
                     if next_ch == Some(QUOTE_SINGLE) {
                         return Some(QuoteCategory::QuoteSingle);
@@ -1937,7 +1949,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_sql_tokens_quote_curly_bracket() {
+    fn test_get_sql_tokens_interpolation_table_name() {
         assert_eq!(
             get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]}")),
             vec![
@@ -1958,7 +1970,45 @@ mod tests {
                 },
                 Token {
                     value: String::from("{tableNames[i]}"),
-                    category: Some(TokenCategory::Quote),
+                    category: None,
+                    behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_procedure_name() {
+        assert_eq!(
+            get_sql_tokens(String::from("CALL SCH.{procedureName}();")),
+            vec![
+                Token {
+                    value: String::from("CALL"),
+                    category: Some(TokenCategory::Method),
+                    behavior: vec![
+                        TokenBehavior::NewLineBefore,
+                        TokenBehavior::IncreaseIndent,
+                        TokenBehavior::DecreaseIndentOnSingleLine,
+                    ],
+                },
+                Token {
+                    value: String::from("SCH.{procedureName}"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("("),
+                    category: Some(TokenCategory::ParenOpen),
+                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(")"),
+                    category: Some(TokenCategory::ParenClose),
+                    behavior: vec![TokenBehavior::NoSpaceBefore],
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
                     behavior: vec![],
                 },
             ]
