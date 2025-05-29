@@ -690,6 +690,53 @@ WHERE C1 = 1"#
     }
 
     #[test]
+    fn test_get_formatted_sql_embedded_conditions() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#" 
+                    SELECT * FROM TBL1
+                    WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
+                    "#
+                )
+            ),
+            r#"SELECT * FROM TBL1
+WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_embedded_conditions_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#" 
+                    SELECT * FROM TBL1
+                    WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
+                    "#
+                )
+            ),
+            r#"SELECT
+    *
+FROM TBL1
+WHERE (
+        (
+            C1 = 0
+            AND C2 = 0
+        )
+        OR (
+            C1 = 1
+            AND C2 = 1
+        )
+    )"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_sub_query_inline() {
         assert_eq!(
             get_formatted_sql(
