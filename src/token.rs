@@ -7,7 +7,6 @@ const CIRCUMFLEX: char = '^';
 const COMMA: char = ',';
 const CURLY_BRACKET_CLOSE: char = '}';
 const CURLY_BRACKET_OPEN: char = '{';
-const DELIMITER: char = ';';
 const EQUAL: char = '=';
 const FULL_STOP: char = '.';
 const GREATER_THAN: char = '>';
@@ -67,19 +66,21 @@ impl Token {
         self.value.match_indices(find).count()
     }
 
-    fn setup(&mut self) {
-        self.category = self.get_category();
+    fn setup(&mut self, delimiter: char) {
+        self.category = self.get_category(delimiter);
         self.set_behavior();
     }
 
-    fn get_category(&self) -> Option<TokenCategory> {
+    fn get_category(&self, delimiter: char) -> Option<TokenCategory> {
         if self.category.is_some() {
             return self.category.clone();
         }
 
         if self.value.len() == 1 {
+            if self.value.chars().nth(0) == Some(delimiter) {
+                return Some(TokenCategory::Delimiter);
+            }
             return match self.value.chars().nth(0).unwrap() {
-                DELIMITER => Some(TokenCategory::Delimiter),
                 NEW_LINE => Some(TokenCategory::NewLine),
                 COMMA => Some(TokenCategory::Comma),
                 PAREN_OPEN => Some(TokenCategory::ParenOpen),
@@ -1320,6 +1321,8 @@ enum QuoteCategory {
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
+    let delimiter: char = ';';
+
     let mut curr_token: Token = Token::new();
     let mut in_interpolation: bool = false;
     let mut in_comment: Option<CommentCategory> = None;
@@ -1364,12 +1367,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.category = Some(TokenCategory::Comment);
-                curr_token.setup();
+                curr_token.setup(delimiter);
             }
 
             curr_token.value.push(curr_ch);
@@ -1386,12 +1389,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.category = Some(TokenCategory::Quote);
-                curr_token.setup();
+                curr_token.setup(delimiter);
             }
 
             curr_token.value.push(curr_ch);
@@ -1402,28 +1405,40 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
+        if curr_ch == delimiter {
+            if !curr_token.is_empty() {
+                curr_token.setup(delimiter);
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+            curr_token.value.push(curr_ch);
+            curr_token.setup(delimiter);
+            tokens.push(curr_token);
+            curr_token = Token::new();
+            continue;
+        }
+
         match curr_ch {
-            DELIMITER | NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
-            | CIRCUMFLEX => {
+            NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.setup();
+                curr_token.setup(delimiter);
                 tokens.push(curr_token);
                 curr_token = Token::new();
                 continue;
             }
             LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.setup();
+                curr_token.setup(delimiter);
 
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
@@ -1442,7 +1457,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     && prev_ch != Some(SLASH_FORWARD)
                     && prev_ch != Some(PERCENT)
                 {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1455,7 +1470,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     Some(PERCENT) => Some(TokenCategory::Operator),
                     _ => Some(TokenCategory::Compare),
                 };
-                curr_token.setup();
+                curr_token.setup(delimiter);
 
                 if next_ch != Some(EQUAL) {
                     tokens.push(curr_token);
@@ -1466,7 +1481,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             PLUS | HYPHEN => {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(delimiter);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1476,7 +1491,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     continue;
                 }
 
-                curr_token.setup();
+                curr_token.setup(delimiter);
 
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
@@ -1490,7 +1505,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
         if curr_ch.is_whitespace() {
             if !curr_token.is_empty() {
-                curr_token.setup();
+                curr_token.setup(delimiter);
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
@@ -1501,7 +1516,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     if !curr_token.is_empty() {
-        curr_token.setup();
+        curr_token.setup(delimiter);
         tokens.push(curr_token);
     }
 
