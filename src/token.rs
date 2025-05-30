@@ -1320,9 +1320,10 @@ enum QuoteCategory {
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
-    let mut delimiter: char = ';';
+    let mut delimiter: String = String::from(";");
 
     let mut curr_token: Token = Token::new();
+    let mut in_delimiter_change: bool = false;
     let mut in_interpolation: bool = false;
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
@@ -1330,19 +1331,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
-
-        if tokens
-            .last()
-            .is_some_and(|t| t.value.to_uppercase() == "DELIMITER")
-        {
-            if !curr_ch.is_whitespace() {
-                curr_token.value.push(curr_ch);
-                tokens.push(curr_token);
-                curr_token = Token::new();
-                delimiter = curr_ch;
-            }
-            continue;
-        }
 
         let prev2_ch: Option<char> = if i >= 2 {
             Some(sql_bytes[i - 2].into())
@@ -1359,6 +1347,22 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         } else {
             None
         };
+
+        let was_in_delimiter_change: bool = in_delimiter_change;
+        in_delimiter_change = get_in_delimiter_change(in_delimiter_change, tokens.last(), curr_ch);
+        if in_delimiter_change {
+            if !was_in_delimiter_change {
+                // start of new delimiter change
+                curr_token.category = Some(TokenCategory::Delimiter);
+            }
+            curr_token.value.push(curr_ch);
+            continue;
+        } else if was_in_delimiter_change {
+            // delimiter change just ended, add delimiter token
+            delimiter = curr_token.value.clone();
+            tokens.push(curr_token);
+            curr_token = Token::new();
+        }
 
         in_interpolation = get_in_interpolation(in_interpolation, prev_ch, curr_ch);
         if in_interpolation {
@@ -1415,19 +1419,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             // quote just ended, add quote token
             tokens.push(curr_token);
             curr_token = Token::new();
-        }
-
-        if curr_ch == delimiter {
-            if !curr_token.is_empty() {
-                curr_token.setup();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-            curr_token.value.push(curr_ch);
-            curr_token.category = Some(TokenCategory::Delimiter);
-            tokens.push(curr_token);
-            curr_token = Token::new();
-            continue;
         }
 
         match curr_ch {
@@ -1525,6 +1516,19 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         curr_token.value.push(curr_ch);
+
+        if curr_token.value.ends_with(&delimiter) {
+            curr_token.value = curr_token.value.replace(&delimiter, "");
+            if !curr_token.is_empty() {
+                curr_token.setup();
+                tokens.push(curr_token);
+            }
+            curr_token = Token::new();
+            curr_token.value = delimiter.clone();
+            curr_token.category = Some(TokenCategory::Delimiter);
+            tokens.push(curr_token);
+            curr_token = Token::new();
+        }
     }
 
     if !curr_token.is_empty() {
@@ -1533,6 +1537,22 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     return tokens;
+}
+
+fn get_in_delimiter_change(
+    in_delimiter_change: bool,
+    prev_token: Option<&Token>,
+    curr_ch: char,
+) -> bool {
+    if curr_ch.is_whitespace() {
+        return false;
+    }
+
+    if prev_token.is_some_and(|t| t.value.to_uppercase() == "DELIMITER") {
+        return true;
+    }
+
+    return in_delimiter_change;
 }
 
 fn get_in_interpolation(in_interpolation: bool, prev_ch: Option<char>, curr_ch: char) -> bool {
@@ -2267,7 +2287,7 @@ Name'"#
     fn test_get_sql_tokens_delimiter_change() {
         assert_eq!(
             get_sql_tokens(String::from(
-                "SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;;"
+                "SELECT 1; DELIMITER $$ SELECT 1; DELIMITER \\"
             )),
             vec![
                 Token {
@@ -2291,12 +2311,7 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
-                    value: String::from("$"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("$"),
+                    value: String::from("$$"),
                     category: Some(TokenCategory::Delimiter),
                     behavior: vec![],
                 },
@@ -2316,12 +2331,7 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
-                    value: String::from(";"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
+                    value: String::from("\\"),
                     category: Some(TokenCategory::Delimiter),
                     behavior: vec![],
                 },

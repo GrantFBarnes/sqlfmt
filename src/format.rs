@@ -88,9 +88,7 @@ impl FormatState {
             self.remove_extra_newline(token);
         }
 
-        if token.category == Some(TokenCategory::NewLine)
-            || token.category == Some(TokenCategory::Delimiter)
-        {
+        if token.category == Some(TokenCategory::NewLine) {
             return;
         }
 
@@ -98,6 +96,12 @@ impl FormatState {
             .tokens
             .last()
             .expect("should always have a previous token");
+
+        if token.category == Some(TokenCategory::Delimiter) {
+            if prev_token.value.to_uppercase() != "DELIMITER" {
+                return;
+            }
+        }
 
         if prev_token.behavior.contains(&TokenBehavior::NoSpaceAfter) {
             return;
@@ -1023,11 +1027,11 @@ DECLARE C5 = 5;"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    SELECT 1;DELIMITER $$SELECT 1; DELIMITER ;;
+                    SELECT 1;DELIMITER $$ SELECT 1; DELIMITER ;
                     "#
                 )
             ),
-            r#"SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;;"#
+            r#"SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;"#
         );
     }
 
@@ -1040,7 +1044,7 @@ DECLARE C5 = 5;"#
                 &config,
                 String::from(
                     r#"
-                    SELECT 1;DELIMITER $$SELECT 1; DELIMITER ;;
+                    SELECT 1;DELIMITER $$ SELECT 1; DELIMITER ;
                     "#
                 )
             ),
@@ -1051,7 +1055,7 @@ DELIMITER $$
 
 SELECT
     1;
-DELIMITER ;;"#
+DELIMITER ;"#
         );
     }
 
