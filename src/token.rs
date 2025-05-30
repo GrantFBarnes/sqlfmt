@@ -66,20 +66,17 @@ impl Token {
         self.value.match_indices(find).count()
     }
 
-    fn setup(&mut self, delimiter: char) {
-        self.category = self.get_category(delimiter);
+    fn setup(&mut self) {
+        self.category = self.get_category();
         self.set_behavior();
     }
 
-    fn get_category(&self, delimiter: char) -> Option<TokenCategory> {
+    fn get_category(&self) -> Option<TokenCategory> {
         if self.category.is_some() {
             return self.category.clone();
         }
 
         if self.value.len() == 1 {
-            if self.value.chars().nth(0) == Some(delimiter) {
-                return Some(TokenCategory::Delimiter);
-            }
             return match self.value.chars().nth(0).unwrap() {
                 NEW_LINE => Some(TokenCategory::NewLine),
                 COMMA => Some(TokenCategory::Comma),
@@ -278,6 +275,7 @@ impl Token {
             "DEL" => Some(TokenCategory::Keyword),
             "DELAYED" => Some(TokenCategory::Keyword),
             "DELETE" => Some(TokenCategory::Keyword),
+            "DELIMITER" => Some(TokenCategory::Keyword),
             "DENSE_RANK" => Some(TokenCategory::Keyword),
             "DENY" => Some(TokenCategory::Keyword),
             "DEPTH" => Some(TokenCategory::Keyword),
@@ -1189,6 +1187,7 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
+            "DELIMITER" => behavior.push(TokenBehavior::NewLineBefore),
             "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
             "DO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1321,7 +1320,7 @@ enum QuoteCategory {
 pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
-    let delimiter: char = ';';
+    let mut delimiter: char = ';';
 
     let mut curr_token: Token = Token::new();
     let mut in_interpolation: bool = false;
@@ -1331,6 +1330,19 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
+
+        if tokens
+            .last()
+            .is_some_and(|t| t.value.to_uppercase() == "DELIMITER")
+        {
+            if !curr_ch.is_whitespace() {
+                curr_token.value.push(curr_ch);
+                tokens.push(curr_token);
+                curr_token = Token::new();
+                delimiter = curr_ch;
+            }
+            continue;
+        }
 
         let prev2_ch: Option<char> = if i >= 2 {
             Some(sql_bytes[i - 2].into())
@@ -1367,12 +1379,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_comment.is_none() {
                 // start of new comment, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.category = Some(TokenCategory::Comment);
-                curr_token.setup(delimiter);
+                curr_token.setup();
             }
 
             curr_token.value.push(curr_ch);
@@ -1389,12 +1401,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
                 if !curr_token.is_empty() {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.category = Some(TokenCategory::Quote);
-                curr_token.setup(delimiter);
+                curr_token.setup();
             }
 
             curr_token.value.push(curr_ch);
@@ -1407,12 +1419,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
         if curr_ch == delimiter {
             if !curr_token.is_empty() {
-                curr_token.setup(delimiter);
+                curr_token.setup();
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
             curr_token.value.push(curr_ch);
-            curr_token.setup(delimiter);
+            curr_token.category = Some(TokenCategory::Delimiter);
             tokens.push(curr_token);
             curr_token = Token::new();
             continue;
@@ -1421,24 +1433,24 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         match curr_ch {
             NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.setup(delimiter);
+                curr_token.setup();
                 tokens.push(curr_token);
                 curr_token = Token::new();
                 continue;
             }
             LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.setup(delimiter);
+                curr_token.setup();
 
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
@@ -1457,7 +1469,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     && prev_ch != Some(SLASH_FORWARD)
                     && prev_ch != Some(PERCENT)
                 {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1470,7 +1482,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     Some(PERCENT) => Some(TokenCategory::Operator),
                     _ => Some(TokenCategory::Compare),
                 };
-                curr_token.setup(delimiter);
+                curr_token.setup();
 
                 if next_ch != Some(EQUAL) {
                     tokens.push(curr_token);
@@ -1481,7 +1493,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             }
             PLUS | HYPHEN => {
                 if !curr_token.is_empty() {
-                    curr_token.setup(delimiter);
+                    curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -1491,7 +1503,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                     continue;
                 }
 
-                curr_token.setup(delimiter);
+                curr_token.setup();
 
                 if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
                     tokens.push(curr_token);
@@ -1505,7 +1517,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
         if curr_ch.is_whitespace() {
             if !curr_token.is_empty() {
-                curr_token.setup(delimiter);
+                curr_token.setup();
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
@@ -1516,7 +1528,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     if !curr_token.is_empty() {
-        curr_token.setup(delimiter);
+        curr_token.setup();
         tokens.push(curr_token);
     }
 
@@ -2239,6 +2251,72 @@ Name'"#
                 },
                 Token {
                     value: String::from("1"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_change() {
+        assert_eq!(
+            get_sql_tokens(String::from(
+                "SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;;"
+            )),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("1"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("DELIMITER"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from("$"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("$"),
+                    category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("1;"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("DELIMITER"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(";"),
                     category: None,
                     behavior: vec![],
                 },

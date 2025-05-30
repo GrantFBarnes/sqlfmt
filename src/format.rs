@@ -391,13 +391,36 @@ impl FormatState {
             "INTO" => vec!["SELECT", "INSERT"],
             "SET" => vec!["UPDATE"],
             "VALUE" | "VALUES" => vec!["INTO"],
-            "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DROP" | "ELSE" | "EXEC" | "EXECUTE"
-            | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT" | "TRUNCATE"
-            | "UNION" | "UPDATE" | "WITH" => {
+            "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DELIMITER" | "DROP" | "ELSE" | "EXEC"
+            | "EXECUTE" | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT"
+            | "TRUNCATE" | "UNION" | "UPDATE" | "WITH" => {
                 vec![
-                    "BEGIN", "CALL", "DECLARE", "DELETE", "DROP", "EXEC", "EXECUTE", "ELSE", "FOR",
-                    "FROM", "GROUP", "HAVING", "IF", "INSERT", "OPEN", "PIVOT", "RETURN", "SELECT",
-                    "SET", "TRUNCATE", "UNION", "UPDATE", "WHERE", "WHILE", "WITH",
+                    "BEGIN",
+                    "CALL",
+                    "DECLARE",
+                    "DELETE",
+                    "DELIMITER",
+                    "DROP",
+                    "EXEC",
+                    "EXECUTE",
+                    "ELSE",
+                    "FOR",
+                    "FROM",
+                    "GROUP",
+                    "HAVING",
+                    "IF",
+                    "INSERT",
+                    "OPEN",
+                    "PIVOT",
+                    "RETURN",
+                    "SELECT",
+                    "SET",
+                    "TRUNCATE",
+                    "UNION",
+                    "UPDATE",
+                    "WHERE",
+                    "WHILE",
+                    "WITH",
                 ]
             }
             "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
@@ -990,6 +1013,45 @@ FROM TBL1
 DECLARE C4 = 4;
 
 DECLARE C5 = 5;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter_change() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT 1;DELIMITER $$SELECT 1; DELIMITER ;;
+                    "#
+                )
+            ),
+            r#"SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter_change_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT 1;DELIMITER $$SELECT 1; DELIMITER ;;
+                    "#
+                )
+            ),
+            r#"SELECT
+    1;
+
+DELIMITER $$
+
+SELECT
+    1;
+DELIMITER ;;"#
         );
     }
 
