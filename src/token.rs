@@ -668,7 +668,6 @@ impl Token {
             "QUERY" => Some(TokenCategory::Keyword),
             "QUERYNO" => Some(TokenCategory::Keyword),
             "QUOTENAME" => Some(TokenCategory::Keyword),
-            "RAISERROR" => Some(TokenCategory::Keyword),
             "RANDOM" => Some(TokenCategory::Keyword),
             "RANGE" => Some(TokenCategory::Keyword),
             "RANGE_N" => Some(TokenCategory::Keyword),
@@ -1092,6 +1091,7 @@ impl Token {
             "POWER" => Some(TokenCategory::Method),
             "QUARTER" => Some(TokenCategory::Method),
             "RADIANS" => Some(TokenCategory::Method),
+            "RAISERROR" => Some(TokenCategory::Method),
             "RAND" => Some(TokenCategory::Method),
             "RAW" => Some(TokenCategory::Method),
             "REPEAT" => Some(TokenCategory::Method),
@@ -1327,6 +1327,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut in_interpolation: bool = false;
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
+    let mut backtrack_quote: bool;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
@@ -1400,11 +1401,12 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-        in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
+        (in_quote, backtrack_quote) =
+            get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
         if in_quote.is_some() {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
-                if !curr_token.is_empty() {
+                if !backtrack_quote && !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
@@ -1617,55 +1619,55 @@ fn get_in_quote(
     curr_ch: char,
     next_ch: Option<char>,
     curr_token: &Token,
-) -> Option<QuoteCategory> {
+) -> (Option<QuoteCategory>, bool) {
     match in_quote {
         Some(qc) => {
             if curr_token.len() <= 1 {
-                return in_quote.clone();
+                return (in_quote.clone(), false);
             }
 
             match qc {
                 QuoteCategory::Backtick => {
                     if prev_ch == Some(BACKTICK) {
-                        return None;
+                        return (None, false);
                     }
-                    return in_quote.clone();
+                    return (in_quote.clone(), false);
                 }
                 QuoteCategory::QuoteSingle => {
                     if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
                         if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
-                            return None;
+                            return (None, false);
                         }
                     }
-                    return in_quote.clone();
+                    return (in_quote.clone(), false);
                 }
                 QuoteCategory::QuoteDouble => {
                     if prev_ch == Some(QUOTE_DOUBLE) {
-                        return None;
+                        return (None, false);
                     }
-                    return in_quote.clone();
+                    return (in_quote.clone(), false);
                 }
                 QuoteCategory::Bracket => {
                     if prev_ch == Some(BRACKET_CLOSE) && curr_ch != FULL_STOP {
-                        return None;
+                        return (None, false);
                     }
-                    return in_quote.clone();
+                    return (in_quote.clone(), false);
                 }
             }
         }
         None => {
             return match curr_ch {
-                BACKTICK => Some(QuoteCategory::Backtick),
-                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
-                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
-                BRACKET_OPEN => Some(QuoteCategory::Bracket),
+                BACKTICK => (Some(QuoteCategory::Backtick), false),
+                QUOTE_SINGLE => (Some(QuoteCategory::QuoteSingle), false),
+                QUOTE_DOUBLE => (Some(QuoteCategory::QuoteDouble), false),
+                BRACKET_OPEN => (Some(QuoteCategory::Bracket), prev_ch == Some(FULL_STOP)),
                 'N' => {
                     if next_ch == Some(QUOTE_SINGLE) {
-                        return Some(QuoteCategory::QuoteSingle);
+                        return (Some(QuoteCategory::QuoteSingle), false);
                     }
-                    return None;
+                    return (None, false);
                 }
-                _ => None,
+                _ => (None, false),
             };
         }
     }
@@ -1988,6 +1990,25 @@ mod tests {
                 },
                 Token {
                     value: String::from("[S].[TBL1]"),
+                    category: Some(TokenCategory::Quote),
+                    behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_bracket_column() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT TBL1.[C1]")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("TBL1.[C1]"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
                 },
