@@ -284,6 +284,7 @@ impl FormatState {
                 if last_endline_categories.len() == 2
                     || last_endline_categories[2] == Some(TokenCategory::Delimiter)
                     || last_endline_categories[2] == Some(TokenCategory::NewLine)
+                    || last_endline_categories[2] == Some(TokenCategory::Comment)
                 {
                     self.tokens.remove(last_newline_positions[0]);
                     return;
@@ -1017,6 +1018,43 @@ FROM TBL1
 DECLARE C4 = 4;
 
 DECLARE C5 = 5;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter_comment() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    -- COMMENT
+                    DECLARE C1=1;DECLARE C2=2;
+                    "#
+                )
+            ),
+            r#"-- COMMENT
+DECLARE C1 = 1; DECLARE C2 = 2;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_delimiter_comment_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    -- COMMENT
+                    DECLARE C1=1;DECLARE C2=2;
+                    "#
+                )
+            ),
+            r#"-- COMMENT
+DECLARE C1 = 1;
+DECLARE C2 = 2;"#
         );
     }
 
