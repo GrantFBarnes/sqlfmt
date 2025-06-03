@@ -468,7 +468,9 @@ impl FormatState {
 
     fn get_result(&self, config: &Configuration) -> String {
         let mut result: String = String::new();
-        for token in &self.tokens {
+        for i in 0..self.tokens.len() {
+            let token: &Token = &self.tokens[i];
+
             let mut token_value: String = token.value.clone();
 
             match token.category {
@@ -480,6 +482,20 @@ impl FormatState {
                     ConfigCase::Unchanged => (),
                 },
                 _ => (),
+            }
+
+            if self
+                .tokens
+                .get(i + 1)
+                .is_some_and(|nt| nt.category == Some(TokenCategory::ParenOpen))
+            {
+                let xml_methods: [&str; 5] = [".QUERY", ".VALUE", ".EXIST", ".MODIFY", ".NODES"];
+                for m in xml_methods {
+                    if token_value.ends_with(m) {
+                        token_value = token_value.replace(m, m.to_lowercase().as_str());
+                        break;
+                    }
+                }
             }
 
             result.push_str(token_value.as_str());
@@ -3002,9 +3018,9 @@ FOR XML RAW('ITEM'),
                 &Configuration::new(),
                 String::from(
                     r#"
-                    SELECT T2.Loc.query('.')
+                    SELECT T2.Loc.QUERY('.')
                     FROM T
-                    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)
+                    CROSS APPLY Instructions.NODES('/root/Location') AS T2(Loc)
                     "#
                 )
             ),
@@ -3023,9 +3039,9 @@ FROM T
                 &config,
                 String::from(
                     r#"
-                    SELECT T2.Loc.query('.')
+                    SELECT T2.Loc.QUERY('.')
                     FROM T
-                    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)
+                    CROSS APPLY Instructions.NODES('/root/Location') AS T2(Loc)
                     "#
                 )
             ),
