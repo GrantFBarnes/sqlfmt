@@ -3,45 +3,6 @@ use std::collections::HashMap;
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
-pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
-    let mut state: FormatState = FormatState::new();
-
-    let tokens: Vec<Token> = get_sql_tokens(sql);
-    for i in 0..tokens.len() {
-        let token: &Token = &tokens[i];
-
-        if config.newlines {
-            if token.category == Some(TokenCategory::NewLine) {
-                continue;
-            }
-        }
-
-        let mut next_keyword_token: Option<&Token> = None;
-        if token.category == Some(TokenCategory::Comment) {
-            for n in i + 1..tokens.len() {
-                if tokens[n].category == Some(TokenCategory::Keyword) {
-                    next_keyword_token = Some(&tokens[n]);
-                    break;
-                }
-            }
-        }
-
-        state.increase_method_count(token);
-        state.decrease_indent_stack(
-            token,
-            tokens.get(i + 1),
-            tokens.get(i + 2),
-            next_keyword_token,
-        );
-        state.add_pre_space(token, config);
-        state.push(token.clone());
-        state.increase_indent_stack(token);
-        state.decrease_method_count(token);
-    }
-
-    return state.get_result(config);
-}
-
 struct FormatState {
     tokens: Vec<Token>,
     indent_stack: Vec<Token>,
@@ -363,19 +324,18 @@ impl FormatState {
         }
     }
 
-    fn decrease_indent_stack(
-        &mut self,
-        token: &Token,
-        next1_token: Option<&Token>,
-        next2_token: Option<&Token>,
-        next_keyword_token: Option<&Token>,
-    ) {
+    fn decrease_indent_stack(&mut self, tokens: &Vec<Token>, i: usize) {
         if self.indent_stack.is_empty() {
             return;
         }
 
+        let token: &Token = &tokens[i];
+
         let token_value: String = token.value.to_uppercase();
-        let top_of_stack: &Token = self.indent_stack.last().unwrap();
+        let top_of_stack: &Token = self
+            .indent_stack
+            .last()
+            .expect("should always have item on stack");
         let top_of_stack_value: &String = &top_of_stack.value.to_uppercase();
 
         let required_to_decrease: HashMap<&str, &str> = HashMap::from([
@@ -396,12 +356,18 @@ impl FormatState {
 
         match token.category {
             Some(TokenCategory::Comment) => {
-                if next_keyword_token.is_some_and(|t| {
-                    t.behavior.contains(&TokenBehavior::IncreaseIndent)
-                        && t.value.to_uppercase() != "FROM"
-                }) {
-                    self.indent_stack.pop();
-                    return;
+                for n in i + 1..tokens.len() {
+                    if tokens[n].category != Some(TokenCategory::Keyword) {
+                        continue;
+                    }
+
+                    if tokens[n].behavior.contains(&TokenBehavior::IncreaseIndent)
+                        && tokens[n].value.to_uppercase() != "FROM"
+                    {
+                        self.indent_stack.pop();
+                        return;
+                    }
+                    break;
                 }
             }
             Some(TokenCategory::Delimiter) => {
@@ -421,8 +387,12 @@ impl FormatState {
             .contains(&TokenBehavior::DecreaseIndentIfFound)
         {
             if &token.value.to_uppercase() == top_of_stack_value
-                || next1_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
-                || next2_token.is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
+                || tokens
+                    .get(i + 1)
+                    .is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
+                || tokens
+                    .get(i + 2)
+                    .is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
             {
                 self.indent_stack.pop();
                 return;
@@ -516,6 +486,28 @@ impl FormatState {
         }
         return result.trim().to_string();
     }
+}
+
+pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
+    let mut state: FormatState = FormatState::new();
+
+    let tokens: Vec<Token> = get_sql_tokens(sql);
+    for i in 0..tokens.len() {
+        let token: &Token = &tokens[i];
+
+        if config.newlines && token.category == Some(TokenCategory::NewLine) {
+            continue;
+        }
+
+        state.increase_method_count(token);
+        state.decrease_indent_stack(&tokens, i);
+        state.add_pre_space(token, config);
+        state.push(token.clone());
+        state.increase_indent_stack(token);
+        state.decrease_method_count(token);
+    }
+
+    return state.get_result(config);
 }
 
 #[cfg(test)]
