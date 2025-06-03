@@ -31,6 +31,11 @@ impl FormatState {
             return;
         }
 
+        if self.method_count > 0 {
+            self.method_count += 1;
+            return;
+        }
+
         let prev_token: &Token = self
             .tokens
             .last()
@@ -3050,6 +3055,41 @@ FROM T
     T2.Loc.query('.')
 FROM T
     CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_stuff_comma_list() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')
+                    "#
+                )
+            ),
+            r#"STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_stuff_comma_list_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')
+                    "#
+                )
+            ),
+            r#"STUFF((SELECT
+            ', ' + C1
+        FROM TBL1
+        FOR XML PATH('')), 1, 2, '')"#
         );
     }
 
