@@ -3034,14 +3034,15 @@ FROM T
     fn test_get_formatted_sql_xml_method_config_newline() {
         let mut config: Configuration = Configuration::new();
         config.newlines = true;
+        config.case = ConfigCase::Uppercase;
         assert_eq!(
             get_formatted_sql(
                 &config,
                 String::from(
                     r#"
-                    SELECT T2.Loc.QUERY('.')
-                    FROM T
-                    CROSS APPLY Instructions.NODES('/root/Location') AS T2(Loc)
+                    select T2.Loc.QUERY('.')
+                    from T
+                    cross apply Instructions.NODES('/root/Location') as T2(Loc)
                     "#
                 )
             ),

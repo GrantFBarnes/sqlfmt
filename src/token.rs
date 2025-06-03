@@ -126,6 +126,7 @@ impl Token {
             "ANSIDATE" => Some(TokenCategory::Keyword),
             "ANY" => Some(TokenCategory::Keyword),
             "ANY_VALUE" => Some(TokenCategory::Keyword),
+            "APPLY" => Some(TokenCategory::Keyword),
             "ARE" => Some(TokenCategory::Keyword),
             "ARRAY" => Some(TokenCategory::Keyword),
             "ARRAY_AGG" => Some(TokenCategory::Keyword),
