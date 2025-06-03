@@ -16,19 +16,6 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             }
         }
 
-        if token.category == Some(TokenCategory::ParenOpen) {
-            for p in 0..3 {
-                if let Some(t) = state.tokens.iter().nth_back(p) {
-                    if t.category == Some(TokenCategory::Method)
-                        || (p == 0 && t.category == Some(TokenCategory::DataType))
-                    {
-                        state.method_count += 1;
-                        break;
-                    }
-                }
-            }
-        }
-
         let mut next_keyword_token: Option<&Token> = None;
         if token.category == Some(TokenCategory::Comment) {
             for n in i + 1..tokens.len() {
@@ -39,6 +26,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             }
         }
 
+        state.increase_method_count(token);
         state.decrease_indent_stack(
             token,
             tokens.get(i + 1),
@@ -48,12 +36,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
         state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token);
-
-        if token.category == Some(TokenCategory::ParenClose) {
-            if state.method_count > 0 {
-                state.method_count -= 1;
-            }
-        }
+        state.decrease_method_count(token);
     }
 
     return state.get_result(config);
@@ -76,6 +59,63 @@ impl FormatState {
 
     fn push(&mut self, token: Token) {
         self.tokens.push(token);
+    }
+
+    fn increase_method_count(&mut self, token: &Token) {
+        if self.tokens.is_empty() {
+            return;
+        }
+
+        if token.category != Some(TokenCategory::ParenOpen) {
+            return;
+        }
+
+        let prev_token: &Token = self
+            .tokens
+            .last()
+            .expect("should always have a previous token");
+
+        if prev_token.category == Some(TokenCategory::Method)
+            || prev_token.category == Some(TokenCategory::DataType)
+        {
+            self.method_count += 1;
+            return;
+        }
+
+        let prev_token_value: String = prev_token.value.to_uppercase();
+        if prev_token_value.ends_with(".QUERY")
+            || prev_token_value.ends_with(".VALUE")
+            || prev_token_value.ends_with(".EXIST")
+            || prev_token_value.ends_with(".MODIFY")
+            || prev_token_value.ends_with(".NODES")
+        {
+            self.method_count += 1;
+            return;
+        }
+
+        if let Some(prev2_token) = self.tokens.iter().nth_back(2) {
+            if prev2_token.category == Some(TokenCategory::Method) {
+                self.method_count += 1;
+                return;
+            }
+
+            if prev2_token.value.to_uppercase() == "AS" {
+                self.method_count += 1;
+                return;
+            }
+        }
+    }
+
+    fn decrease_method_count(&mut self, token: &Token) {
+        if self.method_count == 0 {
+            return;
+        }
+
+        if token.category != Some(TokenCategory::ParenClose) {
+            return;
+        }
+
+        self.method_count -= 1;
     }
 
     fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
@@ -2960,6 +3000,47 @@ FOR XML RAW('ITEM'),
     ELEMENTS,
     ROOT('VALUES'),
     BINARY BASE64"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_xml_method() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT T2.Loc.query('.')
+                    FROM T
+                    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)
+                    "#
+                )
+            ),
+            r#"SELECT T2.Loc.query('.')
+FROM T
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_xml_method_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT T2.Loc.query('.')
+                    FROM T
+                    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)
+                    "#
+                )
+            ),
+            r#"SELECT
+    T2.Loc.query('.')
+FROM T
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
         );
     }
 

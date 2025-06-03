@@ -336,6 +336,7 @@ impl Token {
             "EXCEPT" => Some(TokenCategory::Keyword),
             "EXCEPTION" => Some(TokenCategory::Keyword),
             "EXCLUSIVE" => Some(TokenCategory::Keyword),
+            "EXIST" => Some(TokenCategory::Keyword),
             "EXISTS" => Some(TokenCategory::Keyword),
             "EXIT" => Some(TokenCategory::Keyword),
             "EXPLAIN" => Some(TokenCategory::Keyword),
@@ -554,6 +555,7 @@ impl Token {
             "NOAUDIT" => Some(TokenCategory::Keyword),
             "NOCHECK" => Some(TokenCategory::Keyword),
             "NOCOMPRESS" => Some(TokenCategory::Keyword),
+            "NODES" => Some(TokenCategory::Keyword),
             "NONCLUSTERED" => Some(TokenCategory::Keyword),
             "NONE" => Some(TokenCategory::Keyword),
             "NORMALIZE" => Some(TokenCategory::Keyword),
@@ -3132,6 +3134,35 @@ Name'"#
                     value: String::from("C2"),
                     category: None,
                     behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_xml_method() {
+        assert_eq!(
+            get_sql_tokens(String::from("Instructions.nodes('/root/Location')")),
+            vec![
+                Token {
+                    value: String::from("Instructions.nodes"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("("),
+                    category: Some(TokenCategory::ParenOpen),
+                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("'/root/Location'"),
+                    category: Some(TokenCategory::Quote),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(")"),
+                    category: Some(TokenCategory::ParenClose),
+                    behavior: vec![TokenBehavior::NoSpaceBefore],
                 },
             ]
         );
