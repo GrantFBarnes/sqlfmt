@@ -1426,6 +1426,11 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
+        if curr_ch == FULL_STOP || prev_ch == Some(FULL_STOP) {
+            curr_token.value.push(curr_ch);
+            continue;
+        }
+
         match curr_ch {
             NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
@@ -1702,6 +1707,40 @@ mod tests {
                 },
                 Token {
                     value: String::from("TBL1"),
+                    category: None,
+                    behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_alias() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT T.* FROM TBL1 T")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("T.*"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("FROM"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from("TBL1"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("T"),
                     category: None,
                     behavior: vec![],
                 },
