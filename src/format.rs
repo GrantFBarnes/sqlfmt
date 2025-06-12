@@ -699,6 +699,24 @@ FROM TBL1"#
     }
 
     #[test]
+    fn test_get_formatted_sql_datatype_quote() {
+        assert_eq!(
+            get_formatted_sql(&Configuration::new(), String::from("[NVARCHAR](36)")),
+            r#"[NVARCHAR](36)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_datatype_quote_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, String::from("[NVARCHAR](36)")),
+            r#"[NVARCHAR](36)"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_convert() {
         assert_eq!(
             get_formatted_sql(
