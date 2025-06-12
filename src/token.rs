@@ -189,7 +189,10 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
-            "HAVING" => behavior.push(TokenBehavior::IncreaseIndent),
+            "HAVING" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
             "INSERT" => behavior.push(TokenBehavior::IncreaseIndent),
             "JOIN" => {

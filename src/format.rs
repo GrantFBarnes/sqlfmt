@@ -1457,13 +1457,15 @@ FROM TBL1"#
                     COUNT(*) AS CNT
                     FROM TBL1
                     GROUP BY C1
+                    HAVING COUNT(*) > 1
                     "#,
                 )
             ),
             r#"SELECT C1,
     COUNT(*) AS CNT
 FROM TBL1
-GROUP BY C1"#
+GROUP BY C1
+HAVING COUNT(*) > 1"#
         );
     }
 
@@ -1480,6 +1482,7 @@ GROUP BY C1"#
                     COUNT(*) AS CNT
                     FROM TBL1
                     GROUP BY C1
+                    HAVING COUNT(*) > 1
                     "#,
                 )
             ),
@@ -1487,7 +1490,8 @@ GROUP BY C1"#
     C1,
     COUNT(*) AS CNT
 FROM TBL1
-GROUP BY C1"#
+GROUP BY C1
+HAVING COUNT(*) > 1"#
         );
     }
 
