@@ -193,12 +193,9 @@ impl FormatState {
                 }
             },
             "INTO" => {
-                if self
-                    .tokens
-                    .iter()
-                    .nth_back(2)
-                    .is_some_and(|t| t.value.to_uppercase() != "INSERT")
-                {
+                if self.tokens.iter().nth_back(2).is_some_and(|t| {
+                    t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
+                }) {
                     self.push(Token::newline());
                     return;
                 }
@@ -244,7 +241,9 @@ impl FormatState {
                 }
             }
             "INTO" => {
-                if prev1_token.value.to_uppercase() != "INSERT" {
+                if prev1_token.value.to_uppercase() != "INSERT"
+                    && prev1_token.value.to_uppercase() != "IGNORE"
+                {
                     self.push(Token::newline());
                     return;
                 }
@@ -291,6 +290,7 @@ impl FormatState {
             if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
                 if last_endline_categories.len() == 2
                     || last_endline_values[2] == Some(String::from("BEGIN"))
+                    || last_endline_values[2] == Some(String::from("DO"))
                     || last_endline_categories[2] == Some(TokenCategory::Delimiter)
                     || last_endline_categories[2] == Some(TokenCategory::NewLine)
                     || last_endline_categories[2] == Some(TokenCategory::Comment)
@@ -310,12 +310,9 @@ impl FormatState {
 
         match token.value.to_uppercase().as_str() {
             "INTO" => {
-                if self
-                    .tokens
-                    .iter()
-                    .nth_back(2)
-                    .is_some_and(|t| t.value.to_uppercase() != "INSERT")
-                {
+                if self.tokens.iter().nth_back(2).is_some_and(|t| {
+                    t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
+                }) {
                     self.indent_stack.push(token.clone());
                     return;
                 }
