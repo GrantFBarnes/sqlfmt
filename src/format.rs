@@ -252,10 +252,12 @@ impl FormatState {
     fn remove_extra_newline(&mut self, token: &Token) {
         let mut last_newline_positions: Vec<usize> = vec![];
         let mut last_endline_categories: Vec<Option<TokenCategory>> = vec![];
+        let mut last_endline_values: Vec<Option<String>> = vec![];
         for i in (1..self.tokens.len()).rev() {
             if self.tokens[i].category == Some(TokenCategory::NewLine) {
                 last_newline_positions.push(i);
                 last_endline_categories.push(self.tokens[i - 1].category.clone());
+                last_endline_values.push(Some(self.tokens[i - 1].value.to_uppercase()));
                 if last_newline_positions.len() >= 3 {
                     break;
                 }
@@ -284,6 +286,7 @@ impl FormatState {
         if token.category == Some(TokenCategory::Delimiter) {
             if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
                 if last_endline_categories.len() == 2
+                    || last_endline_values[2] == Some(String::from("BEGIN"))
                     || last_endline_categories[2] == Some(TokenCategory::Delimiter)
                     || last_endline_categories[2] == Some(TokenCategory::NewLine)
                     || last_endline_categories[2] == Some(TokenCategory::Comment)
@@ -801,7 +804,7 @@ WHERE C1 = 1"#
             get_formatted_sql(
                 &Configuration::new(),
                 String::from(
-                    r#" 
+                    r#"
                     SELECT * FROM TBL1
                     WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
                     "#
@@ -820,7 +823,7 @@ WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
             get_formatted_sql(
                 &config,
                 String::from(
-                    r#" 
+                    r#"
                     SELECT * FROM TBL1
                     WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
                     "#
@@ -2692,19 +2695,19 @@ SET V2 = NULL"#
                 String::from(
                     r#"
                     IF V1 IS NULL BEGIN
-                    SET V1 = 0
+                    SET V1 = 0;
                     END
                     ELSE BEGIN
-                    SET V2 = NULL
+                    SET V2 = NULL;
                     END
                     "#
                 )
             ),
             r#"IF V1 IS NULL BEGIN
-    SET V1 = 0
+    SET V1 = 0;
 END
 ELSE BEGIN
-    SET V2 = NULL
+    SET V2 = NULL;
 END"#
         );
     }
@@ -2719,21 +2722,25 @@ END"#
                 String::from(
                     r#"
                     IF V1 IS NULL BEGIN
-                    SET V1 = 0
+                    SET V1 = 0;
+                    SET V1 = 0;
+                    SET V1 = 0;
                     END
                     ELSE BEGIN
-                    SET V2 = NULL
+                    SET V2 = NULL;
                     END
                     "#
                 )
             ),
             r#"IF V1 IS NULL
 BEGIN
-    SET V1 = 0
+    SET V1 = 0;
+    SET V1 = 0;
+    SET V1 = 0;
 END
 ELSE
 BEGIN
-    SET V2 = NULL
+    SET V2 = NULL;
 END"#
         );
     }
