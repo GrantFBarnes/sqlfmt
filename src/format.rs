@@ -41,6 +41,10 @@ impl FormatState {
             .last()
             .expect("should always have a previous token");
 
+        if prev_token.value.to_uppercase() == "JOIN" {
+            return;
+        }
+
         if prev_token.category == Some(TokenCategory::Method)
             || prev_token.category == Some(TokenCategory::DataType)
         {
@@ -2171,6 +2175,48 @@ SELECT
     *
 FROM CTE1
     INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_subquery() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1
+                    "#,
+                )
+            ),
+            r#"SELECT * FROM T1
+    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_subquery_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1
+                    "#,
+                )
+            ),
+            r#"SELECT
+    *
+FROM T1
+    LEFT JOIN (
+            SELECT
+                C2
+            FROM T2
+        ) AS ST1 ON ST1.C2 = T1.C1"#
         );
     }
 
