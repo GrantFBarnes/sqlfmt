@@ -253,6 +253,10 @@ impl FormatState {
     }
 
     fn remove_extra_newline(&mut self, token: &Token) {
+        if token.category != Some(TokenCategory::Delimiter) {
+            return;
+        }
+
         let mut last_newline_positions: Vec<usize> = vec![];
         let mut last_endline_categories: Vec<Option<TokenCategory>> = vec![];
         let mut last_endline_values: Vec<Option<String>> = vec![];
@@ -286,18 +290,16 @@ impl FormatState {
         }
 
         // remove double newline for two consecutive single delimiter lines
-        if token.category == Some(TokenCategory::Delimiter) {
-            if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
-                if last_endline_categories.len() == 2
-                    || last_endline_values[2] == Some(String::from("BEGIN"))
-                    || last_endline_values[2] == Some(String::from("DO"))
-                    || last_endline_categories[2] == Some(TokenCategory::Delimiter)
-                    || last_endline_categories[2] == Some(TokenCategory::NewLine)
-                    || last_endline_categories[2] == Some(TokenCategory::Comment)
-                {
-                    self.tokens.remove(last_newline_positions[0]);
-                    return;
-                }
+        if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
+            if last_endline_categories.len() == 2
+                || last_endline_values[2] == Some(String::from("BEGIN"))
+                || last_endline_values[2] == Some(String::from("DO"))
+                || last_endline_categories[2] == Some(TokenCategory::Delimiter)
+                || last_endline_categories[2] == Some(TokenCategory::NewLine)
+                || last_endline_categories[2] == Some(TokenCategory::Comment)
+            {
+                self.tokens.remove(last_newline_positions[0]);
+                return;
             }
         }
     }
