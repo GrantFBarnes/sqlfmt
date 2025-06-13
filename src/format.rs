@@ -321,6 +321,11 @@ impl FormatState {
                 .iter()
                 .nth_back(2)
                 .is_none_or(|t| t.value.to_uppercase() != "ON")
+                && self
+                    .tokens
+                    .iter()
+                    .nth_back(4)
+                    .is_none_or(|t| t.value.to_uppercase() != "ON")
             {
                 self.indent_stack.push(token.clone());
                 return;
