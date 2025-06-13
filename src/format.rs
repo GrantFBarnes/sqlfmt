@@ -185,13 +185,6 @@ impl FormatState {
                     return;
                 }
             },
-            "SELECT" => match token.value.to_uppercase().as_str() {
-                "DISTINCT" | "TOP" => return,
-                _ => {
-                    self.push(Token::newline());
-                    return;
-                }
-            },
             "INTO" => {
                 if self.tokens.iter().nth_back(2).is_some_and(|t| {
                     t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
@@ -870,7 +863,8 @@ WHERE (
             ),
             r#"SELECT
     (
-        SELECT TOP 1
+        SELECT
+            TOP 1
             ID
         FROM TBL1
     ) AS ID"#
@@ -1040,7 +1034,8 @@ FROM TBL1"#
             ),
             r#"SELECT
     (
-        SELECT TOP 1
+        SELECT
+            TOP 1
             ID
         FROM TBL1
     ) AS ID,
@@ -1660,7 +1655,8 @@ LIMIT 1"#
                     "#
                 )
             ),
-            r#"SELECT DISTINCT
+            r#"SELECT
+    DISTINCT
     T1.C1 AS C1,
     T2.C2 AS C2,
     T3.C3 AS C3
@@ -3156,8 +3152,7 @@ FROM T
                     "#
                 )
             ),
-            r#"STUFF((SELECT
-            ', ' + C1
+            r#"STUFF((SELECT ', ' + C1
         FROM TBL1
         FOR XML PATH('')), 1, 2, '')"#
         );
