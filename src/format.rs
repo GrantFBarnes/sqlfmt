@@ -204,8 +204,12 @@ impl FormatState {
         }
 
         if token.behavior.contains(&TokenBehavior::NewLineBefore) {
-            self.push(Token::newline());
-            return;
+            if prev1_token.value.to_uppercase() != "ON"
+                && prev3_token.is_none_or(|t| t.value.to_uppercase() != "ON")
+            {
+                self.push(Token::newline());
+                return;
+            }
         }
 
         match &token.category {
@@ -312,8 +316,15 @@ impl FormatState {
 
     fn increase_indent_stack(&mut self, token: &Token) {
         if token.behavior.contains(&TokenBehavior::IncreaseIndent) {
-            self.indent_stack.push(token.clone());
-            return;
+            if self
+                .tokens
+                .iter()
+                .nth_back(2)
+                .is_none_or(|t| t.value.to_uppercase() != "ON")
+            {
+                self.indent_stack.push(token.clone());
+                return;
+            }
         }
 
         match token.value.to_uppercase().as_str() {
@@ -3269,7 +3280,8 @@ FROM T
                         C1 VARCHAR(10) NOT NULL,
                         D1 DATETIME NULL,
                         I1 INT,
-                        PRIMARY KEY (ID)
+                        I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
                     )
                     "#
                 )
@@ -3279,7 +3291,8 @@ FROM T
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
     I1 INT,
-    PRIMARY KEY(ID)
+    I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
     }
@@ -3298,7 +3311,8 @@ FROM T
                         C1 VARCHAR(10) NOT NULL,
                         D1 DATETIME NULL,
                         I1 INT,
-                        PRIMARY KEY (ID)
+                        I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
                     )
                     "#
                 )
@@ -3308,7 +3322,10 @@ FROM T
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
     I1 INT,
-    PRIMARY KEY(ID)
+    I2 INT,
+    PRIMARY KEY(ID),
+    FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
     }
@@ -3361,8 +3378,7 @@ END;"#
             ),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER
-INSERT ON TBL1
-FOR EACH ROW
+INSERT ON TBL1 FOR EACH ROW
 BEGIN
     CALL SP1(NEW.ID);
 END;"#
