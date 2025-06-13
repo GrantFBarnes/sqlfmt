@@ -69,7 +69,7 @@ impl FormatState {
                 return;
             }
 
-            if prev2_token.value.to_uppercase() == "AS" {
+            if prev2_token.value == "=" || prev2_token.value.to_uppercase() == "AS" {
                 self.method_count += 1;
                 return;
             }
