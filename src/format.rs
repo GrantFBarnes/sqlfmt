@@ -248,15 +248,30 @@ impl FormatState {
     fn remove_extra_newline(&mut self, token: &Token) {
         let mut last_newline_positions: Vec<usize> = vec![];
         let mut last_endline_categories: Vec<Option<TokenCategory>> = vec![];
-        let mut last_endline_values: Vec<Option<String>> = vec![];
+        let mut last_endline_values: Vec<String> = vec![];
         for i in (1..self.tokens.len()).rev() {
             if self.tokens[i].category == Some(TokenCategory::NewLine) {
                 last_newline_positions.push(i);
                 last_endline_categories.push(self.tokens[i - 1].category.clone());
-                last_endline_values.push(Some(self.tokens[i - 1].value.to_uppercase()));
+                last_endline_values.push(self.tokens[i - 1].value.to_uppercase());
                 if last_newline_positions.len() >= 3 {
                     break;
                 }
+            }
+        }
+
+        // need at least one newline to remove extra
+        if last_newline_positions.is_empty() {
+            return;
+        }
+
+        // remove extra white space if single line select
+        if token.category == Some(TokenCategory::Delimiter) {
+            if last_endline_values[0] == String::from("SELECT") {
+                self.tokens.remove(last_newline_positions[0]);
+                self.tokens[last_newline_positions[0]].value = String::from(" ");
+                self.remove_extra_newline(token);
+                return;
             }
         }
 
@@ -282,8 +297,8 @@ impl FormatState {
         if token.category == Some(TokenCategory::Delimiter) {
             if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
                 if last_endline_categories.len() == 2
-                    || last_endline_values[2] == Some(String::from("BEGIN"))
-                    || last_endline_values[2] == Some(String::from("DO"))
+                    || last_endline_values[2] == String::from("BEGIN")
+                    || last_endline_values[2] == String::from("DO")
                     || last_endline_categories[2] == Some(TokenCategory::Delimiter)
                     || last_endline_categories[2] == Some(TokenCategory::NewLine)
                     || last_endline_categories[2] == Some(TokenCategory::Comment)
@@ -1049,11 +1064,11 @@ FROM TBL1"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2=2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    SELECT * FROM TBL1;DECLARE C1=1;SELECT 1;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
                     "#
                 )
             ),
-            r#"SELECT * FROM TBL1; DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
+            r#"SELECT * FROM TBL1; DECLARE C1 = 1; SELECT 1; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
         );
     }
 
@@ -1066,7 +1081,7 @@ FROM TBL1"#
                 &config,
                 String::from(
                     r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2=2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    SELECT * FROM TBL1;DECLARE C1=1;SELECT 1;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
                     "#
                 )
             ),
@@ -1075,7 +1090,7 @@ FROM TBL1"#
 FROM TBL1;
 
 DECLARE C1 = 1;
-DECLARE C2 = 2;
+SELECT 1;
 DECLARE C3 = 3;
 
 SELECT
@@ -1152,9 +1167,7 @@ DECLARE C2 = 2;"#
                     "#
                 )
             ),
-            r#"SELECT
-    1;
-
+            r#"SELECT 1;
 DELIMITER $$
 
 SELECT
