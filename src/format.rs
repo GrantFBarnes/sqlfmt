@@ -326,11 +326,13 @@ impl FormatState {
                 }
             }
             "THEN" => {
-                if let Some(t) = self.indent_stack.last() {
-                    if t.value.to_uppercase() != "CASE" {
-                        self.indent_stack.push(token.clone());
-                        return;
-                    }
+                if self
+                    .indent_stack
+                    .last()
+                    .is_none_or(|t| t.value.to_uppercase() != "CASE")
+                {
+                    self.indent_stack.push(token.clone());
+                    return;
                 }
             }
             _ => (),
@@ -2708,13 +2710,13 @@ SET V2 = 0"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    IF V1 IS NULL SET V1 = 0
+                    IF V1 IS NULL THEN SET V1 = 0
                     ELSE SET V2 = NULL
                     "#
                 )
             ),
-            r#"IF V1 IS NULL SET V1 = 0
-ELSE SET V2 = NULL"#
+            r#"IF V1 IS NULL THEN SET V1 = 0
+    ELSE SET V2 = NULL"#
         );
     }
 
@@ -2727,15 +2729,15 @@ ELSE SET V2 = NULL"#
                 &config,
                 String::from(
                     r#"
-                    IF V1 IS NULL SET V1 = 0
+                    IF V1 IS NULL THEN SET V1 = 0
                     ELSE SET V2 = NULL
                     "#
                 )
             ),
-            r#"IF V1 IS NULL
-SET V1 = 0
-ELSE
-SET V2 = NULL"#
+            r#"IF V1 IS NULL THEN
+    SET V1 = 0
+    ELSE
+    SET V2 = NULL"#
         );
     }
 
