@@ -279,7 +279,7 @@ impl FormatState {
         }
 
         // remove double newline for end of section
-        if token.value.to_uppercase() == "END" {
+        if token.value.to_uppercase() == "END" || token.value.to_uppercase() == "ELSE" {
             if self.tokens.len() == last_newline_positions[0] + 1 {
                 self.tokens.remove(last_newline_positions[0]);
                 return;
