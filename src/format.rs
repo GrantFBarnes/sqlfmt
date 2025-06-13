@@ -226,19 +226,15 @@ impl FormatState {
 
         match token.value.to_uppercase().as_str() {
             "IF" => {
-                if prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE") {
+                if prev1_token.value.to_uppercase() != "END"
+                    && prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE")
+                {
                     self.push(Token::newline());
                     return;
                 }
             }
             "WHILE" => {
                 if prev1_token.value.to_uppercase() != "END" {
-                    self.push(Token::newline());
-                    return;
-                }
-            }
-            "INSERT" | "UPDATE" => {
-                if prev1_token.value.to_uppercase() != "AFTER" {
                     self.push(Token::newline());
                     return;
                 }
@@ -3304,7 +3300,8 @@ END;"#
                 )
             ),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
-AFTER INSERT ON TBL1
+AFTER
+INSERT ON TBL1
 FOR EACH ROW
 BEGIN
     CALL SP1(NEW.ID);

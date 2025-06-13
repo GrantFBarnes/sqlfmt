@@ -194,7 +194,10 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
-            "INSERT" => behavior.push(TokenBehavior::IncreaseIndent),
+            "INSERT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "JOIN" => {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentIfFound);
@@ -228,7 +231,10 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
-            "UPDATE" => behavior.push(TokenBehavior::IncreaseIndent),
+            "UPDATE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
             "WHERE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
