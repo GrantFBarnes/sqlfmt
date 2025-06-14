@@ -236,6 +236,10 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
+            "VALUE" | "VALUES" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
             "WHERE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -495,8 +499,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "EXCEPT" => Some(TokenCategory::Keyword),
         "EXCEPTION" => Some(TokenCategory::Keyword),
         "EXCLUSIVE" => Some(TokenCategory::Keyword),
-        "EXIST" => Some(TokenCategory::Keyword),
-        "EXISTS" => Some(TokenCategory::Keyword),
         "EXIT" => Some(TokenCategory::Keyword),
         "EXPLAIN" => Some(TokenCategory::Keyword),
         "EXTERNAL" => Some(TokenCategory::Keyword),
@@ -1295,6 +1297,8 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "CALL" => Some(TokenCategory::Function),
         "EXEC" => Some(TokenCategory::Function),
         "EXECUTE" => Some(TokenCategory::Function),
+        "EXIST" => Some(TokenCategory::Function),
+        "EXISTS" => Some(TokenCategory::Function),
         "IF" => Some(TokenCategory::Function),
         "IFNULL" => Some(TokenCategory::Function),
         "IIF" => Some(TokenCategory::Function),

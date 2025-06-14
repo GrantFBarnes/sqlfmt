@@ -2439,7 +2439,8 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("INSERT INTO TBL1(ID)VALUES(1)")),
-            r#"INSERT INTO TBL1 (ID) VALUES (1)"#
+            r#"INSERT INTO TBL1 (ID)
+VALUES (1)"#
         );
     }
 
@@ -2463,7 +2464,8 @@ FROM TBL1"#
                 &config,
                 String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3) VALUES (1, 2, 3)"#
+            r#"INSERT INTO TBL1 (C1, C2, C3)
+VALUES (1, 2, 3)"#
         );
     }
 
@@ -3010,7 +3012,8 @@ RETURN 0"#
 
 BEGIN TRY
     -- COMMENT
-    INSERT INTO TBL1 (C1) VALUES (1)
+    INSERT INTO TBL1 (C1)
+    VALUES (1)
 END TRY
 BEGIN CATCH
     RETURN 1
@@ -3353,7 +3356,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1 (
+            r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
@@ -3384,7 +3387,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1 (
+            r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
