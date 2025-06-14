@@ -545,7 +545,84 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
         state.decrease_method_count(token);
     }
 
-    return state.get_result(config);
+    let mut result: String = state.get_result(config);
+
+    if config.newlines {
+        result = get_result_with_collapsed_paren(result);
+    }
+
+    return result;
+}
+
+fn get_result_with_collapsed_paren(sql: String) -> String {
+    let mut current_line_char_count: usize = 0;
+    let sql_bytes: &[u8] = sql.as_bytes();
+    for i in 0..sql_bytes.len() {
+        let curr_ch: char = sql_bytes[i].into();
+        match curr_ch {
+            NEW_LINE => {
+                current_line_char_count = 0;
+                continue;
+            }
+            PAREN_OPEN => {
+                let mut paren_level: usize = 1;
+                for j in i + 1..sql_bytes.len() {
+                    let next_ch: char = sql_bytes[j].into();
+
+                    match next_ch {
+                        PAREN_OPEN => paren_level += 1,
+                        PAREN_CLOSE => paren_level -= 1,
+                        _ => continue,
+                    }
+
+                    if paren_level > 0 {
+                        continue;
+                    }
+
+                    let paren: String = sql[i..=j].to_string();
+                    let paren_collapsed: String = get_collapsed_paren(paren.clone());
+                    if paren_collapsed == paren {
+                        // no changes made
+                        break;
+                    }
+
+                    if current_line_char_count + paren_collapsed.len() > 80 {
+                        // too long, keep with line breaks
+                        break;
+                    }
+
+                    return get_result_with_collapsed_paren(format!(
+                        "{}{}{}",
+                        sql[0..i].to_string(),
+                        paren_collapsed,
+                        sql[j + 1..].to_string(),
+                    ));
+                }
+            }
+            _ => (),
+        }
+        current_line_char_count += 1;
+    }
+
+    return sql;
+}
+
+fn get_collapsed_paren(mut sql: String) -> String {
+    let find_replace_with_space: [&'static str; 3] = ["\n", "\t", "  "];
+    for f in find_replace_with_space {
+        while sql.contains(f) {
+            sql = sql.replace(f, " ")
+        }
+    }
+
+    let find_trim_space: [&'static str; 2] = ["( ", " )"];
+    for f in find_trim_space {
+        while sql.contains(f) {
+            sql = sql.replace(f, f.trim())
+        }
+    }
+
+    return sql;
 }
 
 #[cfg(test)]
@@ -850,16 +927,7 @@ WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
             r#"SELECT
     *
 FROM TBL1
-WHERE (
-        (
-            C1 = 0
-            AND C2 = 0
-        )
-        OR (
-            C1 = 1
-            AND C2 = 1
-        )
-    )"#
+WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
         );
     }
 
@@ -884,12 +952,7 @@ WHERE (
                 String::from(r#" SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID "#)
             ),
             r#"SELECT
-    (
-        SELECT
-            TOP 1
-            ID
-        FROM TBL1
-    ) AS ID"#
+    (SELECT TOP 1 ID FROM TBL1) AS ID"#
         );
     }
 
@@ -1055,12 +1118,7 @@ FROM TBL1"#
                 )
             ),
             r#"SELECT
-    (
-        SELECT
-            TOP 1
-            ID
-        FROM TBL1
-    ) AS ID,
+    (SELECT TOP 1 ID FROM TBL1) AS ID,
     C1
 FROM TBL1"#
         );
@@ -1418,11 +1476,7 @@ WHERE C1 IN (1, 2, 3)"#
             r#"SELECT
     *
 FROM TBL1
-WHERE C1 IN (
-        1,
-        2,
-        3
-    )"#
+WHERE C1 IN (1, 2, 3)"#
         );
     }
 
@@ -1684,10 +1738,7 @@ FROM TBL1 AS T1
     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
         AND T2.C2 = T1.C2
     INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
-WHERE (
-        T1.C2 <> T2.C2
-        OR T1.C2 <> T3.C2
-    )
+WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
 ORDER BY T1.C1
 LIMIT 1"#
         );
@@ -2071,11 +2122,7 @@ SELECT * FROM CTE2"#
             r#"SELECT
     C1
 FROM TBL1
-WITH CTE2 AS (
-        SELECT
-            C2
-        FROM TBL2
-    )
+WITH CTE2 AS (SELECT C2 FROM TBL2)
 SELECT
     *
 FROM CTE2"#
@@ -2119,16 +2166,46 @@ SELECT C1 FROM CTE1"#
                     "#,
                 )
             ),
+            r#"WITH CTE1 AS (SELECT C1 FROM TBL1)
+INSERT INTO TB2 (C1)
+SELECT
+    C1
+FROM CTE1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_insert_after_cte_config_newline_long() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    WITH CTE1 AS
+                    (SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM TBL1)
+                    INSERT INTO TB2 (C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002)
+                    SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM CTE1
+                    "#,
+                )
+            ),
             r#"WITH CTE1 AS (
         SELECT
-            C1
+            C00000000000000000000000000000,
+            C00000000000000000000000000001,
+            C00000000000000000000000000002
         FROM TBL1
     )
 INSERT INTO TB2 (
-    C1
+    C00000000000000000000000000000,
+    C00000000000000000000000000001,
+    C00000000000000000000000000002
 )
 SELECT
-    C1
+    C00000000000000000000000000000,
+    C00000000000000000000000000001,
+    C00000000000000000000000000002
 FROM CTE1"#
         );
     }
@@ -2176,16 +2253,8 @@ SELECT * FROM CTE1
                     "#,
                 )
             ),
-            r#"WITH CTE1 AS (
-        SELECT
-            C1
-        FROM TBL1
-    ),
-    CTE2 AS (
-        SELECT
-            C2
-        FROM TBL2
-    )
+            r#"WITH CTE1 AS (SELECT C1 FROM TBL1),
+    CTE2 AS (SELECT C2 FROM TBL2)
 SELECT
     *
 FROM CTE1
@@ -2227,11 +2296,7 @@ FROM CTE1
             r#"SELECT
     *
 FROM T1
-    LEFT JOIN (
-            SELECT
-                C2
-            FROM T2
-        ) AS ST1 ON ST1.C2 = T1.C1"#
+    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1"#
         );
     }
 
@@ -2336,11 +2401,7 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("INSERT INTO TBL1(ID)VALUES(1)")),
-            r#"INSERT INTO TBL1 (
-    ID
-) VALUES (
-    1
-)"#
+            r#"INSERT INTO TBL1 (ID) VALUES (1)"#
         );
     }
 
@@ -2364,15 +2425,7 @@ FROM TBL1"#
                 &config,
                 String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
             ),
-            r#"INSERT INTO TBL1 (
-    C1,
-    C2,
-    C3
-) VALUES (
-    1,
-    2,
-    3
-)"#
+            r#"INSERT INTO TBL1 (C1, C2, C3) VALUES (1, 2, 3)"#
         );
     }
 
@@ -2410,11 +2463,7 @@ FROM TBL1"#
                     "#,
                 )
             ),
-            r#"INSERT INTO TBL1 (
-    C1,
-    C2,
-    C3
-)
+            r#"INSERT INTO TBL1 (C1, C2, C3)
 SELECT
     C1,
     C2,
@@ -2923,11 +2972,7 @@ RETURN 0"#
 
 BEGIN TRY
     -- COMMENT
-    INSERT INTO TBL1 (
-        C1
-    ) VALUES (
-        1
-    )
+    INSERT INTO TBL1 (C1) VALUES (1)
 END TRY
 BEGIN CATCH
     RETURN 1
@@ -3049,11 +3094,7 @@ RETURN 0"#
                     "#
                 )
             ),
-            r#"DECLARE V1 INT = (
-        SELECT
-            C1
-        FROM TBL
-    );"#
+            r#"DECLARE V1 INT = (SELECT C1 FROM TBL);"#
         );
     }
 
@@ -3193,9 +3234,7 @@ FROM T
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 INT)")),
-            r#"CREATE TABLE TBL1 (
-    C1 INT
-)"#
+            r#"CREATE TABLE TBL1 (C1 INT)"#
         );
     }
 
@@ -3216,9 +3255,7 @@ FROM T
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")),
-            r#"CREATE TABLE TBL1 (
-    C1 VARCHAR(10)
-)"#
+            r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#
         );
     }
 
@@ -3256,9 +3293,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE TBL1 (
-    ID UUID NOT NULL DEFAULT UUID()
-)"#
+            r#"CREATE TABLE TBL1 (ID UUID NOT NULL DEFAULT UUID())"#
         );
     }
 
@@ -3531,20 +3566,9 @@ PIVOT (
     [2],
     [3],
     [4]
-FROM (
-        SELECT
-            DaysToManufacture,
-            StandardCost
-        FROM Production.Product
-    ) AS SourceTable PIVOT (
+FROM (SELECT DaysToManufacture, StandardCost FROM Production.Product) AS SourceTable PIVOT (
     AVG(StandardCost)
-    FOR DaysToManufacture IN (
-            [0],
-            [1],
-            [2],
-            [3],
-            [4]
-        )
+    FOR DaysToManufacture IN ([0], [1], [2], [3], [4])
 ) AS PivotTable;"#
         );
     }
