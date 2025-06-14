@@ -98,47 +98,40 @@ impl FormatState {
             self.remove_extra_newline(token);
         }
 
-        if token.category == Some(TokenCategory::NewLine) {
-            return;
-        }
-
         let prev_token: &Token = self
             .tokens
             .last()
             .expect("should always have a previous token");
 
-        if token.category == Some(TokenCategory::Delimiter) {
-            if prev_token.value.to_uppercase() != "DELIMITER" {
-                return;
-            }
-        }
-
-        if prev_token.behavior.contains(&TokenBehavior::NoSpaceAfter) {
-            return;
-        }
-
-        match prev_token.category {
-            Some(TokenCategory::NewLine) => {
-                self.push(Token::new_space(match config.tabs {
-                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-                }));
-                return;
-            }
-            _ => (),
-        }
-
-        if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
-            return;
-        }
-
         match token.category {
+            Some(TokenCategory::NewLine) => return,
+            Some(TokenCategory::Delimiter) => {
+                if prev_token.value.to_uppercase() != "DELIMITER" {
+                    return;
+                }
+            }
             Some(TokenCategory::ParenOpen) => {
                 if self.method_count > 0 {
                     return;
                 }
             }
             _ => (),
+        }
+
+        if prev_token.behavior.contains(&TokenBehavior::NoSpaceAfter) {
+            return;
+        }
+
+        if prev_token.category == Some(TokenCategory::NewLine) {
+            self.push(Token::new_space(match config.tabs {
+                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+            }));
+            return;
+        }
+
+        if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
+            return;
         }
 
         self.push(Token::new_space(String::from(" ")));
@@ -149,6 +142,10 @@ impl FormatState {
             return;
         }
 
+        if self.method_count > 0 {
+            return;
+        }
+
         let prev1_token: &Token = self
             .tokens
             .iter()
@@ -156,9 +153,7 @@ impl FormatState {
             .expect("should always have a previous token");
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            if self.method_count == 0 {
-                self.push(Token::newline());
-            }
+            self.push(Token::newline());
             return;
         }
 
@@ -169,9 +164,7 @@ impl FormatState {
                 return;
             }
             Some(TokenCategory::ParenOpen) | Some(TokenCategory::Comma) => {
-                if self.method_count == 0 {
-                    self.push(Token::newline());
-                }
+                self.push(Token::newline());
                 return;
             }
             _ => (),
@@ -214,9 +207,7 @@ impl FormatState {
 
         match &token.category {
             Some(TokenCategory::ParenClose) => {
-                if self.method_count == 0 {
-                    self.push(Token::newline());
-                }
+                self.push(Token::newline());
                 return;
             }
             _ => (),
@@ -3181,9 +3172,7 @@ FROM T
                     "#
                 )
             ),
-            r#"STUFF((SELECT ', ' + C1
-        FROM TBL1
-        FOR XML PATH('')), 1, 2, '')"#
+            r#"STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')"#
         );
     }
 
