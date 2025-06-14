@@ -157,8 +157,14 @@ impl FormatState {
                 self.push(Token::newline());
                 return;
             }
-            Some(TokenCategory::ParenOpen) | Some(TokenCategory::Comma) => {
+            Some(TokenCategory::Comma) => {
                 self.push(Token::newline());
+                return;
+            }
+            Some(TokenCategory::ParenOpen) => {
+                if token.category != Some(TokenCategory::ParenClose) {
+                    self.push(Token::newline());
+                }
                 return;
             }
             _ => (),
