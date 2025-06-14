@@ -6,7 +6,7 @@ use crate::token::*;
 struct FormatState {
     tokens: Vec<Token>,
     indent_stack: Vec<Token>,
-    method_count: usize,
+    paren_stack: Vec<ParenCategory>,
 }
 
 impl FormatState {
@@ -14,7 +14,7 @@ impl FormatState {
         FormatState {
             tokens: vec![],
             indent_stack: vec![],
-            method_count: 0,
+            paren_stack: vec![],
         }
     }
 
@@ -22,34 +22,28 @@ impl FormatState {
         self.tokens.push(token);
     }
 
-    fn increase_method_count(&mut self, token: &Token) {
-        if self.tokens.is_empty() {
-            return;
-        }
-
+    fn increase_paren_stack(&mut self, token: &Token) {
         if token.category != Some(TokenCategory::ParenOpen) {
             return;
         }
 
-        if self.method_count > 0 {
-            self.method_count += 1;
+        let prev_token: Option<&Token> = self.tokens.last();
+        if prev_token.is_none() {
+            self.paren_stack.push(ParenCategory::Space1Newline1);
             return;
         }
+        let prev_token: &Token = prev_token.unwrap();
 
-        let prev_token: &Token = self
-            .tokens
-            .last()
-            .expect("should always have a previous token");
-
-        if prev_token.value.to_uppercase() == "JOIN" {
-            return;
-        }
-
-        if prev_token.category == Some(TokenCategory::Method)
-            || prev_token.category == Some(TokenCategory::DataType)
-        {
-            self.method_count += 1;
-            return;
+        match prev_token.category {
+            Some(TokenCategory::DataType) | Some(TokenCategory::Method) => {
+                self.paren_stack.push(ParenCategory::Space0Newline0);
+                return;
+            }
+            Some(TokenCategory::Function) => {
+                self.paren_stack.push(ParenCategory::Space0Newline1);
+                return;
+            }
+            _ => (),
         }
 
         let prev_token_value: String = prev_token.value.to_uppercase();
@@ -59,33 +53,29 @@ impl FormatState {
             || prev_token_value.ends_with(".MODIFY")
             || prev_token_value.ends_with(".NODES")
         {
-            self.method_count += 1;
+            self.paren_stack.push(ParenCategory::Space0Newline0);
             return;
         }
 
         if let Some(prev2_token) = self.tokens.iter().nth_back(2) {
-            if prev2_token.category == Some(TokenCategory::Method) {
-                self.method_count += 1;
+            if prev2_token.category == Some(TokenCategory::Function) {
+                self.paren_stack.push(ParenCategory::Space0Newline1);
                 return;
             }
 
             if prev2_token.value == "=" || prev2_token.value.to_uppercase() == "AS" {
-                self.method_count += 1;
+                self.paren_stack.push(ParenCategory::Space0Newline1);
                 return;
             }
         }
+
+        self.paren_stack.push(ParenCategory::Space1Newline1);
     }
 
-    fn decrease_method_count(&mut self, token: &Token) {
-        if self.method_count == 0 {
-            return;
+    fn decrease_paren_stack(&mut self, token: &Token) {
+        if token.category == Some(TokenCategory::ParenClose) {
+            self.paren_stack.pop();
         }
-
-        if token.category != Some(TokenCategory::ParenClose) {
-            return;
-        }
-
-        self.method_count -= 1;
     }
 
     fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
@@ -111,8 +101,12 @@ impl FormatState {
                 }
             }
             Some(TokenCategory::ParenOpen) => {
-                if self.method_count > 0 {
-                    return;
+                if let Some(paren) = self.paren_stack.last() {
+                    if paren == &ParenCategory::Space0Newline0
+                        || paren == &ParenCategory::Space0Newline1
+                    {
+                        return;
+                    }
                 }
             }
             _ => (),
@@ -142,7 +136,7 @@ impl FormatState {
             return;
         }
 
-        if self.method_count > 0 {
+        if self.paren_stack.last() == Some(&ParenCategory::Space0Newline0) {
             return;
         }
 
@@ -498,7 +492,8 @@ impl FormatState {
             match token.category {
                 Some(TokenCategory::Keyword)
                 | Some(TokenCategory::DataType)
-                | Some(TokenCategory::Method) => match config.case {
+                | Some(TokenCategory::Method)
+                | Some(TokenCategory::Function) => match config.case {
                     ConfigCase::Uppercase => token_value = token_value.to_uppercase(),
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
@@ -526,6 +521,13 @@ impl FormatState {
     }
 }
 
+#[derive(PartialEq, Eq)]
+enum ParenCategory {
+    Space0Newline0,
+    Space0Newline1,
+    Space1Newline1,
+}
+
 pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     let mut state: FormatState = FormatState::new();
 
@@ -537,12 +539,12 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             continue;
         }
 
-        state.increase_method_count(token);
+        state.increase_paren_stack(token);
         state.decrease_indent_stack(&tokens, i);
         state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token);
-        state.decrease_method_count(token);
+        state.decrease_paren_stack(token);
     }
 
     let mut result: String = state.get_result(config);
@@ -3320,8 +3322,8 @@ FROM T
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
     I1 INT,
-    I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
-    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
+    I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
 )"#
         );
     }
@@ -3353,8 +3355,8 @@ FROM T
     I1 INT,
     I2 INT,
     PRIMARY KEY(ID),
-    FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
-    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
+    FOREIGN KEY(I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
 )"#
         );
     }

@@ -1146,7 +1146,7 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "XML" => Some(TokenCategory::DataType),
         "YEAR" => Some(TokenCategory::DataType),
 
-        // Methods
+        // Methods (no space before paren, no new lines inside)
         "ABS" => Some(TokenCategory::Method),
         "ACOS" => Some(TokenCategory::Method),
         "ADDDATE" => Some(TokenCategory::Method),
@@ -1156,7 +1156,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "ATAN2" => Some(TokenCategory::Method),
         "AVG" => Some(TokenCategory::Method),
         "BIN" => Some(TokenCategory::Method),
-        "CALL" => Some(TokenCategory::Method),
         "CAST" => Some(TokenCategory::Method),
         "CEIL" => Some(TokenCategory::Method),
         "CEILING" => Some(TokenCategory::Method),
@@ -1190,8 +1189,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "DEGREES" => Some(TokenCategory::Method),
         "DENSE_RANK" => Some(TokenCategory::Method),
         "DIV" => Some(TokenCategory::Method),
-        "EXEC" => Some(TokenCategory::Method),
-        "EXECUTE" => Some(TokenCategory::Method),
         "EXP" => Some(TokenCategory::Method),
         "EXTRACT" => Some(TokenCategory::Method),
         "FIND_IN_SET" => Some(TokenCategory::Method),
@@ -1203,9 +1200,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "GETDATE" => Some(TokenCategory::Method),
         "GREATEST" => Some(TokenCategory::Method),
         "HOUR" => Some(TokenCategory::Method),
-        "IF" => Some(TokenCategory::Method),
-        "IFNULL" => Some(TokenCategory::Method),
-        "IIF" => Some(TokenCategory::Method),
         "INSTR" => Some(TokenCategory::Method),
         "ISNULL" => Some(TokenCategory::Method),
         "LAG" => Some(TokenCategory::Method),
@@ -1240,7 +1234,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "MONTHNAME" => Some(TokenCategory::Method),
         "NEWID" => Some(TokenCategory::Method),
         "NOW" => Some(TokenCategory::Method),
-        "NULLIF" => Some(TokenCategory::Method),
         "PATH" => Some(TokenCategory::Method),
         "PERCENT_RANK" => Some(TokenCategory::Method),
         "PERIOD_ADD" => Some(TokenCategory::Method),
@@ -1274,7 +1267,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "SQRT" => Some(TokenCategory::Method),
         "STRCMP" => Some(TokenCategory::Method),
         "STR_TO_DATE" => Some(TokenCategory::Method),
-        "STUFF" => Some(TokenCategory::Method),
         "SUBDATE" => Some(TokenCategory::Method),
         "SUBSTR" => Some(TokenCategory::Method),
         "SUBSTRING" => Some(TokenCategory::Method),
@@ -1298,6 +1290,16 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "WEEKDAY" => Some(TokenCategory::Method),
         "WEEKOFYEAR" => Some(TokenCategory::Method),
         "YEARWEEK" => Some(TokenCategory::Method),
+
+        // Functions (no space before paren, can have new lines inside)
+        "CALL" => Some(TokenCategory::Function),
+        "EXEC" => Some(TokenCategory::Function),
+        "EXECUTE" => Some(TokenCategory::Function),
+        "IF" => Some(TokenCategory::Function),
+        "IFNULL" => Some(TokenCategory::Function),
+        "IIF" => Some(TokenCategory::Function),
+        "NULLIF" => Some(TokenCategory::Function),
+        "STUFF" => Some(TokenCategory::Function),
         _ => None,
     };
 }
@@ -1318,6 +1320,7 @@ pub enum TokenCategory {
     Keyword,
     DataType,
     Method,
+    Function,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -2184,7 +2187,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("CALL"),
-                    category: Some(TokenCategory::Method),
+                    category: Some(TokenCategory::Function),
                     behavior: vec![
                         TokenBehavior::NewLineBefore,
                         TokenBehavior::IncreaseIndent,
