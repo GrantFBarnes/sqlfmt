@@ -12,6 +12,7 @@ pub struct Arguments {
     pub lower: bool,
     pub tabs: bool,
     pub spaces: Option<u8>,
+    pub chars: Option<u8>,
 }
 
 impl Arguments {
@@ -30,6 +31,7 @@ impl Arguments {
             lower: false,
             tabs: false,
             spaces: None,
+            chars: None,
         }
     }
 
@@ -74,6 +76,12 @@ impl Arguments {
                     }
                     arguments.arg_type = Some(ArgType::Spaces);
                 }
+                "-c" | "--chars" => {
+                    if arguments.arg_type.is_some() {
+                        return Err("Invalid arguments provided.");
+                    }
+                    arguments.arg_type = Some(ArgType::Chars);
+                }
                 _ => match arguments.arg_type {
                     Some(ArgType::Input) => {
                         arguments.input = Some(arg);
@@ -89,6 +97,14 @@ impl Arguments {
                             return Err("Invalid space size provided (must be 0-255).");
                         }
                         arguments.spaces = Some(spaces.unwrap());
+                        arguments.arg_type = None;
+                    }
+                    Some(ArgType::Chars) => {
+                        let chars: Result<u8, std::num::ParseIntError> = arg.parse::<u8>();
+                        if chars.is_err() {
+                            return Err("Invalid char size provided (must be 0-255).");
+                        }
+                        arguments.chars = Some(chars.unwrap());
                         arguments.arg_type = None;
                     }
                     None => {
@@ -110,6 +126,7 @@ enum ArgType {
     Input,
     Output,
     Spaces,
+    Chars,
 }
 
 #[cfg(test)]
@@ -131,6 +148,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -148,6 +166,8 @@ mod tests {
             String::from("-t"),
             String::from("-s"),
             String::from("2"),
+            String::from("-c"),
+            String::from("120"),
         ];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
         assert_eq!(arguments.is_ok(), true);
@@ -161,6 +181,7 @@ mod tests {
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, true);
         assert_eq!(arguments.spaces, Some(2));
+        assert_eq!(arguments.chars, Some(120));
     }
 
     #[test]
@@ -178,6 +199,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -195,6 +217,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -212,6 +235,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -229,6 +253,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -246,6 +271,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -263,6 +289,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -280,6 +307,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -297,6 +325,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -314,6 +343,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -331,6 +361,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -348,6 +379,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -365,6 +397,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -382,6 +415,7 @@ mod tests {
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -399,6 +433,7 @@ mod tests {
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -416,6 +451,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -433,6 +469,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
         assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -450,6 +487,7 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, Some(2));
+        assert_eq!(arguments.chars, None);
     }
 
     #[test]
@@ -467,6 +505,43 @@ mod tests {
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
         assert_eq!(arguments.spaces, Some(2));
+        assert_eq!(arguments.chars, None);
+    }
+
+    #[test]
+    fn test_get_arguments_chars_short() {
+        let args: Vec<String> = vec![String::from("-c"), String::from("120")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+        assert_eq!(arguments.help, false);
+        assert_eq!(arguments.version, false);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.upper, false);
+        assert_eq!(arguments.lower, false);
+        assert_eq!(arguments.tabs, false);
+        assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, Some(120));
+    }
+
+    #[test]
+    fn test_get_arguments_chars_long() {
+        let args: Vec<String> = vec![String::from("--chars"), String::from("120")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+        assert_eq!(arguments.help, false);
+        assert_eq!(arguments.version, false);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.upper, false);
+        assert_eq!(arguments.lower, false);
+        assert_eq!(arguments.tabs, false);
+        assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, Some(120));
     }
 
     #[test]
@@ -507,6 +582,20 @@ mod tests {
     #[test]
     fn test_get_arguments_spaces_not_number() {
         let args: Vec<String> = vec![String::from("--spaces"), String::from("true")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_err(), true);
+    }
+
+    #[test]
+    fn test_get_arguments_chars_no_number() {
+        let args: Vec<String> = vec![String::from("--chars")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_err(), true);
+    }
+
+    #[test]
+    fn test_get_arguments_chars_not_number() {
+        let args: Vec<String> = vec![String::from("--chars"), String::from("true")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
         assert_eq!(arguments.is_err(), true);
     }

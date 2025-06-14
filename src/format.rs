@@ -556,13 +556,13 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     let mut result: String = state.get_result(config);
 
     if config.newlines {
-        result = get_result_with_collapsed_paren(result);
+        result = get_result_with_collapsed_paren(result, config);
     }
 
     return result;
 }
 
-fn get_result_with_collapsed_paren(sql: String) -> String {
+fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> String {
     let mut current_line_char_count: usize = 0;
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
@@ -594,17 +594,20 @@ fn get_result_with_collapsed_paren(sql: String) -> String {
                         break;
                     }
 
-                    if current_line_char_count + paren_collapsed.len() > 80 {
+                    if current_line_char_count + paren_collapsed.len() > config.chars.into() {
                         // too long, keep with line breaks
                         break;
                     }
 
-                    return get_result_with_collapsed_paren(format!(
-                        "{}{}{}",
-                        sql[0..i].to_string(),
-                        paren_collapsed,
-                        sql[j + 1..].to_string(),
-                    ));
+                    return get_result_with_collapsed_paren(
+                        format!(
+                            "{}{}{}",
+                            sql[0..i].to_string(),
+                            paren_collapsed,
+                            sql[j + 1..].to_string(),
+                        ),
+                        config,
+                    );
                 }
             }
             _ => (),
@@ -737,6 +740,33 @@ FROM TBL1"#
   C1,
   C2
 FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_chars_short() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        config.chars = 10;
+        assert_eq!(
+            get_formatted_sql(&config, String::from(r#"(SELECT C1, C2 FROM TBL1)"#)),
+            r#"(
+    SELECT
+        C1,
+        C2
+    FROM TBL1
+)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_chars_long() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        config.chars = 120;
+        assert_eq!(
+            get_formatted_sql(&config, String::from(r#"(SELECT C1, C2 FROM TBL1)"#)),
+            r#"(SELECT C1, C2 FROM TBL1)"#
         );
     }
 

@@ -14,7 +14,8 @@ This extension contributes the following settings:
 - `sqlfmt.replaceNewlines`: Replace newlines
 - `sqlfmt.changeKeywordCase`: Change case on keywords
 - `sqlfmt.useTabs`: Use tabs instead of spaces for indentation
-- `sqlfmt.setSpaceCount`: Set amont of spaces for each level of indent
+- `sqlfmt.setSpaceCount`: Set amount of spaces for each level of indent
+- `sqlfmt.setCharCount`: Set amount of chars to determine line breaks
 
 ## Installation
 

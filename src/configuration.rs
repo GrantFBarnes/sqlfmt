@@ -12,6 +12,7 @@ pub struct Configuration {
     pub newlines: bool,
     pub case: ConfigCase,
     pub tabs: ConfigTab,
+    pub chars: u8,
 }
 
 impl Configuration {
@@ -20,6 +21,7 @@ impl Configuration {
             newlines: false,
             case: ConfigCase::Unchanged,
             tabs: ConfigTab::Space(4),
+            chars: 80,
         }
     }
 
@@ -48,6 +50,10 @@ impl Configuration {
 
         if args.spaces.is_some() {
             config.tabs = ConfigTab::Space(args.spaces.unwrap());
+        }
+
+        if args.chars.is_some() {
+            config.chars = args.chars.unwrap();
         }
 
         return config;
@@ -106,6 +112,12 @@ fn get_file_config(file: PathBuf) -> Option<Configuration> {
                     config.tabs = ConfigTab::Space(spaces);
                 }
             }
+        } else if line.starts_with("chars") {
+            if let Some(n) = line.split("=").last() {
+                if let Ok(chars) = n.parse::<u8>() {
+                    config.chars = chars;
+                }
+            }
         }
     }
 
@@ -140,6 +152,7 @@ mod tests {
         assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
     }
 
     #[test]
@@ -153,6 +166,7 @@ mod tests {
         assert_eq!(config.newlines, true);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
     }
 
     #[test]
@@ -166,6 +180,7 @@ mod tests {
         assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Uppercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
     }
 
     #[test]
@@ -179,6 +194,7 @@ mod tests {
         assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Lowercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
     }
 
     #[test]
@@ -192,6 +208,7 @@ mod tests {
         assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Tab);
+        assert_eq!(config.chars, 80);
     }
 
     #[test]
@@ -205,5 +222,20 @@ mod tests {
         assert_eq!(config.newlines, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(2));
+        assert_eq!(config.chars, 80);
+    }
+
+    #[test]
+    fn test_get_configuration_chars() {
+        let args: Vec<String> = vec![String::from("-c"), String::from("120")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+
+        let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
+        assert_eq!(config.case, ConfigCase::Unchanged);
+        assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 120);
     }
 }

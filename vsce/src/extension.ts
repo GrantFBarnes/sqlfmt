@@ -55,11 +55,17 @@ export function activate(context: vscode.ExtensionContext) {
       if (config.get("sqlfmt.useTabs")) {
         args.push("-t");
       } else {
-        let count = config.get("sqlfmt.setSpaceCount");
-        if (typeof count == "number") {
+        let spaceCount = config.get("sqlfmt.setSpaceCount");
+        if (typeof spaceCount == "number") {
           args.push("-s");
-          args.push(count.toString());
+          args.push(spaceCount.toString());
         }
+      }
+
+      let charCount = config.get("sqlfmt.setCharCount");
+      if (typeof charCount == "number") {
+        args.push("-c");
+        args.push(charCount.toString());
       }
     }
 
@@ -87,4 +93,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

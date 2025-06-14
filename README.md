@@ -25,7 +25,8 @@ Command line SQL formatter.
     -u, --upper        Uppercase keywords
     -l, --lower        Lowercase keywords
     -t, --tabs         Use tabs for indents
-    -s, --spaces <INT> Define amount of spaces per indent
+    -s, --spaces <INT> Define amount of spaces per indent (default 4)
+    -c, --chars  <INT> Define amount of max chars per line before break (default 80)
 ```
 
 ## Config File
@@ -44,4 +45,5 @@ upper
 lower
 tabs
 spaces=<INT>
+chars=<INT>
 ```

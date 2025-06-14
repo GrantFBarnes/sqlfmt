@@ -73,7 +73,15 @@
           "default": 4,
           "minimum": 0,
           "maximum": 255,
-          "description": "Set amont of spaces for each level of indent."
+          "description": "Set amount of spaces for each level of indent."
+        },
+        "sqlfmt.setCharCount": {
+          "order": 5,
+          "type": "number",
+          "default": 80,
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Set amount of chars to determine line breaks."
         }
       }
     }
