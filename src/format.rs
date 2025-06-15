@@ -3580,9 +3580,9 @@ FROM (
         FROM Production.Product
     ) AS SourceTable
 PIVOT (
-    AVG(StandardCost) FOR DaysToManufacture IN
-        ([0], [1], [2], [3], [4])
-) AS PivotTable;"#
+        AVG(StandardCost) FOR DaysToManufacture IN
+            ([0], [1], [2], [3], [4])
+    ) AS PivotTable;"#
         );
     }
 
@@ -3620,10 +3620,11 @@ FROM (
             DaysToManufacture,
             StandardCost
         FROM Production.Product
-    ) AS SourceTable PIVOT (
-    AVG(StandardCost)
-    FOR DaysToManufacture IN ([0], [1], [2], [3], [4])
-) AS PivotTable;"#
+    ) AS SourceTable
+PIVOT (
+        AVG(StandardCost)
+        FOR DaysToManufacture IN ([0], [1], [2], [3], [4])
+    ) AS PivotTable;"#
         );
     }
 
