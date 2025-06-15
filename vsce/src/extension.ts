@@ -1,14 +1,7 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import cp from "child_process";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
   const sqlfmt = vscode.commands.registerCommand("sqlfmt.sqlfmt", () => {
     const editor = vscode.window.activeTextEditor;
     if (editor == null) {
@@ -22,17 +15,49 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const sqlIn = editor.document.getText(range);
-    const args = getSqlFmtArguments();
-    const process = cp.spawn("sqlfmt", args);
-    process.stdin.write(sqlIn);
+    getFormattedSql(editor.document, range).then((formattedSql: string) => {
+      editor.edit((editBuilder) => {
+        editBuilder.replace(range, formattedSql);
+      });
+    }).catch(() => { });
+  });
+
+  context.subscriptions.push(sqlfmt);
+}
+
+export function deactivate() { }
+
+function getRangeToFormat(): vscode.Range | null {
+  const editor = vscode.window.activeTextEditor;
+  const selection = editor?.selection;
+  if (!selection) return null;
+
+  if (selection.isEmpty) {
+    const firstLine = editor.document.lineAt(0);
+    const lastLine = editor.document.lineAt(editor.document.lineCount - 1);
+    return new vscode.Range(firstLine.range.start, lastLine.range.end);
+  } else {
+    return new vscode.Range(
+      selection.start.line,
+      selection.start.character,
+      selection.end.line,
+      selection.end.character
+    );
+  }
+}
+
+function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let formattedSql = "";
+
+    const unformattedSql = document.getText(range);
+    const processArguments = getSqlFmtArguments();
+    const process = cp.spawn("sqlfmt", processArguments);
+    process.stdin.write(unformattedSql);
     process.stdin.end();
 
-    process.stdout.on("data", (sqlOut: any) => {
-      editor.edit((editBuilder) => {
-        editBuilder.replace(range, sqlOut.toString());
-      });
-      vscode.window.showInformationMessage("SQL is formatted.");
+    process.stdout.on("data", (data: any) => {
+      formattedSql += data.toString();
     });
 
     process.stderr.on("data", (data: any) => {
@@ -40,37 +65,14 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     process.on("close", (code: any) => {
-      console.log(`child process exited with code ${code}`);
+      if (code === 0) {
+        vscode.window.showInformationMessage("SQL is formatted.");
+        resolve(formattedSql);
+      } else {
+        reject(`Process exited with code ${code}`);
+      }
     });
   });
-
-  context.subscriptions.push(sqlfmt);
-}
-
-// This method is called when your extension is deactivated
-export function deactivate() { }
-
-function getRangeToFormat(): vscode.Range | null {
-  let range: vscode.Range | null = null;
-
-  const editor = vscode.window.activeTextEditor;
-  const selection = editor?.selection;
-  if (!selection) return range;
-
-  if (selection.isEmpty) {
-    const firstLine = editor.document.lineAt(0);
-    const lastLine = editor.document.lineAt(editor.document.lineCount - 1);
-    range = new vscode.Range(firstLine.range.start, lastLine.range.end);
-  } else {
-    range = new vscode.Range(
-      selection.start.line,
-      selection.start.character,
-      selection.end.line,
-      selection.end.character
-    );
-  }
-
-  return range;
 }
 
 function getSqlFmtArguments(): string[] {
@@ -99,14 +101,14 @@ function getSqlFmtArguments(): string[] {
     if (config.get("sqlfmt.useTabs")) {
       args.push("-t");
     } else {
-      let spaceCount = config.get("sqlfmt.setSpaceCount");
+      const spaceCount = config.get("sqlfmt.setSpaceCount");
       if (typeof spaceCount == "number") {
         args.push("-s");
         args.push(spaceCount.toString());
       }
     }
 
-    let charCount = config.get("sqlfmt.setCharCount");
+    const charCount = config.get("sqlfmt.setCharCount");
     if (typeof charCount == "number") {
       args.push("-c");
       args.push(charCount.toString());
