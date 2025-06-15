@@ -3362,7 +3362,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1(
+            r#"CREATE TABLE IF NOT EXISTS TBL1 (
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
@@ -3393,7 +3393,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1(
+            r#"CREATE TABLE IF NOT EXISTS TBL1 (
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
