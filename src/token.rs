@@ -214,6 +214,10 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "OUTER" => behavior.push(TokenBehavior::NewLineBefore),
+            "PIVOT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+            }
             "PRIMARY" => behavior.push(TokenBehavior::NewLineBefore),
             "RETURN" => behavior.push(TokenBehavior::NewLineBefore),
             "RIGHT" => behavior.push(TokenBehavior::NewLineBefore),
