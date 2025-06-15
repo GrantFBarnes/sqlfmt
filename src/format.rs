@@ -594,6 +594,14 @@ fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> Strin
                         break;
                     }
 
+                    // continue to count until next newline
+                    for k in j + 1..sql_bytes.len() {
+                        if char::from(sql_bytes[k]) == NEW_LINE {
+                            break;
+                        }
+                        current_line_char_count += 1;
+                    }
+
                     if current_line_char_count + paren_collapsed.len() > config.chars.into() {
                         // too long, keep with line breaks
                         break;
@@ -3607,7 +3615,12 @@ PIVOT (
     [2],
     [3],
     [4]
-FROM (SELECT DaysToManufacture, StandardCost FROM Production.Product) AS SourceTable PIVOT (
+FROM (
+        SELECT
+            DaysToManufacture,
+            StandardCost
+        FROM Production.Product
+    ) AS SourceTable PIVOT (
     AVG(StandardCost)
     FOR DaysToManufacture IN ([0], [1], [2], [3], [4])
 ) AS PivotTable;"#
