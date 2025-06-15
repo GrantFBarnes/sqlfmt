@@ -23,6 +23,24 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(sqlfmt);
+
+  vscode.languages.registerDocumentFormattingEditProvider('sql', {
+    async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
+      const firstLine = document.lineAt(0);
+      const lastLine = document.lineAt(document.lineCount - 1);
+      const range = new vscode.Range(firstLine.range.start, lastLine.range.end);
+
+      const formattedSql: string = await getFormattedSql(document, range);
+      return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
+    }
+  });
+
+  vscode.languages.registerDocumentRangeFormattingEditProvider('sql', {
+    async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
+      const formattedSql: string = await getFormattedSql(document, range);
+      return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
+    }
+  });
 }
 
 export function deactivate() { }
