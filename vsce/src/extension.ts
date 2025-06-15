@@ -90,6 +90,11 @@ function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Pr
         reject(`Process exited with code ${code}`);
       }
     });
+
+    process.on("error", (error: any) => {
+      vscode.window.showErrorMessage(`error: ${error}`);
+      reject(`Process error: ${error}`);
+    });
   });
 }
 
