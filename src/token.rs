@@ -1162,7 +1162,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "CEILING" => Some(TokenCategory::Method),
         "CHARACTER_LENGTH" => Some(TokenCategory::Method),
         "CHAR_LENGTH" => Some(TokenCategory::Method),
-        "COALESCE" => Some(TokenCategory::Method),
         "CONCAT" => Some(TokenCategory::Method),
         "CONCAT_WS" => Some(TokenCategory::Method),
         "CONNECTION_ID" => Some(TokenCategory::Method),
@@ -1285,6 +1284,7 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "SYSTEM_USER" => Some(TokenCategory::Method),
         "TAN" => Some(TokenCategory::Method),
         "TIMEDIFF" => Some(TokenCategory::Method),
+        "TIMESTAMPDIFF" => Some(TokenCategory::Method),
         "TIME_FORMAT" => Some(TokenCategory::Method),
         "TIME_TO_SEC" => Some(TokenCategory::Method),
         "TO_DAYS" => Some(TokenCategory::Method),
@@ -1301,6 +1301,7 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
 
         // Functions (no space before paren, can have new lines inside)
         "CALL" => Some(TokenCategory::Function),
+        "COALESCE" => Some(TokenCategory::Function),
         "EXEC" => Some(TokenCategory::Function),
         "EXECUTE" => Some(TokenCategory::Function),
         "IF" => Some(TokenCategory::Function),
