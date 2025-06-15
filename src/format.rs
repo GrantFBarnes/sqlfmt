@@ -136,7 +136,7 @@ impl FormatState {
             return;
         }
 
-        if self.paren_stack.last() == Some(&ParenCategory::Space0Newline0) {
+        if self.paren_stack.contains(&ParenCategory::Space0Newline0) {
             return;
         }
 
