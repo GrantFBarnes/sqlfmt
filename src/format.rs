@@ -241,66 +241,62 @@ impl FormatState {
     }
 
     fn remove_extra_newline(&mut self, token: &Token) {
-        let mut last_newline_positions: Vec<usize> = vec![];
-        let mut last_endline_categories: Vec<Option<TokenCategory>> = vec![];
-        let mut last_endline_values: Vec<String> = vec![];
-        for i in (1..self.tokens.len()).rev() {
-            if self.tokens[i].category == Some(TokenCategory::NewLine) {
-                last_newline_positions.push(i);
-                last_endline_categories.push(self.tokens[i - 1].category.clone());
-                last_endline_values.push(self.tokens[i - 1].value.to_uppercase());
-                if last_newline_positions.len() >= 3 {
-                    break;
-                }
-            }
-        }
-
-        // need at least one newline to remove extra
-        if last_newline_positions.is_empty() {
-            return;
-        }
-
-        // remove extra white space if single line select
-        if token.category == Some(TokenCategory::Delimiter) {
-            if last_endline_values[0] == String::from("SELECT") {
-                self.tokens.remove(last_newline_positions[0]);
-                self.tokens[last_newline_positions[0]].value = String::from(" ");
-                self.remove_extra_newline(token);
-                return;
-            }
-        }
-
-        // need at least two newlines to remove extra
-        if last_newline_positions.len() < 2 {
-            return;
-        }
-
-        // last two newlines need to be next to each other
-        if last_newline_positions[0] != last_newline_positions[1] + 1 {
-            return;
-        }
-
         // remove double newline for end of section
         if token.value.to_uppercase() == "END" || token.value.to_uppercase() == "ELSE" {
-            if self.tokens.len() == last_newline_positions[0] + 1 {
-                self.tokens.remove(last_newline_positions[0]);
+            if self.tokens.len() < 2 {
                 return;
             }
+
+            if self.tokens[self.tokens.len() - 1].category != Some(TokenCategory::NewLine) {
+                return;
+            }
+
+            if self.tokens[self.tokens.len() - 2].category != Some(TokenCategory::NewLine) {
+                return;
+            }
+
+            self.tokens.pop();
+            return;
         }
 
         // remove double newline for two consecutive single delimiter lines
         if token.category == Some(TokenCategory::Delimiter) {
-            if last_endline_categories[1] == Some(TokenCategory::Delimiter) {
-                if last_endline_categories.len() == 2
-                    || last_endline_values[2] == String::from("BEGIN")
-                    || last_endline_values[2] == String::from("DO")
-                    || last_endline_categories[2] == Some(TokenCategory::Delimiter)
-                    || last_endline_categories[2] == Some(TokenCategory::NewLine)
-                    || last_endline_categories[2] == Some(TokenCategory::Comment)
-                {
-                    self.tokens.remove(last_newline_positions[0]);
-                    return;
+            let mut prev_newline_positions: Vec<usize> = vec![];
+            let mut prev_endline_tokens: Vec<&Token> = vec![];
+            for i in (1..self.tokens.len()).rev() {
+                if self.tokens[i].category == Some(TokenCategory::NewLine) {
+                    prev_newline_positions.push(i);
+                    prev_endline_tokens.push(&self.tokens[i - 1]);
+                    if prev_newline_positions.len() >= 3 {
+                        break;
+                    }
                 }
+            }
+
+            // need at least two newlines to remove extra
+            if prev_newline_positions.len() < 2 {
+                return;
+            }
+
+            // last two newlines need to be next to each other
+            if prev_newline_positions[0] != prev_newline_positions[1] + 1 {
+                return;
+            }
+
+            // need previous line to end in delimiter
+            if prev_endline_tokens[1].category != Some(TokenCategory::Delimiter) {
+                return;
+            }
+
+            if prev_endline_tokens.len() == 2
+                || prev_endline_tokens[2].value.to_uppercase() == String::from("BEGIN")
+                || prev_endline_tokens[2].value.to_uppercase() == String::from("DO")
+                || prev_endline_tokens[2].category == Some(TokenCategory::Delimiter)
+                || prev_endline_tokens[2].category == Some(TokenCategory::NewLine)
+                || prev_endline_tokens[2].category == Some(TokenCategory::Comment)
+            {
+                self.tokens.remove(prev_newline_positions[0]);
+                return;
             }
         }
     }
@@ -1177,11 +1173,11 @@ FROM TBL1"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;SELECT 1;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2= 2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
                     "#
                 )
             ),
-            r#"SELECT * FROM TBL1; DECLARE C1 = 1; SELECT 1; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
+            r#"SELECT * FROM TBL1; DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
         );
     }
 
@@ -1194,7 +1190,7 @@ FROM TBL1"#
                 &config,
                 String::from(
                     r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;SELECT 1;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2= 2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
                     "#
                 )
             ),
@@ -1203,7 +1199,7 @@ FROM TBL1"#
 FROM TBL1;
 
 DECLARE C1 = 1;
-SELECT 1;
+DECLARE C2 = 2;
 DECLARE C3 = 3;
 
 SELECT
@@ -1280,7 +1276,9 @@ DECLARE C2 = 2;"#
                     "#
                 )
             ),
-            r#"SELECT 1;
+            r#"SELECT
+    1;
+
 DELIMITER $$
 
 SELECT
