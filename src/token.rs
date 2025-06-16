@@ -113,6 +113,7 @@ impl Token {
         let mut behavior: Vec<TokenBehavior> = vec![];
 
         match self.category {
+            Some(TokenCategory::NewLine) => behavior.push(TokenBehavior::NoWhiteSpaceBefore),
             Some(TokenCategory::ParenOpen) => {
                 behavior.push(TokenBehavior::NoSpaceAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -1335,6 +1336,7 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     NewLineBefore,
     NewLineAfter,
+    NoWhiteSpaceBefore,
     NoSpaceBefore,
     NoSpaceAfter,
     IncreaseIndent,
@@ -1847,7 +1849,7 @@ mod tests {
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
                     value: String::from("-- comment newline"),
@@ -1857,7 +1859,7 @@ mod tests {
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
                     value: String::from("FROM"),
@@ -1964,7 +1966,7 @@ mod tests {
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
                     value: String::from(
@@ -1979,7 +1981,7 @@ mod tests {
                 Token {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
                     value: String::from("FROM"),

@@ -83,6 +83,10 @@ impl FormatState {
             return;
         }
 
+        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore) {
+            return;
+        }
+
         if config.newlines {
             self.add_pre_newline(token);
             self.remove_extra_newline(token);
@@ -94,7 +98,6 @@ impl FormatState {
             .expect("should always have a previous token");
 
         match token.category {
-            Some(TokenCategory::NewLine) => return,
             Some(TokenCategory::Delimiter) => {
                 if prev_token.value.to_uppercase() != "DELIMITER" {
                     return;
@@ -142,8 +145,7 @@ impl FormatState {
 
         let prev1_token: &Token = self
             .tokens
-            .iter()
-            .nth_back(0)
+            .last()
             .expect("should always have a previous token");
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
@@ -523,7 +525,7 @@ impl FormatState {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 enum ParenCategory {
     Space0Newline0,
     Space0Newline1,
@@ -2455,7 +2457,9 @@ VALUES (1)"#
         assert_eq!(
             get_formatted_sql(
                 &Configuration::new(),
-                String::from("INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)")
+                String::from(
+                    "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
+                )
             ),
             r#"INSERT INTO TBL1 (C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21) VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)"#
         );
@@ -2468,7 +2472,9 @@ VALUES (1)"#
         assert_eq!(
             get_formatted_sql(
                 &config,
-                String::from("INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)")
+                String::from(
+                    "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
+                )
             ),
             r#"INSERT INTO TBL1 (
     C1,
