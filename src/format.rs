@@ -2455,9 +2455,9 @@ VALUES (1)"#
         assert_eq!(
             get_formatted_sql(
                 &Configuration::new(),
-                String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
+                String::from("INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)")
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3) VALUES (1, 2, 3)"#
+            r#"INSERT INTO TBL1 (C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20) VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)"#
         );
     }
 
@@ -2468,10 +2468,31 @@ VALUES (1)"#
         assert_eq!(
             get_formatted_sql(
                 &config,
-                String::from("INSERT INTO TBL1 (C1,C2,C3) VALUES (1,2,3)")
+                String::from("INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)")
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3)
-VALUES (1, 2, 3)"#
+            r#"INSERT INTO TBL1 (
+    C1,
+    C2,
+    C3,
+    C4,
+    C5,
+    C6,
+    C7,
+    C8,
+    C9,
+    C10,
+    C11,
+    C12,
+    C13,
+    C14,
+    C15,
+    C16,
+    C17,
+    C18,
+    C19,
+    C20
+)
+VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)"#
         );
     }
 

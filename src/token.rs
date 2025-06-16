@@ -242,7 +242,6 @@ impl Token {
             }
             "VALUE" | "VALUES" => {
                 behavior.push(TokenBehavior::NewLineBefore);
-                behavior.push(TokenBehavior::IncreaseIndent);
             }
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
             "WHERE" => {
