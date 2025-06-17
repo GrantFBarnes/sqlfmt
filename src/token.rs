@@ -514,7 +514,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "EXCLUSIVE" => Some(TokenCategory::Keyword),
         "EXEC" => Some(TokenCategory::Keyword),
         "EXECUTE" => Some(TokenCategory::Keyword),
-        "EXISTS" => Some(TokenCategory::Keyword),
         "EXIT" => Some(TokenCategory::Keyword),
         "EXPLAIN" => Some(TokenCategory::Keyword),
         "EXTERNAL" => Some(TokenCategory::Keyword),
@@ -1314,6 +1313,7 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
 
         // Functions (no space before paren, can have new lines inside)
         "COALESCE" => Some(TokenCategory::Function),
+        "EXISTS" => Some(TokenCategory::Function),
         "IF" => Some(TokenCategory::Function),
         "IFNULL" => Some(TokenCategory::Function),
         "IIF" => Some(TokenCategory::Function),
