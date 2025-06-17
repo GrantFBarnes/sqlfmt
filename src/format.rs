@@ -35,7 +35,7 @@ impl FormatState {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
-                Some(TokenCategory::Function) => {
+                Some(TokenCategory::Function) | None => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
                     return;
                 }
@@ -880,7 +880,7 @@ WHERE C1 = 1"#
                 &Configuration::new(),
                 String::from(r#"CALL SCH.{procedureName}();"#)
             ),
-            r#"CALL SCH.{procedureName} ();"#
+            r#"CALL SCH.{procedureName}();"#
         );
     }
 
@@ -890,7 +890,7 @@ WHERE C1 = 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from(r#"CALL SCH.{procedureName}();"#)),
-            r#"CALL SCH.{procedureName} ();"#
+            r#"CALL SCH.{procedureName}();"#
         );
     }
 
@@ -2141,14 +2141,14 @@ FROM CTE2"#
                     r#"
                     WITH CTE1 AS
                     (SELECT C1 FROM TBL1)
-                    INSERT INTO TB2 (C1)
+                    INSERT INTO TBL2 (C1)
                     SELECT C1 FROM CTE1
                     "#,
                 )
             ),
             r#"WITH CTE1 AS
     (SELECT C1 FROM TBL1)
-INSERT INTO TB2 (C1)
+INSERT INTO TBL2(C1)
 SELECT C1 FROM CTE1"#
         );
     }
@@ -2164,13 +2164,13 @@ SELECT C1 FROM CTE1"#
                     r#"
                     WITH CTE1 AS
                     (SELECT C1 FROM TBL1)
-                    INSERT INTO TB2 (C1)
+                    INSERT INTO TBL2 (C1)
                     SELECT C1 FROM CTE1
                     "#,
                 )
             ),
             r#"WITH CTE1 AS (SELECT C1 FROM TBL1)
-INSERT INTO TB2 (C1)
+INSERT INTO TBL2(C1)
 SELECT
     C1
 FROM CTE1"#
@@ -2188,7 +2188,7 @@ FROM CTE1"#
                     r#"
                     WITH CTE1 AS
                     (SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM TBL1)
-                    INSERT INTO TB2 (C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002)
+                    INSERT INTO TBL2 (C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002)
                     SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM CTE1
                     "#,
                 )
@@ -2200,7 +2200,7 @@ FROM CTE1"#
             C00000000000000000000000000002
         FROM TBL1
     )
-INSERT INTO TB2 (
+INSERT INTO TBL2(
     C00000000000000000000000000000,
     C00000000000000000000000000001,
     C00000000000000000000000000002
@@ -2394,7 +2394,7 @@ FROM TBL1"#
                 &Configuration::new(),
                 String::from("INSERT INTO TBL1(ID)VALUES(1)")
             ),
-            r#"INSERT INTO TBL1 (ID) VALUES (1)"#
+            r#"INSERT INTO TBL1(ID) VALUES (1)"#
         );
     }
 
@@ -2404,7 +2404,7 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("INSERT INTO TBL1(ID)VALUES(1)")),
-            r#"INSERT INTO TBL1 (ID)
+            r#"INSERT INTO TBL1(ID)
 VALUES (1)"#
         );
     }
@@ -2418,7 +2418,7 @@ VALUES (1)"#
                     "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
                 )
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21) VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)"#
+            r#"INSERT INTO TBL1(C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21) VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)"#
         );
     }
 
@@ -2433,7 +2433,7 @@ VALUES (1)"#
                     "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
                 )
             ),
-            r#"INSERT INTO TBL1 (
+            r#"INSERT INTO TBL1(
     C1,
     C2,
     C3,
@@ -2495,7 +2495,7 @@ VALUES (
                     "#,
                 )
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3)
+            r#"INSERT INTO TBL1(C1, C2, C3)
 SELECT C1, C2, C3
 FROM TBL1"#
         );
@@ -2516,7 +2516,7 @@ FROM TBL1"#
                     "#,
                 )
             ),
-            r#"INSERT INTO TBL1 (C1, C2, C3)
+            r#"INSERT INTO TBL1(C1, C2, C3)
 SELECT
     C1,
     C2,
@@ -2674,8 +2674,8 @@ DROP TABLE TBL3"#
                     "#
                 )
             ),
-            r#"EXEC SP1 (); EXEC SP1 ();
-EXEC SP1 ();"#
+            r#"EXEC SP1(); EXEC SP1();
+EXEC SP1();"#
         );
     }
 
@@ -2693,9 +2693,9 @@ EXEC SP1 ();"#
                     "#
                 )
             ),
-            r#"EXEC SP1 ();
-EXEC SP1 ();
-EXEC SP1 ();"#
+            r#"EXEC SP1();
+EXEC SP1();
+EXEC SP1();"#
         );
     }
 
@@ -2706,7 +2706,7 @@ EXEC SP1 ();"#
                 &Configuration::new(),
                 String::from("EXEC SP1() EXEC SP1() EXEC SP1()")
             ),
-            r#"EXEC SP1 () EXEC SP1 () EXEC SP1 ()"#
+            r#"EXEC SP1() EXEC SP1() EXEC SP1()"#
         );
     }
 
@@ -2716,9 +2716,9 @@ EXEC SP1 ();"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("EXEC SP1() EXEC SP1() EXEC SP1()")),
-            r#"EXEC SP1 ()
-EXEC SP1 ()
-EXEC SP1 ()"#
+            r#"EXEC SP1()
+EXEC SP1()
+EXEC SP1()"#
         );
     }
 
@@ -2758,7 +2758,7 @@ EXEC SP1 P1,
                 &Configuration::new(),
                 String::from("CALL SP1() CALL SP1() CALL SP1()")
             ),
-            r#"CALL SP1 () CALL SP1 () CALL SP1 ()"#
+            r#"CALL SP1() CALL SP1() CALL SP1()"#
         );
     }
 
@@ -2768,9 +2768,9 @@ EXEC SP1 P1,
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CALL SP1() CALL SP1() CALL SP1()")),
-            r#"CALL SP1 ()
-CALL SP1 ()
-CALL SP1 ()"#
+            r#"CALL SP1()
+CALL SP1()
+CALL SP1()"#
         );
     }
 
@@ -2991,7 +2991,7 @@ RETURN 0"#
             r#"SET V1 = 0;
 BEGIN TRY
     -- COMMENT
-    INSERT INTO TBL1 (C1) VALUES (1)
+    INSERT INTO TBL1(C1) VALUES (1)
 END TRY
 BEGIN CATCH
     RETURN 1
@@ -3025,7 +3025,7 @@ RETURN 0"#
 
 BEGIN TRY
     -- COMMENT
-    INSERT INTO TBL1 (C1)
+    INSERT INTO TBL1(C1)
     VALUES (1)
 END TRY
 BEGIN CATCH
@@ -3212,7 +3212,7 @@ FOR XML RAW('ITEM'),
             ),
             r#"SELECT T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2 (Loc)"#
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
         );
     }
 
@@ -3235,7 +3235,7 @@ FROM T
             r#"SELECT
     T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2 (Loc)"#
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
         );
     }
 
@@ -3278,7 +3278,7 @@ FROM T
                 &Configuration::new(),
                 String::from("CREATE TABLE TBL1 (C1 INT)")
             ),
-            r#"CREATE TABLE TBL1 (C1 INT)"#
+            r#"CREATE TABLE TBL1(C1 INT)"#
         );
     }
 
@@ -3288,7 +3288,7 @@ FROM T
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 INT)")),
-            r#"CREATE TABLE TBL1 (C1 INT)"#
+            r#"CREATE TABLE TBL1(C1 INT)"#
         );
     }
 
@@ -3299,7 +3299,7 @@ FROM T
                 &Configuration::new(),
                 String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")
             ),
-            r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#
+            r#"CREATE TABLE TBL1(C1 VARCHAR(10))"#
         );
     }
 
@@ -3309,7 +3309,7 @@ FROM T
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")),
-            r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#
+            r#"CREATE TABLE TBL1(C1 VARCHAR(10))"#
         );
     }
 
@@ -3326,7 +3326,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE TBL1 (
+            r#"CREATE TABLE TBL1(
     ID UUID NOT NULL DEFAULT UUID()
 )"#
         );
@@ -3347,7 +3347,7 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE TBL1 (ID UUID NOT NULL DEFAULT UUID())"#
+            r#"CREATE TABLE TBL1(ID UUID NOT NULL DEFAULT UUID())"#
         );
     }
 
@@ -3369,13 +3369,13 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1 (
+            r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
     I1 INT,
-    I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
-    FOREIGN KEY(I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
+    I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
     }
@@ -3400,15 +3400,15 @@ FROM T
                     "#
                 )
             ),
-            r#"CREATE TABLE IF NOT EXISTS TBL1 (
+            r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
     D1 DATETIME NULL,
     I1 INT,
     I2 INT,
     PRIMARY KEY(ID),
-    FOREIGN KEY(I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
-    FOREIGN KEY(I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
+    FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
     }
@@ -3435,7 +3435,7 @@ AFTER INSERT
     ON TBL1
 FOR EACH ROW
 BEGIN
-    CALL SP1 (NEW.ID);
+    CALL SP1(NEW.ID);
 END;"#
         );
     }
@@ -3463,7 +3463,7 @@ END;"#
 AFTER
 INSERT ON TBL1 FOR EACH ROW
 BEGIN
-    CALL SP1 (NEW.ID);
+    CALL SP1(NEW.ID);
 END;"#
         );
     }
