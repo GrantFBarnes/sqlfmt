@@ -733,13 +733,11 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "NONE" => Some(TokenCategory::Keyword),
         "NORMALIZE" => Some(TokenCategory::Keyword),
         "NOT" => Some(TokenCategory::Keyword),
-        "NOTNULL" => Some(TokenCategory::Keyword),
         "NOWAIT" => Some(TokenCategory::Keyword),
         "NO_WRITE_TO_BINLOG" => Some(TokenCategory::Keyword),
         "NTH_VALUE" => Some(TokenCategory::Keyword),
         "NTILE" => Some(TokenCategory::Keyword),
         "NULL" => Some(TokenCategory::Keyword),
-        "NULLIFZERO" => Some(TokenCategory::Keyword),
         "NULLS" => Some(TokenCategory::Keyword),
         "NUMBER" => Some(TokenCategory::Keyword),
         "NUMPARTS" => Some(TokenCategory::Keyword),
@@ -1099,7 +1097,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "YEARS" => Some(TokenCategory::Keyword),
         "YEAR_MONTH" => Some(TokenCategory::Keyword),
         "ZEROFILL" => Some(TokenCategory::Keyword),
-        "ZEROIFNULL" => Some(TokenCategory::Keyword),
         "ZONE" => Some(TokenCategory::Keyword),
 
         // DataTypes
@@ -1206,7 +1203,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "GREATEST" => Some(TokenCategory::Method),
         "HOUR" => Some(TokenCategory::Method),
         "INSTR" => Some(TokenCategory::Method),
-        "ISNULL" => Some(TokenCategory::Method),
         "LAG" => Some(TokenCategory::Method),
         "LAST" => Some(TokenCategory::Method),
         "LAST_DAY" => Some(TokenCategory::Method),
@@ -1317,8 +1313,12 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "IF" => Some(TokenCategory::Function),
         "IFNULL" => Some(TokenCategory::Function),
         "IIF" => Some(TokenCategory::Function),
+        "ISNULL" => Some(TokenCategory::Function),
+        "NOTNULL" => Some(TokenCategory::Function),
         "NULLIF" => Some(TokenCategory::Function),
+        "NULLIFZERO" => Some(TokenCategory::Function),
         "STUFF" => Some(TokenCategory::Function),
+        "ZEROIFNULL" => Some(TokenCategory::Function),
 
         _ => None,
     };
