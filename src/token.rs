@@ -91,6 +91,7 @@ impl Token {
             return match self.value.chars().nth(0).unwrap() {
                 NEW_LINE => Some(TokenCategory::NewLine),
                 COMMA => Some(TokenCategory::Comma),
+                FULL_STOP => Some(TokenCategory::FullStop),
                 PAREN_OPEN => Some(TokenCategory::ParenOpen),
                 PAREN_CLOSE => Some(TokenCategory::ParenClose),
                 AMPERSAND => Some(TokenCategory::Bitwise),
@@ -119,7 +120,14 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             Some(TokenCategory::ParenClose) => behavior.push(TokenBehavior::NoSpaceBefore),
-            Some(TokenCategory::Comma) => behavior.push(TokenBehavior::NoSpaceBefore),
+            Some(TokenCategory::Comma) => {
+                behavior.push(TokenBehavior::NoSpaceBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
+            Some(TokenCategory::FullStop) => {
+                behavior.push(TokenBehavior::NoSpaceBefore);
+                behavior.push(TokenBehavior::NoSpaceAfter);
+            }
             Some(TokenCategory::Comment) => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
@@ -338,6 +346,7 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "BYTE" => Some(TokenCategory::Keyword),
         "BYTEINT" => Some(TokenCategory::Keyword),
         "BYTES" => Some(TokenCategory::Keyword),
+        "CALL" => Some(TokenCategory::Keyword),
         "CALLED" => Some(TokenCategory::Keyword),
         "CAPTURE" => Some(TokenCategory::Keyword),
         "CARDINALITY" => Some(TokenCategory::Keyword),
@@ -503,7 +512,8 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "EXCEPT" => Some(TokenCategory::Keyword),
         "EXCEPTION" => Some(TokenCategory::Keyword),
         "EXCLUSIVE" => Some(TokenCategory::Keyword),
-        "EXIST" => Some(TokenCategory::Keyword),
+        "EXEC" => Some(TokenCategory::Keyword),
+        "EXECUTE" => Some(TokenCategory::Keyword),
         "EXISTS" => Some(TokenCategory::Keyword),
         "EXIT" => Some(TokenCategory::Keyword),
         "EXPLAIN" => Some(TokenCategory::Keyword),
@@ -698,7 +708,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "MLSLABEL" => Some(TokenCategory::Keyword),
         "MODE" => Some(TokenCategory::Keyword),
         "MODIFIES" => Some(TokenCategory::Keyword),
-        "MODIFY" => Some(TokenCategory::Keyword),
         "MODULE" => Some(TokenCategory::Keyword),
         "MONRESOURCE" => Some(TokenCategory::Keyword),
         "MONSESSION" => Some(TokenCategory::Keyword),
@@ -721,7 +730,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "NOAUDIT" => Some(TokenCategory::Keyword),
         "NOCHECK" => Some(TokenCategory::Keyword),
         "NOCOMPRESS" => Some(TokenCategory::Keyword),
-        "NODES" => Some(TokenCategory::Keyword),
         "NONCLUSTERED" => Some(TokenCategory::Keyword),
         "NONE" => Some(TokenCategory::Keyword),
         "NORMALIZE" => Some(TokenCategory::Keyword),
@@ -831,7 +839,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "QUALIFIED" => Some(TokenCategory::Keyword),
         "QUALIFY" => Some(TokenCategory::Keyword),
         "QUANTILE" => Some(TokenCategory::Keyword),
-        "QUERY" => Some(TokenCategory::Keyword),
         "QUERYNO" => Some(TokenCategory::Keyword),
         "QUOTENAME" => Some(TokenCategory::Keyword),
         "RANDOM" => Some(TokenCategory::Keyword),
@@ -1054,7 +1061,6 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "UTC_TIMESTAMP" => Some(TokenCategory::Keyword),
         "VALIDATE" => Some(TokenCategory::Keyword),
         "VALIDPROC" => Some(TokenCategory::Keyword),
-        "VALUE" => Some(TokenCategory::Keyword),
         "VALUES" => Some(TokenCategory::Keyword),
         "VALUE_OF" => Some(TokenCategory::Keyword),
         "VARGRAPHIC" => Some(TokenCategory::Keyword),
@@ -1299,16 +1305,21 @@ fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
         "WEEKOFYEAR" => Some(TokenCategory::Method),
         "YEARWEEK" => Some(TokenCategory::Method),
 
+        // Xml Methods (treated as method, but always lowercase)
+        "EXIST" => Some(TokenCategory::XmlMethod),
+        "MODIFY" => Some(TokenCategory::XmlMethod),
+        "NODES" => Some(TokenCategory::XmlMethod),
+        "QUERY" => Some(TokenCategory::XmlMethod),
+        "VALUE" => Some(TokenCategory::XmlMethod),
+
         // Functions (no space before paren, can have new lines inside)
-        "CALL" => Some(TokenCategory::Function),
         "COALESCE" => Some(TokenCategory::Function),
-        "EXEC" => Some(TokenCategory::Function),
-        "EXECUTE" => Some(TokenCategory::Function),
         "IF" => Some(TokenCategory::Function),
         "IFNULL" => Some(TokenCategory::Function),
         "IIF" => Some(TokenCategory::Function),
         "NULLIF" => Some(TokenCategory::Function),
         "STUFF" => Some(TokenCategory::Function),
+
         _ => None,
     };
 }
@@ -1321,6 +1332,7 @@ pub enum TokenCategory {
     NewLine,
     Delimiter,
     Comma,
+    FullStop,
     ParenOpen,
     ParenClose,
     Operator,
@@ -1329,6 +1341,7 @@ pub enum TokenCategory {
     Keyword,
     DataType,
     Method,
+    XmlMethod,
     Function,
 }
 
@@ -1368,7 +1381,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut in_interpolation: bool = false;
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
-    let mut backtrack_quote: bool;
 
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
@@ -1442,12 +1454,11 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
         }
 
         let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-        (in_quote, backtrack_quote) =
-            get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
+        in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
         if in_quote.is_some() {
             if was_in_quote.is_none() {
                 // start of new quote, add any current token if any
-                if !backtrack_quote && !curr_token.is_empty() {
+                if !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
@@ -1465,13 +1476,9 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
-        if curr_ch == FULL_STOP || prev_ch == Some(FULL_STOP) {
-            curr_token.value.push(curr_ch);
-            continue;
-        }
-
         match curr_ch {
-            NEW_LINE | COMMA | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR | CIRCUMFLEX => {
+            NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
+            | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
@@ -1666,55 +1673,55 @@ fn get_in_quote(
     curr_ch: char,
     next_ch: Option<char>,
     curr_token: &Token,
-) -> (Option<QuoteCategory>, bool) {
+) -> Option<QuoteCategory> {
     match in_quote {
         Some(qc) => {
             if curr_token.len() <= 1 {
-                return (in_quote.clone(), false);
+                return in_quote.clone();
             }
 
             match qc {
                 QuoteCategory::Backtick => {
                     if prev_ch == Some(BACKTICK) {
-                        return (None, false);
+                        return None;
                     }
-                    return (in_quote.clone(), false);
+                    return in_quote.clone();
                 }
                 QuoteCategory::QuoteSingle => {
                     if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
                         if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
-                            return (None, false);
+                            return None;
                         }
                     }
-                    return (in_quote.clone(), false);
+                    return in_quote.clone();
                 }
                 QuoteCategory::QuoteDouble => {
                     if prev_ch == Some(QUOTE_DOUBLE) {
-                        return (None, false);
+                        return None;
                     }
-                    return (in_quote.clone(), false);
+                    return in_quote.clone();
                 }
                 QuoteCategory::Bracket => {
-                    if prev_ch == Some(BRACKET_CLOSE) && curr_ch != FULL_STOP {
-                        return (None, false);
+                    if prev_ch == Some(BRACKET_CLOSE) {
+                        return None;
                     }
-                    return (in_quote.clone(), false);
+                    return in_quote.clone();
                 }
             }
         }
         None => {
             return match curr_ch {
-                BACKTICK => (Some(QuoteCategory::Backtick), false),
-                QUOTE_SINGLE => (Some(QuoteCategory::QuoteSingle), false),
-                QUOTE_DOUBLE => (Some(QuoteCategory::QuoteDouble), false),
-                BRACKET_OPEN => (Some(QuoteCategory::Bracket), prev_ch == Some(FULL_STOP)),
+                BACKTICK => Some(QuoteCategory::Backtick),
+                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
+                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
+                BRACKET_OPEN => Some(QuoteCategory::Bracket),
                 'N' => {
                     if next_ch == Some(QUOTE_SINGLE) {
-                        return (Some(QuoteCategory::QuoteSingle), false);
+                        return Some(QuoteCategory::QuoteSingle);
                     }
-                    return (None, false);
+                    return None;
                 }
-                _ => (None, false),
+                _ => None,
             };
         }
     }
@@ -1772,8 +1779,18 @@ mod tests {
                     ],
                 },
                 Token {
-                    value: String::from("T.*"),
+                    value: String::from("T"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("*"),
+                    category: Some(TokenCategory::Operator),
                     behavior: vec![],
                 },
                 Token {
@@ -2126,7 +2143,17 @@ mod tests {
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
-                    value: String::from("[S].[TBL1]"),
+                    value: String::from("[S]"),
+                    category: Some(TokenCategory::Quote),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("[TBL1]"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
                 },
@@ -2149,7 +2176,17 @@ mod tests {
                     ],
                 },
                 Token {
-                    value: String::from("TBL1.[C1]"),
+                    value: String::from("TBL1"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("[C1]"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
                 },
@@ -2197,7 +2234,7 @@ mod tests {
             vec![
                 Token {
                     value: String::from("CALL"),
-                    category: Some(TokenCategory::Function),
+                    category: Some(TokenCategory::Keyword),
                     behavior: vec![
                         TokenBehavior::NewLineBefore,
                         TokenBehavior::IncreaseIndent,
@@ -2205,7 +2242,17 @@ mod tests {
                     ],
                 },
                 Token {
-                    value: String::from("SCH.{procedureName}"),
+                    value: String::from("SCH"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("{procedureName}"),
                     category: None,
                     behavior: vec![],
                 },
@@ -2563,7 +2610,7 @@ Name'"#
                 Token {
                     value: String::from(","),
                     category: Some(TokenCategory::Comma),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NewLineAfter],
                 },
                 Token {
                     value: String::from("2"),
@@ -2573,7 +2620,7 @@ Name'"#
                 Token {
                     value: String::from(","),
                     category: Some(TokenCategory::Comma),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NewLineAfter],
                 },
                 Token {
                     value: String::from("3"),
@@ -3344,8 +3391,18 @@ Name'"#
             get_sql_tokens(String::from("Instructions.nodes('/root/Location')")),
             vec![
                 Token {
-                    value: String::from("Instructions.nodes"),
+                    value: String::from("Instructions"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("nodes"),
+                    category: Some(TokenCategory::XmlMethod),
                     behavior: vec![],
                 },
                 Token {

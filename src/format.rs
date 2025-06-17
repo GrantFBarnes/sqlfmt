@@ -27,45 +27,19 @@ impl FormatState {
             return;
         }
 
-        let prev_token: Option<&Token> = self.tokens.last();
-        if prev_token.is_none() {
-            self.paren_stack.push(ParenCategory::Space1Newline1);
-            return;
-        }
-        let prev_token: &Token = prev_token.unwrap();
-
-        match prev_token.category {
-            Some(TokenCategory::DataType) | Some(TokenCategory::Method) => {
-                self.paren_stack.push(ParenCategory::Space0Newline0);
-                return;
-            }
-            Some(TokenCategory::Function) => {
-                self.paren_stack.push(ParenCategory::Space0Newline1);
-                return;
-            }
-            _ => (),
-        }
-
-        let prev_token_value: String = prev_token.value.to_uppercase();
-        if prev_token_value.ends_with(".QUERY")
-            || prev_token_value.ends_with(".VALUE")
-            || prev_token_value.ends_with(".EXIST")
-            || prev_token_value.ends_with(".MODIFY")
-            || prev_token_value.ends_with(".NODES")
-        {
-            self.paren_stack.push(ParenCategory::Space0Newline0);
-            return;
-        }
-
-        if let Some(prev2_token) = self.tokens.iter().nth_back(2) {
-            if prev2_token.category == Some(TokenCategory::Function) {
-                self.paren_stack.push(ParenCategory::Space0Newline1);
-                return;
-            }
-
-            if prev2_token.value == "=" || prev2_token.value.to_uppercase() == "AS" {
-                self.paren_stack.push(ParenCategory::Space0Newline1);
-                return;
+        if let Some(prev_token) = self.tokens.last() {
+            match prev_token.category {
+                Some(TokenCategory::DataType)
+                | Some(TokenCategory::Method)
+                | Some(TokenCategory::XmlMethod) => {
+                    self.paren_stack.push(ParenCategory::Space0Newline0);
+                    return;
+                }
+                Some(TokenCategory::Function) => {
+                    self.paren_stack.push(ParenCategory::Space0Newline1);
+                    return;
+                }
+                _ => (),
             }
         }
 
@@ -156,10 +130,6 @@ impl FormatState {
         match prev1_token.category {
             Some(TokenCategory::Delimiter) => {
                 self.push(Token::newline());
-                self.push(Token::newline());
-                return;
-            }
-            Some(TokenCategory::Comma) => {
                 self.push(Token::newline());
                 return;
             }
@@ -502,21 +472,8 @@ impl FormatState {
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
                 },
+                Some(TokenCategory::XmlMethod) => token_value = token_value.to_lowercase(),
                 _ => (),
-            }
-
-            if self
-                .tokens
-                .get(i + 1)
-                .is_some_and(|nt| nt.category == Some(TokenCategory::ParenOpen))
-            {
-                let xml_methods: [&str; 5] = [".QUERY", ".VALUE", ".EXIST", ".MODIFY", ".NODES"];
-                for m in xml_methods {
-                    if token_value.ends_with(m) {
-                        token_value = token_value.replace(m, m.to_lowercase().as_str());
-                        break;
-                    }
-                }
             }
 
             result.push_str(token_value.as_str());
@@ -923,7 +880,7 @@ WHERE C1 = 1"#
                 &Configuration::new(),
                 String::from(r#"CALL SCH.{procedureName}();"#)
             ),
-            r#"CALL SCH.{procedureName}();"#
+            r#"CALL SCH.{procedureName} ();"#
         );
     }
 
@@ -933,7 +890,7 @@ WHERE C1 = 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from(r#"CALL SCH.{procedureName}();"#)),
-            r#"CALL SCH.{procedureName}();"#
+            r#"CALL SCH.{procedureName} ();"#
         );
     }
 
@@ -2717,8 +2674,8 @@ DROP TABLE TBL3"#
                     "#
                 )
             ),
-            r#"EXEC SP1(); EXEC SP1();
-EXEC SP1();"#
+            r#"EXEC SP1 (); EXEC SP1 ();
+EXEC SP1 ();"#
         );
     }
 
@@ -2736,9 +2693,9 @@ EXEC SP1();"#
                     "#
                 )
             ),
-            r#"EXEC SP1();
-EXEC SP1();
-EXEC SP1();"#
+            r#"EXEC SP1 ();
+EXEC SP1 ();
+EXEC SP1 ();"#
         );
     }
 
@@ -2749,7 +2706,7 @@ EXEC SP1();"#
                 &Configuration::new(),
                 String::from("EXEC SP1() EXEC SP1() EXEC SP1()")
             ),
-            r#"EXEC SP1() EXEC SP1() EXEC SP1()"#
+            r#"EXEC SP1 () EXEC SP1 () EXEC SP1 ()"#
         );
     }
 
@@ -2759,9 +2716,9 @@ EXEC SP1();"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("EXEC SP1() EXEC SP1() EXEC SP1()")),
-            r#"EXEC SP1()
-EXEC SP1()
-EXEC SP1()"#
+            r#"EXEC SP1 ()
+EXEC SP1 ()
+EXEC SP1 ()"#
         );
     }
 
@@ -2801,7 +2758,7 @@ EXEC SP1 P1,
                 &Configuration::new(),
                 String::from("CALL SP1() CALL SP1() CALL SP1()")
             ),
-            r#"CALL SP1() CALL SP1() CALL SP1()"#
+            r#"CALL SP1 () CALL SP1 () CALL SP1 ()"#
         );
     }
 
@@ -2811,9 +2768,9 @@ EXEC SP1 P1,
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, String::from("CALL SP1() CALL SP1() CALL SP1()")),
-            r#"CALL SP1()
-CALL SP1()
-CALL SP1()"#
+            r#"CALL SP1 ()
+CALL SP1 ()
+CALL SP1 ()"#
         );
     }
 
@@ -3255,7 +3212,7 @@ FOR XML RAW('ITEM'),
             ),
             r#"SELECT T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2 (Loc)"#
         );
     }
 
@@ -3278,7 +3235,7 @@ FROM T
             r#"SELECT
     T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+    CROSS APPLY Instructions.nodes('/root/Location') AS T2 (Loc)"#
         );
     }
 
@@ -3478,7 +3435,7 @@ AFTER INSERT
     ON TBL1
 FOR EACH ROW
 BEGIN
-    CALL SP1(NEW.ID);
+    CALL SP1 (NEW.ID);
 END;"#
         );
     }
@@ -3506,7 +3463,7 @@ END;"#
 AFTER
 INSERT ON TBL1 FOR EACH ROW
 BEGIN
-    CALL SP1(NEW.ID);
+    CALL SP1 (NEW.ID);
 END;"#
         );
     }
