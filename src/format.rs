@@ -3333,6 +3333,7 @@ FROM TBL1 AS T"#
     fn test_get_formatted_sql_stuff_comma_list_config_newline() {
         let mut config: Configuration = Configuration::new();
         config.newlines = true;
+        config.chars = 40;
         assert_eq!(
             get_formatted_sql(
                 &config,
@@ -3342,7 +3343,17 @@ FROM TBL1 AS T"#
                     "#
                 )
             ),
-            r#"STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')"#
+            r#"STUFF(
+    (
+        SELECT
+            ', ' + C1
+        FROM TBL1
+        FOR XML PATH('')
+    ),
+    1,
+    2,
+    ''
+)"#
         );
     }
 
