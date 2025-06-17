@@ -8,7 +8,7 @@ const COMMA: char = ',';
 const CURLY_BRACKET_CLOSE: char = '}';
 const CURLY_BRACKET_OPEN: char = '{';
 const EQUAL: char = '=';
-const FULL_STOP: char = '.';
+pub const FULL_STOP: char = '.';
 const GREATER_THAN: char = '>';
 const HYPHEN: char = '-';
 const LESS_THAN: char = '<';
@@ -73,17 +73,6 @@ impl Token {
 
     fn get_category(&self) -> Option<TokenCategory> {
         if self.category.is_some() {
-            if self.category == Some(TokenCategory::Quote) {
-                let mut quote_chars = self.value.chars();
-                quote_chars.next();
-                quote_chars.next_back();
-                let inner_value: &str = quote_chars.as_str();
-                let inner_category: Option<TokenCategory> =
-                    get_token_category_from_value(inner_value.to_uppercase().as_str());
-                if inner_category.is_some() {
-                    return inner_category.clone();
-                }
-            }
             return self.category.clone();
         }
 
@@ -250,7 +239,7 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
-            "VALUE" | "VALUES" => {
+            "VALUES" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
@@ -270,7 +259,7 @@ impl Token {
     }
 }
 
-fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
+pub fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
     return match value {
         // Keywords
         "ABORT" => Some(TokenCategory::Keyword),
@@ -2113,7 +2102,7 @@ mod tests {
             get_sql_tokens(String::from("[NVARCHAR]")),
             vec![Token {
                 value: String::from("[NVARCHAR]"),
-                category: Some(TokenCategory::DataType),
+                category: Some(TokenCategory::Quote),
                 behavior: vec![],
             },]
         );

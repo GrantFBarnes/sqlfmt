@@ -93,12 +93,26 @@ impl FormatState {
             return;
         }
 
-        if prev_token.category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_space(match config.tabs {
-                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-            }));
-            return;
+        match prev_token.category {
+            Some(TokenCategory::NewLine) => {
+                self.push(Token::new_space(match config.tabs {
+                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+                }));
+                return;
+            }
+            Some(TokenCategory::Quote) => {
+                let mut quote_chars = prev_token.value.chars();
+                quote_chars.next();
+                quote_chars.next_back();
+                let inner_value: &str = quote_chars.as_str();
+                if get_token_category_from_value(inner_value.to_uppercase().as_str())
+                    == Some(TokenCategory::DataType)
+                {
+                    return;
+                }
+            }
+            _ => (),
         }
 
         if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
@@ -393,7 +407,7 @@ impl FormatState {
             "END" => vec!["BEGIN", "CASE", "THEN", "ELSE"],
             "INTO" => vec!["SELECT", "INSERT"],
             "SET" => vec!["UPDATE"],
-            "VALUE" | "VALUES" => vec!["INTO"],
+            "VALUES" => vec!["INTO"],
             "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DELIMITER" | "DROP" | "ELSE" | "EXEC"
             | "EXECUTE" | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT"
             | "TRUNCATE" | "UNION" | "UPDATE" | "WITH" => {
@@ -470,7 +484,16 @@ impl FormatState {
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
                 },
-                Some(TokenCategory::XmlMethod) => token_value = token_value.to_lowercase(),
+                Some(TokenCategory::XmlMethod) => {
+                    if result.ends_with(FULL_STOP)
+                        && self
+                            .tokens
+                            .get(i + 1)
+                            .is_some_and(|t| t.category == Some(TokenCategory::ParenOpen))
+                    {
+                        token_value = token_value.to_lowercase();
+                    }
+                }
                 _ => (),
             }
 
@@ -3215,13 +3238,13 @@ FOR XML RAW('ITEM'),
                     r#"
                     SELECT T2.Loc.QUERY('.')
                     FROM T
-                    CROSS APPLY Instructions.NODES('/root/Location') AS T2(Loc)
+                    CROSS APPLY Instructions.VALUE('/root/Location') AS T2(Loc)
                     "#
                 )
             ),
             r#"SELECT T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+    CROSS APPLY Instructions.value('/root/Location') AS T2(Loc)"#
         );
     }
 
@@ -3237,14 +3260,63 @@ FROM T
                     r#"
                     select T2.Loc.QUERY('.')
                     from T
-                    cross apply Instructions.NODES('/root/Location') as T2(Loc)
+                    cross apply Instructions.VALUE('/root/Location') as T2(Loc)
                     "#
                 )
             ),
             r#"SELECT
     T2.Loc.query('.')
 FROM T
-    CROSS APPLY Instructions.nodes('/root/Location') AS T2(Loc)"#
+    CROSS APPLY Instructions.value('/root/Location') AS T2(Loc)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_keyword_column_name() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT
+                    T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+                    t.days as days, t.[days] as [days], 'days' as 'days'
+                    FROM TBL1 AS T
+                    "#
+                )
+            ),
+            r#"SELECT
+    T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+    t.days as days, t.[days] as [days], 'days' as 'days'
+FROM TBL1 AS T"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_keyword_column_name_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        config.case = ConfigCase::Uppercase;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT
+                    T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+                    t.days as days, t.[days] as [days], 'days' as 'days'
+                    FROM TBL1 AS T
+                    "#
+                )
+            ),
+            r#"SELECT
+    T.VALUE AS VALUE,
+    T.[VALUE] AS [VALUE],
+    'VALUE' AS 'VALUE',
+    t.DAYS AS DAYS,
+    t.[days] AS [days],
+    'days' AS 'days'
+FROM TBL1 AS T"#
         );
     }
 
