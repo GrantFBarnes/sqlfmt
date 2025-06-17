@@ -35,6 +35,17 @@ impl FormatState {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
+                Some(TokenCategory::Quote) => {
+                    let mut quote_chars = prev_token.value.chars();
+                    quote_chars.next();
+                    quote_chars.next_back();
+                    if get_token_category_from_value(quote_chars.as_str().to_uppercase().as_str())
+                        == Some(TokenCategory::DataType)
+                    {
+                        self.paren_stack.push(ParenCategory::Space0Newline0);
+                        return;
+                    }
+                }
                 Some(TokenCategory::Function) | None => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
                     return;
@@ -93,26 +104,12 @@ impl FormatState {
             return;
         }
 
-        match prev_token.category {
-            Some(TokenCategory::NewLine) => {
-                self.push(Token::new_space(match config.tabs {
-                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-                }));
-                return;
-            }
-            Some(TokenCategory::Quote) => {
-                let mut quote_chars = prev_token.value.chars();
-                quote_chars.next();
-                quote_chars.next_back();
-                let inner_value: &str = quote_chars.as_str();
-                if get_token_category_from_value(inner_value.to_uppercase().as_str())
-                    == Some(TokenCategory::DataType)
-                {
-                    return;
-                }
-            }
-            _ => (),
+        if prev_token.category == Some(TokenCategory::NewLine) {
+            self.push(Token::new_space(match config.tabs {
+                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+            }));
+            return;
         }
 
         if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
