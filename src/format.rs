@@ -29,9 +29,7 @@ impl FormatState {
 
         if let Some(prev_token) = self.tokens.last() {
             match prev_token.category {
-                Some(TokenCategory::DataType)
-                | Some(TokenCategory::Method)
-                | Some(TokenCategory::XmlMethod) => {
+                Some(TokenCategory::DataType) | Some(TokenCategory::XmlMethod) => {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
@@ -46,7 +44,7 @@ impl FormatState {
                         return;
                     }
                 }
-                Some(TokenCategory::Function) | None => {
+                Some(TokenCategory::Method) | None => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
                     return;
                 }
@@ -475,8 +473,7 @@ impl FormatState {
             match token.category {
                 Some(TokenCategory::Keyword)
                 | Some(TokenCategory::DataType)
-                | Some(TokenCategory::Method)
-                | Some(TokenCategory::Function) => match config.case {
+                | Some(TokenCategory::Method) => match config.case {
                     ConfigCase::Uppercase => token_value = token_value.to_uppercase(),
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
