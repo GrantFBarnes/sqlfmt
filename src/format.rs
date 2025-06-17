@@ -187,9 +187,7 @@ impl FormatState {
 
         match token.value.to_uppercase().as_str() {
             "IF" => {
-                if prev1_token.value.to_uppercase() != "END"
-                    && prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE")
-                {
+                if prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE") {
                     self.push(Token::newline());
                     return;
                 }
@@ -2781,12 +2779,14 @@ CALL SP1()"#
                 &Configuration::new(),
                 String::from(
                     r#"
-                    IF V1 IS NULL SET V1 = 0
+                    IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
+                    IF V1 IS NULL THEN SET V1 = 0 END IF
                     IF V2 IS NULL SET V2 = 0
                     "#
                 )
             ),
-            r#"IF V1 IS NULL SET V1 = 0
+            r#"IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
+IF V1 IS NULL THEN SET V1 = 0 END IF
 IF V2 IS NULL SET V2 = 0"#
         );
     }
@@ -2800,13 +2800,22 @@ IF V2 IS NULL SET V2 = 0"#
                 &config,
                 String::from(
                     r#"
-                    IF V1 IS NULL SET V1 = 0
+                    IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
+                    IF V1 IS NULL THEN SET V1 = 0 END IF
                     IF V2 IS NULL SET V2 = 0
                     "#
                 )
             ),
             r#"IF V1 IS NULL
-SET V1 = 0
+AND V2 IS NULL
+BEGIN
+    SET V1 = 0;
+    SET V2 = 0;
+END
+IF V1 IS NULL THEN
+    SET V1 = 0
+END
+IF
 IF V2 IS NULL
 SET V2 = 0"#
         );

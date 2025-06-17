@@ -155,6 +155,7 @@ impl Token {
             }
             "CATCH" => behavior.push(TokenBehavior::NewLineAfter),
             "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
+            "CREATE" => behavior.push(TokenBehavior::NewLineBefore),
             "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
             "DECLARE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
