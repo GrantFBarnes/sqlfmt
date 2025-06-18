@@ -282,20 +282,8 @@ impl FormatState {
 
     fn increase_indent_stack(&mut self, token: &Token) {
         if token.behavior.contains(&TokenBehavior::IncreaseIndent) {
-            if self
-                .tokens
-                .iter()
-                .nth_back(2)
-                .is_none_or(|t| t.value.to_uppercase() != "ON")
-                && self
-                    .tokens
-                    .iter()
-                    .nth_back(4)
-                    .is_none_or(|t| t.value.to_uppercase() != "ON")
-            {
-                self.indent_stack.push(token.clone());
-                return;
-            }
+            self.indent_stack.push(token.clone());
+            return;
         }
 
         match token.value.to_uppercase().as_str() {
@@ -2315,6 +2303,87 @@ FROM CTE1
     *
 FROM T1
     LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_multi_condition() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
+                    "#,
+                )
+            ),
+            r#"SELECT * FROM T1
+    LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_multi_condition_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
+                    "#,
+                )
+            ),
+            r#"SELECT
+    *
+FROM T1
+    LEFT JOIN T2 ON T2.C1 = T1.C1
+        OR T2.C2 = T1.C2"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_multi_condition_embedded() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
+                    "#,
+                )
+            ),
+            r#"SELECT * FROM T1
+    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+        AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_join_multi_condition_embedded_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+                    SELECT * FROM T1
+                    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
+                    "#,
+                )
+            ),
+            r#"SELECT
+    *
+FROM T1
+    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+        AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
         );
     }
 

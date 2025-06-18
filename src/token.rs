@@ -151,10 +151,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
-            "DELETE" => {
-                behavior.push(TokenBehavior::NewLineBefore);
-                behavior.push(TokenBehavior::IncreaseIndent);
-            }
+            "DELETE" => behavior.push(TokenBehavior::NewLineBefore),
             "DELIMITER" => behavior.push(TokenBehavior::NewLineBefore),
             "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
             "DO" => {
