@@ -77,7 +77,8 @@ impl Token {
         }
 
         if self.value.len() == 1 {
-            return match self.value.chars().nth(0).unwrap() {
+            let value_char: char = self.value.chars().nth(0).unwrap();
+            return match value_char {
                 NEW_LINE => Some(TokenCategory::NewLine),
                 COMMA => Some(TokenCategory::Comma),
                 FULL_STOP => Some(TokenCategory::FullStop),
@@ -92,8 +93,24 @@ impl Token {
                 ASTERISK => Some(TokenCategory::Operator),
                 SLASH_FORWARD => Some(TokenCategory::Operator),
                 PERCENT => Some(TokenCategory::Operator),
-                _ => None,
+                _ => {
+                    if value_char.is_whitespace() {
+                        return Some(TokenCategory::Space);
+                    }
+                    None
+                }
             };
+        }
+
+        let mut all_whitespace: bool = true;
+        for c in self.value.chars() {
+            if !c.is_whitespace() {
+                all_whitespace = false;
+                break;
+            }
+        }
+        if all_whitespace {
+            return Some(TokenCategory::Space);
         }
 
         return get_token_category_from_value(self.value.to_uppercase().as_str());
@@ -1385,8 +1402,28 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             None
         };
 
+        if !in_delimiter_change && !in_interpolation && in_comment.is_none() && in_quote.is_none() {
+            if curr_ch.is_whitespace() && prev_ch.is_some_and(|c| !c.is_whitespace()) {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            } else if !curr_ch.is_whitespace() && prev_ch.is_some_and(|c| c.is_whitespace()) {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            }
+        }
+
         let was_in_delimiter_change: bool = in_delimiter_change;
-        in_delimiter_change = get_in_delimiter_change(in_delimiter_change, tokens.last(), curr_ch);
+        in_delimiter_change = get_in_delimiter_change(
+            in_delimiter_change,
+            get_last_nonspace_token(&tokens),
+            curr_ch,
+        );
         if in_delimiter_change {
             if !was_in_delimiter_change {
                 // start of new delimiter change
@@ -1529,7 +1566,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 }
                 curr_token.value.push(curr_ch);
 
-                if tokens.last().is_some_and(|t| t.category.is_some()) {
+                if get_last_nonspace_token(&tokens).is_some_and(|t| t.category.is_some()) {
                     continue;
                 }
 
@@ -1543,15 +1580,6 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
                 continue;
             }
             _ => (),
-        }
-
-        if curr_ch.is_whitespace() {
-            if !curr_token.is_empty() {
-                curr_token.setup();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-            continue;
         }
 
         curr_token.value.push(curr_ch);
@@ -1576,6 +1604,17 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     }
 
     return tokens;
+}
+
+fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
+    for i in (0..tokens.len()).rev() {
+        let token: &Token = &tokens[i];
+        if token.category == Some(TokenCategory::Space) {
+            continue;
+        }
+        return Some(token);
+    }
+    None
 }
 
 fn get_in_delimiter_change(
@@ -1729,14 +1768,29 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1762,6 +1816,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("T"),
                     category: None,
                     behavior: vec![],
@@ -1777,13 +1836,28 @@ mod tests {
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("TBL1"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -1810,8 +1884,18 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("1"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -1842,6 +1926,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
                     behavior: vec![],
@@ -1850,6 +1939,11 @@ mod tests {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
                     behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
+                },
+                Token {
+                    value: String::from("                "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("-- comment newline"),
@@ -1862,9 +1956,19 @@ mod tests {
                     behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
+                    value: String::from("                "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1890,8 +1994,18 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -1900,9 +2014,19 @@ mod tests {
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -1959,6 +2083,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
                     behavior: vec![],
@@ -1967,6 +2096,11 @@ mod tests {
                     value: String::from("\n"),
                     category: Some(TokenCategory::NewLine),
                     behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
+                },
+                Token {
+                    value: String::from("                "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from(
@@ -1984,9 +2118,19 @@ mod tests {
                     behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
                 },
                 Token {
+                    value: String::from("                "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("TBL1"),
@@ -2012,6 +2156,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("`Column 1`"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
@@ -2033,6 +2182,11 @@ mod tests {
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("'Column 1'"),
@@ -2058,6 +2212,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("\"Column 1\""),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
@@ -2079,6 +2238,11 @@ mod tests {
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("[Column 1]"),
@@ -2116,14 +2280,29 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("[S]"),
@@ -2159,6 +2338,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("TBL1"),
                     category: None,
                     behavior: vec![],
@@ -2192,14 +2376,29 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
                     value: String::from("FROM"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("{tableNames[i]}"),
@@ -2223,6 +2422,11 @@ mod tests {
                         TokenBehavior::IncreaseIndent,
                         TokenBehavior::DecreaseIndentOnSingleLine,
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("SCH"),
@@ -2273,13 +2477,28 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("V1"),
                     category: None,
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2311,13 +2530,28 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("V1"),
                     category: None,
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2349,6 +2583,11 @@ mod tests {
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("N'Column Name'"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
@@ -2370,6 +2609,11 @@ mod tests {
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("'Column''s Name'"),
@@ -2398,6 +2642,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from(
                         r#"'Column
 Name'"#
@@ -2424,6 +2673,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("'Column"),
                     category: Some(TokenCategory::Quote),
                     behavior: vec![],
@@ -2445,6 +2699,11 @@ Name'"#
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
@@ -2475,6 +2734,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("1"),
                     category: None,
                     behavior: vec![],
@@ -2485,6 +2749,11 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("SELECT"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![
@@ -2492,6 +2761,11 @@ Name'"#
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
@@ -2524,6 +2798,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("1"),
                     category: None,
                     behavior: vec![],
@@ -2534,13 +2813,28 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("DELIMITER"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("$$"),
                     category: Some(TokenCategory::Delimiter),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2553,14 +2847,29 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("1;"),
                     category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
                     value: String::from("DELIMITER"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("\\"),
@@ -2586,6 +2895,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("1"),
                     category: None,
                     behavior: vec![],
@@ -2604,6 +2918,11 @@ Name'"#
                     value: String::from(","),
                     category: Some(TokenCategory::Comma),
                     behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NewLineAfter],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("3"),
@@ -2629,6 +2948,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("-1"),
                     category: None,
                     behavior: vec![],
@@ -2650,6 +2974,11 @@ Name'"#
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("MIN"),
@@ -2685,6 +3014,11 @@ Name'"#
                     ],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("("),
                     category: Some(TokenCategory::ParenOpen),
                     behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
@@ -2697,6 +3031,11 @@ Name'"#
                         TokenBehavior::NewLineAfter,
                         TokenBehavior::IncreaseIndent
                     ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("1"),
@@ -2733,8 +3072,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("+"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2767,8 +3116,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("-"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2801,8 +3160,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("*"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2835,8 +3204,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("/"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -2869,8 +3248,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("%"),
                     category: Some(TokenCategory::Operator),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3085,6 +3474,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3100,9 +3494,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3110,8 +3514,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("<"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3134,6 +3548,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3149,9 +3568,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3159,8 +3588,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from(">"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3183,6 +3622,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3198,9 +3642,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3208,8 +3662,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3232,6 +3696,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3247,9 +3716,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3257,8 +3736,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("<>"),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3281,6 +3770,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3296,9 +3790,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3306,8 +3810,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from(">="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {
@@ -3330,6 +3844,11 @@ Name'"#
                     behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("C1"),
                     category: None,
                     behavior: vec![],
@@ -3345,9 +3864,19 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("AND"),
                     category: Some(TokenCategory::Keyword),
                     behavior: vec![TokenBehavior::NewLineBefore],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
                 },
                 Token {
                     value: String::from("C1"),
@@ -3355,8 +3884,18 @@ Name'"#
                     behavior: vec![],
                 },
                 Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
                     value: String::from("<="),
                     category: Some(TokenCategory::Compare),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
                     behavior: vec![],
                 },
                 Token {

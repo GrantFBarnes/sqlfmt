@@ -510,6 +510,10 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
 
+        if token.category == Some(TokenCategory::Space) {
+            continue;
+        }
+
         if config.newlines && token.category == Some(TokenCategory::NewLine) {
             continue;
         }
