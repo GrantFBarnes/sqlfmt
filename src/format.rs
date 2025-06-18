@@ -295,6 +295,17 @@ impl FormatState {
                     return;
                 }
             }
+            "SET" => {
+                if self
+                    .tokens
+                    .iter()
+                    .nth_back(2)
+                    .is_some_and(|t| t.value.to_uppercase() != "DELETE")
+                {
+                    self.indent_stack.push(token.clone());
+                    return;
+                }
+            }
             "THEN" => {
                 if self
                     .indent_stack
@@ -3550,6 +3561,7 @@ FROM TBL1 AS T"#
                         D1 DATETIME NULL,
                         I1 INT,
                         I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL,
                         FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
                     )
                     "#
@@ -3563,6 +3575,7 @@ FROM TBL1 AS T"#
     I2 INT,
     PRIMARY KEY(ID),
     FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
+    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL,
     FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );

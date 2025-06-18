@@ -224,7 +224,6 @@ impl Token {
             }
             "SET" => {
                 behavior.push(TokenBehavior::NewLineBefore);
-                behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "TRUNCATE" => behavior.push(TokenBehavior::NewLineBefore),
