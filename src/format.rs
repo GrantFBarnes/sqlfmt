@@ -102,12 +102,16 @@ impl FormatState {
             return;
         }
 
-        if prev_token.category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_space(match config.tabs {
-                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-            }));
-            return;
+        match prev_token.category {
+            Some(TokenCategory::NewLine) => {
+                self.push(Token::new_space(match config.tabs {
+                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+                }));
+                return;
+            }
+            Some(TokenCategory::Space) => return,
+            _ => (),
         }
 
         if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
@@ -131,17 +135,30 @@ impl FormatState {
             .last()
             .expect("should always have a previous token");
 
+        if token
+            .behavior
+            .contains(&TokenBehavior::NoNewLineBeforeUnlessMatch)
+        {
+            if prev1_token.category != token.category {
+                return;
+            }
+        }
+
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
             self.push(Token::newline());
             return;
         }
 
+        if prev1_token
+            .behavior
+            .contains(&TokenBehavior::DoubleNewLineAfter)
+        {
+            self.push(Token::newline());
+            self.push(Token::newline());
+            return;
+        }
+
         match prev1_token.category {
-            Some(TokenCategory::Delimiter) => {
-                self.push(Token::newline());
-                self.push(Token::newline());
-                return;
-            }
             Some(TokenCategory::ParenOpen) => {
                 if token.category != Some(TokenCategory::ParenClose) {
                     self.push(Token::newline());
@@ -351,21 +368,6 @@ impl FormatState {
         }
 
         match token.category {
-            Some(TokenCategory::Comment) => {
-                for n in i + 1..tokens.len() {
-                    if tokens[n].category != Some(TokenCategory::Keyword) {
-                        continue;
-                    }
-
-                    if tokens[n].behavior.contains(&TokenBehavior::IncreaseIndent)
-                        && tokens[n].value.to_uppercase() != "FROM"
-                    {
-                        self.indent_stack.pop();
-                        return;
-                    }
-                    break;
-                }
-            }
             Some(TokenCategory::Delimiter) => {
                 if top_of_stack
                     .behavior
@@ -510,12 +512,37 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
     for i in 0..tokens.len() {
         let token: &Token = &tokens[i];
 
-        if token.category == Some(TokenCategory::Space) {
-            continue;
-        }
-
-        if config.newlines && token.category == Some(TokenCategory::NewLine) {
-            continue;
+        match token.category {
+            Some(TokenCategory::NewLine) => {
+                if config.newlines {
+                    continue;
+                }
+            }
+            Some(TokenCategory::Space) => {
+                // only keep user provided space if before newline comment
+                if tokens
+                    .get(i + 1)
+                    .is_some_and(|t| t.category == Some(TokenCategory::Comment))
+                    && tokens
+                        .get(i - 1)
+                        .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+                {
+                    let prev_token: Option<&Token> = state.tokens.last();
+                    if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
+                        if prev_token.is_some_and(|t| {
+                            t.behavior.contains(&TokenBehavior::DoubleNewLineAfter)
+                        }) {
+                            state.push(Token::newline());
+                            state.push(Token::newline());
+                        } else {
+                            state.push(Token::newline());
+                        }
+                    }
+                    state.push(token.clone());
+                }
+                continue;
+            }
+            _ => (),
         }
 
         state.increase_paren_stack(token);
@@ -1189,6 +1216,73 @@ DECLARE C5 = 5;"#
     }
 
     #[test]
+    fn test_get_formatted_sql_comments() {
+        assert_eq!(
+            get_formatted_sql(
+                &Configuration::new(),
+                String::from(
+                    r#"
+-- COMMENT
+  -- COMMENT
+    -- COMMENT
+  -- COMMENT
+-- COMMENT
+-- COMMENT
+/*COMMENT*//*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/
+                    "#
+                )
+            ),
+            r#"-- COMMENT
+  -- COMMENT
+    -- COMMENT
+  -- COMMENT
+-- COMMENT
+-- COMMENT
+/*COMMENT*//*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_comments_config_newline() {
+        let mut config: Configuration = Configuration::new();
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(
+                &config,
+                String::from(
+                    r#"
+-- COMMENT
+  -- COMMENT
+    -- COMMENT
+  -- COMMENT
+-- COMMENT
+-- COMMENT
+/*COMMENT*//*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/
+    /*COMMENT*/ /*COMMENT*/
+                    "#
+                )
+            ),
+            r#"-- COMMENT
+  -- COMMENT
+    -- COMMENT
+  -- COMMENT
+-- COMMENT
+-- COMMENT
+/*COMMENT*//*COMMENT*/
+/*COMMENT*/
+    /*COMMENT*/
+/*COMMENT*/
+    /*COMMENT*/
+/*COMMENT*/"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_delimiter_comment() {
         assert_eq!(
             get_formatted_sql(
@@ -1816,10 +1910,10 @@ FROM TBL1;"#
             ),
             r#"-- top comment
 SELECT C1, --inline comment
-    -- after comment 1
-    -- after comment 2
+                    -- after comment 1
+                    -- after comment 2
     C2
-    -- after comment 3
+                    -- after comment 3
 FROM TBL1"#
         );
     }
@@ -1845,12 +1939,11 @@ FROM TBL1"#
             ),
             r#"-- top comment
 SELECT
-    C1,
-    --inline comment
-    -- after comment 1
-    -- after comment 2
+    C1, --inline comment
+                    -- after comment 1
+                    -- after comment 2
     C2
-    -- after comment 3
+                    -- after comment 3
 FROM TBL1"#
         );
     }
@@ -1882,7 +1975,7 @@ SELECT
     C2
 FROM TBL1;
 
--- comment
+                    -- comment
 SELECT
     C1,
     C2
@@ -1919,7 +2012,7 @@ SELECT
     C2
 FROM TBL1;
 
--- comment
+                    -- comment
 SELECT
     C1,
     C2
@@ -1947,7 +2040,7 @@ FROM TBL1;"#
 FROM TBL1
 ORDER BY C1
 
--- COMMENT
+                    -- COMMENT
 SET V1 = 1"#
         );
     }
@@ -1974,7 +2067,7 @@ SET V1 = 1"#
     C1
 FROM TBL1
 ORDER BY C1
--- COMMENT
+                    -- COMMENT
 SET V1 = 1"#
         );
     }
@@ -2001,7 +2094,7 @@ SET V1 = 1"#
             ),
             r#"/* top comment */
 SELECT C1 /* inline comment */
-    /*
+                    /*
 
                     after
 
@@ -2036,9 +2129,8 @@ SELECT C1 /* inline comment */
             ),
             r#"/* top comment */
 SELECT
-    C1
-    /* inline comment */
-    /*
+    C1 /* inline comment */
+                    /*
 
                     after
 
@@ -3100,7 +3192,7 @@ RETURN 0"#
             ),
             r#"SET V1 = 0;
 BEGIN TRY
-    -- COMMENT
+                        -- COMMENT
     INSERT INTO TBL1(C1) VALUES (1)
 END TRY
 BEGIN CATCH
@@ -3134,7 +3226,7 @@ RETURN 0"#
             r#"SET V1 = 0;
 
 BEGIN TRY
-    -- COMMENT
+                        -- COMMENT
     INSERT INTO TBL1(C1)
     VALUES (1)
 END TRY

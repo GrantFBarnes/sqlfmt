@@ -121,6 +121,7 @@ impl Token {
 
         match self.category {
             Some(TokenCategory::NewLine) => behavior.push(TokenBehavior::NoWhiteSpaceBefore),
+            Some(TokenCategory::Delimiter) => behavior.push(TokenBehavior::DoubleNewLineAfter),
             Some(TokenCategory::ParenOpen) => {
                 behavior.push(TokenBehavior::NoSpaceAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -135,7 +136,7 @@ impl Token {
                 behavior.push(TokenBehavior::NoSpaceAfter);
             }
             Some(TokenCategory::Comment) => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
             _ => (),
@@ -1349,6 +1350,8 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     NewLineBefore,
     NewLineAfter,
+    DoubleNewLineAfter,
+    NoNewLineBeforeUnlessMatch,
     NoWhiteSpaceBefore,
     NoSpaceBefore,
     NoSpaceAfter,
@@ -1428,6 +1431,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             if !was_in_delimiter_change {
                 // start of new delimiter change
                 curr_token.category = Some(TokenCategory::Delimiter);
+                curr_token.setup();
             }
             curr_token.value.push(curr_ch);
             continue;
@@ -1593,6 +1597,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
             curr_token.value = delimiter.clone();
             curr_token.category = Some(TokenCategory::Delimiter);
+            curr_token.setup();
             tokens.push(curr_token);
             curr_token = Token::new();
         }
@@ -1668,6 +1673,9 @@ fn get_in_comment(
                     return Some(CommentCategory::SingleLine);
                 }
                 CommentCategory::MultiLine => {
+                    if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+                        return Some(CommentCategory::MultiLine);
+                    }
                     if prev2_ch == Some(ASTERISK) && prev_ch == Some(SLASH_FORWARD) {
                         return None;
                     }
@@ -1901,7 +1909,10 @@ mod tests {
                 Token {
                     value: String::from("--comment inline"),
                     category: Some(TokenCategory::Comment),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
+                    behavior: vec![
+                        TokenBehavior::NoNewLineBeforeUnlessMatch,
+                        TokenBehavior::NewLineAfter
+                    ],
                 },
             ]
         );
@@ -1948,7 +1959,10 @@ mod tests {
                 Token {
                     value: String::from("-- comment newline"),
                     category: Some(TokenCategory::Comment),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
+                    behavior: vec![
+                        TokenBehavior::NoNewLineBeforeUnlessMatch,
+                        TokenBehavior::NewLineAfter
+                    ],
                 },
                 Token {
                     value: String::from("\n"),
@@ -2011,7 +2025,10 @@ mod tests {
                 Token {
                     value: String::from("/*multi inline*/"),
                     category: Some(TokenCategory::Comment),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
+                    behavior: vec![
+                        TokenBehavior::NoNewLineBeforeUnlessMatch,
+                        TokenBehavior::NewLineAfter
+                    ],
                 },
                 Token {
                     value: String::from(" "),
@@ -2050,7 +2067,10 @@ mod tests {
                 Token {
                     value: String::from("/*multi odd*/"),
                     category: Some(TokenCategory::Comment),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
+                    behavior: vec![
+                        TokenBehavior::NoNewLineBeforeUnlessMatch,
+                        TokenBehavior::NewLineAfter
+                    ],
                 },
                 Token {
                     value: String::from("*"),
@@ -2058,6 +2078,21 @@ mod tests {
                     behavior: vec![],
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_double() {
+        assert_eq!(
+            get_sql_tokens(String::from("/*multi double*//*multi double*/")),
+            vec![Token {
+                value: String::from("/*multi double*//*multi double*/"),
+                category: Some(TokenCategory::Comment),
+                behavior: vec![
+                    TokenBehavior::NoNewLineBeforeUnlessMatch,
+                    TokenBehavior::NewLineAfter
+                ],
+            },]
         );
     }
 
@@ -2110,7 +2145,10 @@ mod tests {
                 */"#
                     ),
                     category: Some(TokenCategory::Comment),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::NewLineAfter],
+                    behavior: vec![
+                        TokenBehavior::NoNewLineBeforeUnlessMatch,
+                        TokenBehavior::NewLineAfter
+                    ],
                 },
                 Token {
                     value: String::from("\n"),
@@ -2456,7 +2494,7 @@ mod tests {
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
@@ -2509,7 +2547,7 @@ mod tests {
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
@@ -2562,7 +2600,7 @@ mod tests {
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
@@ -2713,7 +2751,7 @@ Name'"#
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
@@ -2746,7 +2784,7 @@ Name'"#
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
                 Token {
                     value: String::from(" "),
@@ -2775,7 +2813,7 @@ Name'"#
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
@@ -2810,7 +2848,7 @@ Name'"#
                 Token {
                     value: String::from(";"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
                 Token {
                     value: String::from(" "),
@@ -2830,7 +2868,7 @@ Name'"#
                 Token {
                     value: String::from("$$"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
                 Token {
                     value: String::from(" "),
@@ -2874,7 +2912,7 @@ Name'"#
                 Token {
                     value: String::from("\\"),
                     category: Some(TokenCategory::Delimiter),
-                    behavior: vec![],
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
                 },
             ]
         );
