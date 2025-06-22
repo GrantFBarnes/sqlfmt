@@ -1360,6 +1360,11 @@ pub enum TokenBehavior {
     DecreaseIndentOnSingleLine,
 }
 
+enum InterpolationCategory {
+    Bracket,
+    Percent,
+}
+
 #[derive(Clone)]
 enum CommentCategory {
     SingleLine,
@@ -1381,7 +1386,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 
     let mut curr_token: Token = Token::new();
     let mut in_delimiter_change: bool = false;
-    let mut in_interpolation: bool = false;
+    let mut in_interpolation: Option<InterpolationCategory> = None;
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
 
@@ -1405,7 +1410,11 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             None
         };
 
-        if !in_delimiter_change && !in_interpolation && in_comment.is_none() && in_quote.is_none() {
+        if !in_delimiter_change
+            && in_interpolation.is_none()
+            && in_comment.is_none()
+            && in_quote.is_none()
+        {
             if curr_ch.is_whitespace() && prev_ch.is_some_and(|c| !c.is_whitespace()) {
                 if !curr_token.is_empty() {
                     curr_token.setup();
@@ -1442,8 +1451,9 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             curr_token = Token::new();
         }
 
-        in_interpolation = get_in_interpolation(in_interpolation, prev_ch, curr_ch);
-        if in_interpolation {
+        in_interpolation =
+            get_in_interpolation(in_interpolation, prev2_ch, prev_ch, curr_ch, next_ch);
+        if in_interpolation.is_some() {
             curr_token.value.push(curr_ch);
             continue;
         }
@@ -1638,17 +1648,42 @@ fn get_in_delimiter_change(
     return in_delimiter_change;
 }
 
-fn get_in_interpolation(in_interpolation: bool, prev_ch: Option<char>, curr_ch: char) -> bool {
-    if in_interpolation {
-        if prev_ch == Some(CURLY_BRACKET_CLOSE) {
-            return false;
+fn get_in_interpolation(
+    in_interpolation: Option<InterpolationCategory>,
+    prev2_ch: Option<char>,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    next_ch: Option<char>,
+) -> Option<InterpolationCategory> {
+    match in_interpolation {
+        Some(InterpolationCategory::Bracket) => {
+            if prev_ch == Some(CURLY_BRACKET_CLOSE) {
+                return None;
+            }
+            return Some(InterpolationCategory::Bracket);
         }
-    } else {
-        if curr_ch == CURLY_BRACKET_OPEN {
-            return true;
+        Some(InterpolationCategory::Percent) => {
+            if prev2_ch == Some(PERCENT) {
+                None
+            } else {
+                Some(InterpolationCategory::Percent)
+            }
+        }
+        None => {
+            return match curr_ch {
+                CURLY_BRACKET_OPEN => Some(InterpolationCategory::Bracket),
+                PERCENT => match next_ch {
+                    // golang format verbs
+                    Some('v') | Some('T') | Some('%') | Some('t') | Some('b') | Some('c')
+                    | Some('d') | Some('o') | Some('O') | Some('q') | Some('x') | Some('X')
+                    | Some('U') | Some('e') | Some('E') | Some('f') | Some('F') | Some('g')
+                    | Some('G') | Some('s') | Some('p') => Some(InterpolationCategory::Percent),
+                    _ => None,
+                },
+                _ => None,
+            };
         }
     }
-    return in_interpolation;
 }
 
 fn get_in_comment(
@@ -2400,7 +2435,55 @@ mod tests {
     }
 
     #[test]
-    fn test_get_sql_tokens_interpolation_table_name() {
+    fn test_get_sql_tokens_interpolation_bracket() {
+        assert_eq!(
+            get_sql_tokens(String::from("{value}")),
+            vec![Token {
+                value: String::from("{value}"),
+                category: None,
+                behavior: vec![],
+            },]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_percent() {
+        assert_eq!(
+            get_sql_tokens(String::from("%T")),
+            vec![Token {
+                value: String::from("%T"),
+                category: None,
+                behavior: vec![],
+            },]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_bracket_in_quote() {
+        assert_eq!(
+            get_sql_tokens(String::from("'{value}'")),
+            vec![Token {
+                value: String::from("'{value}'"),
+                category: Some(TokenCategory::Quote),
+                behavior: vec![],
+            },]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_percent_in_quote() {
+        assert_eq!(
+            get_sql_tokens(String::from("'%%'")),
+            vec![Token {
+                value: String::from("'%%'"),
+                category: Some(TokenCategory::Quote),
+                behavior: vec![],
+            },]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_table_name_bracket() {
         assert_eq!(
             get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]}")),
             vec![
@@ -2448,7 +2531,55 @@ mod tests {
     }
 
     #[test]
-    fn test_get_sql_tokens_interpolation_procedure_name() {
+    fn test_get_sql_tokens_interpolation_table_name_percent() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT C1 FROM %v")),
+            vec![
+                Token {
+                    value: String::from("SELECT"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![
+                        TokenBehavior::NewLineBefore,
+                        TokenBehavior::NewLineAfter,
+                        TokenBehavior::IncreaseIndent
+                    ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("C1"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("FROM"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("%v"),
+                    category: None,
+                    behavior: vec![],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_procedure_name_bracket() {
         assert_eq!(
             get_sql_tokens(String::from("CALL SCH.{procedureName}();")),
             vec![
@@ -2478,6 +2609,59 @@ mod tests {
                 },
                 Token {
                     value: String::from("{procedureName}"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("("),
+                    category: Some(TokenCategory::ParenOpen),
+                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
+                },
+                Token {
+                    value: String::from(")"),
+                    category: Some(TokenCategory::ParenClose),
+                    behavior: vec![TokenBehavior::NoSpaceBefore],
+                },
+                Token {
+                    value: String::from(";"),
+                    category: Some(TokenCategory::Delimiter),
+                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_procedure_name_percent() {
+        assert_eq!(
+            get_sql_tokens(String::from("CALL SCH.%s();")),
+            vec![
+                Token {
+                    value: String::from("CALL"),
+                    category: Some(TokenCategory::Keyword),
+                    behavior: vec![
+                        TokenBehavior::NewLineBefore,
+                        TokenBehavior::IncreaseIndent,
+                        TokenBehavior::DecreaseIndentOnSingleLine,
+                    ],
+                },
+                Token {
+                    value: String::from(" "),
+                    category: Some(TokenCategory::Space),
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("SCH"),
+                    category: None,
+                    behavior: vec![],
+                },
+                Token {
+                    value: String::from("."),
+                    category: Some(TokenCategory::FullStop),
+                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
+                },
+                Token {
+                    value: String::from("%s"),
                     category: None,
                     behavior: vec![],
                 },
