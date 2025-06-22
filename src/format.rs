@@ -498,12 +498,19 @@ impl FormatState {
                         token_value = token_value.to_lowercase();
                     }
                 }
+                Some(TokenCategory::NewLine) => {
+                    result = result
+                        .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
+                        .to_string();
+                }
                 _ => (),
             }
 
             result.push_str(token_value.as_str());
         }
-        return result.to_string();
+        return result
+            .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
+            .to_string();
     }
 }
 
@@ -528,11 +535,14 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                 }
             }
             Some(TokenCategory::Space) => {
+                // define and keep user provided space as prefix if not found
                 if state.prefix.is_none() {
                     state.prefix = Some(token.value.clone());
+                    state.push(token.clone());
+                    continue;
                 }
 
-                // only keep user provided space if before newline comment
+                // keep user provided space if before newline comment
                 if tokens
                     .get(i + 1)
                     .is_some_and(|t| t.category == Some(TokenCategory::Comment))
@@ -552,7 +562,10 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                         }
                     }
                     state.push(token.clone());
+                    continue;
                 }
+
+                // ignore all other user provided spaces
                 continue;
             }
             _ => {
@@ -689,7 +702,7 @@ mod tests {
             r#"
 
 
-"#
+"#,
         );
 
         config.newlines = true;
@@ -805,7 +818,8 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+			SELECT
 			    C1,
 			    C2
 			FROM TBL1"#
@@ -850,14 +864,16 @@ FROM TBL1"#
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 (SELECT C1, C2 FROM TBL1)"#
         );
 
         config.chars = 40;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 (
                     SELECT
                         C1,
@@ -882,14 +898,16 @@ FROM TBL1"#
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+			SELECT
 				(SELECT C1, C2 FROM TBL1)"#
         );
 
         config.chars = 40;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+			SELECT
 				(
 					SELECT
 						C1,
@@ -1007,7 +1025,8 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM {tableNames[i]}
             WHERE C1 = 1"#
@@ -1052,7 +1071,8 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM TBL1
             WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
@@ -1121,7 +1141,8 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1
             FROM TBL1
             UNION
@@ -1162,7 +1183,8 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1,
                 C2,
                 C3
@@ -1197,7 +1219,8 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 (SELECT TOP 1 ID FROM TBL1) AS ID,
                 C1
             FROM TBL1"#
@@ -1223,7 +1246,8 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM TBL1;
 
@@ -1311,8 +1335,7 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"
-            -- COMMENT
+            r#"            -- COMMENT
             DECLARE C1 = 1;
             DECLARE C2 = 2;"#
         );
@@ -1337,7 +1360,8 @@ SELECT
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 1;
 
             DELIMITER $$
@@ -1426,7 +1450,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SET C1 = 1
+            r#"
+            SET C1 = 1
             SET C2 = 2"#
         );
     }
@@ -1458,7 +1483,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"UPDATE TBL1
+            r#"
+            UPDATE TBL1
             SET C1 = 1,
                 C2 = 2
             WHERE C3 = 3"#
@@ -1488,7 +1514,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM TBL1
             WHERE C1 = 'some value'"#
@@ -1518,7 +1545,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM TBL1
             WHERE C1 IN (1, 2, 3)"#
@@ -1546,7 +1574,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 COUNT(DISTINCT YEAR(D1))
             FROM TBL1"#
         );
@@ -1579,7 +1608,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1,
                 COUNT(*) AS CNT
             FROM TBL1
@@ -1613,7 +1643,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 T1.C1,
                 T1.C2,
                 T2.C2
@@ -1653,7 +1684,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1,
                 C2,
                 C3
@@ -1704,7 +1736,8 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 DISTINCT
                 T1.C1 AS C1,
                 T2.C2 AS C2,
@@ -1775,8 +1808,7 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"
-            -- top comment
+            r#"            -- top comment
             SELECT
                 C1, --inline comment
             -- after comment 1
@@ -1826,8 +1858,7 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"
-            -- comment
+            r#"            -- comment
             SELECT
                 C1,
                 C2
@@ -1870,7 +1901,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1
             FROM TBL1
             ORDER BY C1
@@ -1916,8 +1948,7 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"
-            /* top comment */
+            r#"            /* top comment */
             SELECT
                 C1 /* inline comment */
             /*
@@ -1961,7 +1992,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1,
                 C2,
                 C3
@@ -1996,7 +2028,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1
             FROM TBL1
             WITH CTE2 AS (SELECT C2 FROM TBL2)
@@ -2031,7 +2064,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"WITH CTE1 AS (SELECT C1 FROM TBL1)
+            r#"
+            WITH CTE1 AS (SELECT C1 FROM TBL1)
             INSERT INTO TBL2(C1)
             SELECT
                 C1
@@ -2054,7 +2088,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"WITH CTE1 AS (
+            r#"
+            WITH CTE1 AS (
                     SELECT
                         C00000000000000000000000000000,
                         C00000000000000000000000000001,
@@ -2103,7 +2138,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"WITH CTE1 AS (SELECT C1 FROM TBL1),
+            r#"
+            WITH CTE1 AS (SELECT C1 FROM TBL1),
                 CTE2 AS (SELECT C2 FROM TBL2)
             SELECT
                 *
@@ -2133,7 +2169,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM T1
                 LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1"#
@@ -2161,7 +2198,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM T1
                 LEFT JOIN T2 ON T2.C1 = T1.C1
@@ -2192,7 +2230,8 @@ FROM TBL1;"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM T1
                 LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
@@ -2250,7 +2289,8 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1,
                 CASE
                     WHEN C1 <= 1 THEN 'small'
@@ -2367,7 +2407,8 @@ VALUES (
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"INSERT INTO TBL1(C1, C2, C3)
+            r#"
+            INSERT INTO TBL1(C1, C2, C3)
             SELECT
                 C1,
                 C2,
@@ -2418,7 +2459,8 @@ WHERE C <= 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"DELETE
+            r#"
+            DELETE
             FROM TBL1
             WHERE C <= 1"#
         );
@@ -2445,7 +2487,8 @@ WHERE C <= 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"TRUNCATE TABLE TBL1
+            r#"
+            TRUNCATE TABLE TBL1
             TRUNCATE TABLE TBL2
             TRUNCATE TABLE TBL3"#
         );
@@ -2472,7 +2515,8 @@ WHERE C <= 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"DROP TABLE TBL1
+            r#"
+            DROP TABLE TBL1
             DROP TABLE TBL2
             DROP TABLE TBL3"#
         );
@@ -2499,7 +2543,9 @@ WHERE C <= 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"EXEC SP1();
+            r#"
+            EXEC SP1();
+
             EXEC SP1();
             EXEC SP1();"#
         );
@@ -2588,7 +2634,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"IF V1 IS NULL
+            r#"
+            IF V1 IS NULL
             AND V2 IS NULL
             BEGIN
                 SET V1 = 0;
@@ -2624,7 +2671,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"IF V1 IS NULL THEN
+            r#"
+            IF V1 IS NULL THEN
                 SET V1 = 0
                 ELSE
                 SET V2 = NULL"#
@@ -2660,7 +2708,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"IF V1 IS NULL
+            r#"
+            IF V1 IS NULL
             BEGIN
                 SET V1 = 0;
             END
@@ -2704,7 +2753,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SET V1 = 0;
+            r#"
+            SET V1 = 0;
 
             BEGIN TRY
                 CALL SP1;
@@ -2751,7 +2801,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SET V1 = 0;
+            r#"
+            SET V1 = 0;
 
             BEGIN TRY
                 -- COMMENT
@@ -2784,7 +2835,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"BEGIN CATCH
+            r#"
+            BEGIN CATCH
             END CATCH
             UPDATE TBL1
             SET C1 = 1"#
@@ -2814,7 +2866,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 *
             FROM TBL
             RETURN 0"#
@@ -2846,7 +2899,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"DECLARE V1 INT = (SELECT C1 FROM TBL);"#
+            r#"
+            DECLARE V1 INT = (SELECT C1 FROM TBL);"#
         );
     }
 
@@ -2873,7 +2927,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 C1 AS ID
             FROM TBL1
             FOR XML RAW('ITEM'),
@@ -2909,7 +2964,8 @@ CALL SP1()"#
         config.case = ConfigCase::Uppercase;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 T2.Loc.query('.')
             FROM T
                 CROSS APPLY Instructions.value('/root/Location') AS T2(Loc)"#
@@ -2942,7 +2998,8 @@ CALL SP1()"#
         config.case = ConfigCase::Uppercase;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 T.VALUE AS VALUE,
                 T.[VALUE] AS [VALUE],
                 'VALUE' AS 'VALUE',
@@ -2973,7 +3030,7 @@ CALL SP1()"#
         config.chars = 40;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"STUFF(
+            r#"            STUFF(
                 (
                     SELECT
                         ', ' + C1
@@ -3044,7 +3101,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"CREATE TABLE TBL1(ID UUID NOT NULL DEFAULT UUID())"#
+            r#"
+            CREATE TABLE TBL1(ID UUID NOT NULL DEFAULT UUID())"#
         );
     }
 
@@ -3081,7 +3139,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"CREATE TABLE IF NOT EXISTS TBL1(
+            r#"
+            CREATE TABLE IF NOT EXISTS TBL1(
                 ID UUID NOT NULL DEFAULT UUID(),
                 C1 VARCHAR(10) NOT NULL,
                 D1 DATETIME NULL,
@@ -3125,7 +3184,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"CREATE TRIGGER IF NOT EXISTS TR1
+            r#"
+            CREATE TRIGGER IF NOT EXISTS TR1
             AFTER
             INSERT ON TBL1 FOR EACH ROW
             BEGIN
@@ -3179,7 +3239,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"DECLARE VAR_COUNT INT;
+            r#"
+            DECLARE VAR_COUNT INT;
 
             SELECT
                 COUNT(ID)
@@ -3239,7 +3300,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
+            r#"
+            SELECT
                 'AverageCost' AS CostSortedByProductionDays,
                 [0],
                 [1],
@@ -3312,7 +3374,8 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"DECLARE @ID INT,
+            r#"
+            DECLARE @ID INT,
                 @NAME NVARCHAR(50);
 
             DECLARE SAMPLE_CURSOR CURSOR
