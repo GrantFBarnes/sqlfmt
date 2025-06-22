@@ -650,8 +650,12 @@ mod tests {
 
     #[test]
     fn test_get_formatted_sql_select_simple() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT * FROM TBL1"#);
+
+        config.newlines = false;
         assert_eq!(
-            get_formatted_sql(&Configuration::new(), String::from("SELECT * FROM TBL1")),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM TBL1"#
         );
     }
@@ -659,9 +663,11 @@ mod tests {
     #[test]
     fn test_get_formatted_sql_newlines() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT * FROM TBL1"#);
+
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("SELECT * FROM TBL1")),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL1"#
@@ -671,9 +677,11 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_upper() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"select * from tbl1"#);
+
         config.case = ConfigCase::Uppercase;
         assert_eq!(
-            get_formatted_sql(&config, String::from("select * from tbl1")),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM tbl1"#
         );
     }
@@ -681,25 +689,28 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_lower() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT * FROM TBL1"#);
+
         config.case = ConfigCase::Lowercase;
         assert_eq!(
-            get_formatted_sql(&config, String::from("SELECT * FROM TBL1")),
+            get_formatted_sql(&config, sql.clone()),
             r#"select * from TBL1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_simple_newlines() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT  *
+            FROM  TBL1
+            "#,
+        );
+
+        config.newlines = false;
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT  *
-                    FROM  TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT *
 FROM TBL1"#
         );
@@ -708,19 +719,18 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_config_tabs() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+                C1,
+                C2
+            FROM TBL1
+            "#,
+        );
+
         config.tabs = ConfigTab::Tab;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
 	C1,
 	C2
@@ -731,19 +741,18 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_config_spaces() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+                C1,
+                C2
+            FROM TBL1
+            "#,
+        );
+
         config.tabs = ConfigTab::Space(2);
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
   C1,
   C2
@@ -754,10 +763,12 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_config_chars_short() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"(SELECT C1, C2 FROM TBL1)"#);
+
         config.newlines = true;
         config.chars = 10;
         assert_eq!(
-            get_formatted_sql(&config, String::from(r#"(SELECT C1, C2 FROM TBL1)"#)),
+            get_formatted_sql(&config, sql.clone()),
             r#"(
     SELECT
         C1,
@@ -770,40 +781,44 @@ FROM TBL1"#
     #[test]
     fn test_get_formatted_sql_config_chars_long() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"(SELECT C1, C2 FROM TBL1)"#);
+
         config.newlines = true;
         config.chars = 120;
         assert_eq!(
-            get_formatted_sql(&config, String::from(r#"(SELECT C1, C2 FROM TBL1)"#)),
+            get_formatted_sql(&config, sql.clone()),
             r#"(SELECT C1, C2 FROM TBL1)"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_multiple_columns_inline() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT C1,C2, C3 FROM TBL1"#);
+
+        config.newlines = false;
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("SELECT C1,C2, C3 FROM TBL1")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1, C2, C3 FROM TBL1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_multiple_columns_newlines() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            C1 AS 'Column 1',
+                C2 AS 'Column 2',
+            C3
+            FROM TBL1 AS T
+            "#,
+        );
+
+        config.newlines = false;
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    C1 AS 'Column 1',
-                      C2 AS 'Column 2',
-                    C3
-                    FROM TBL1 AS T
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1 AS 'Column 1',
     C2 AS 'Column 2',
@@ -814,24 +829,17 @@ FROM TBL1 AS T"#
 
     #[test]
     fn test_get_formatted_sql_alias() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT C1 AS 'Column 1' FROM TBL1"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(r#"SELECT C1 AS 'Column 1' FROM TBL1"#)
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1 AS 'Column 1' FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_alias_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(r#"SELECT C1 AS 'Column 1' FROM TBL1"#)
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1 AS 'Column 1'
 FROM TBL1"#
@@ -840,77 +848,53 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_datatype_quote() {
-        assert_eq!(
-            get_formatted_sql(&Configuration::new(), String::from("[NVARCHAR](36)")),
-            r#"[NVARCHAR](36)"#
-        );
-    }
-
-    #[test]
-    fn test_get_formatted_sql_datatype_quote_config_newline() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"[NVARCHAR](36)"#);
+
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#"[NVARCHAR](36)"#);
+
         config.newlines = true;
-        assert_eq!(
-            get_formatted_sql(&config, String::from("[NVARCHAR](36)")),
-            r#"[NVARCHAR](36)"#
-        );
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#"[NVARCHAR](36)"#);
     }
 
     #[test]
     fn test_get_formatted_sql_convert() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"CONVERT(NVARCHAR(36), ID)"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("CONVERT(NVARCHAR(36), ID)")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CONVERT(NVARCHAR(36), ID)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_convert_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("CONVERT(NVARCHAR(36), ID)")),
+            get_formatted_sql(&config, sql.clone()),
             r#"CONVERT(NVARCHAR(36), ID)"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_curly_string() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM {tableNames[i]}
+            WHERE C1 = 1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM {tableNames[i]}
-                    WHERE C1 = 1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT *
 FROM {tableNames[i]}
 WHERE C1 = 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_curly_string_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM {tableNames[i]}
-                    WHERE C1 = 1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM {tableNames[i]}
@@ -920,56 +904,40 @@ WHERE C1 = 1"#
 
     #[test]
     fn test_get_formatted_sql_call_curly_string() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"CALL SCH.{procedureName}();"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(r#"CALL SCH.{procedureName}();"#)
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CALL SCH.{procedureName}();"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_call_curly_string_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from(r#"CALL SCH.{procedureName}();"#)),
+            get_formatted_sql(&config, sql.clone()),
             r#"CALL SCH.{procedureName}();"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_embedded_conditions() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT * FROM TBL1
+            WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT * FROM TBL1
-                    WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM TBL1
 WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_embedded_conditions_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT * FROM TBL1
-                    WHERE ((C1=0 AND C2=0)OR(C1=1 AND C2=1))
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL1
@@ -979,24 +947,17 @@ WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
 
     #[test]
     fn test_get_formatted_sql_sub_query_inline() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#" SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID "#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(r#" SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID "#)
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT (SELECT TOP 1 ID FROM TBL1) AS ID"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_sub_query_inline_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(r#" SELECT ( SELECT TOP 1 ID FROM TBL1 ) AS ID "#)
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     (SELECT TOP 1 ID FROM TBL1) AS ID"#
         );
@@ -1004,21 +965,17 @@ WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
 
     #[test]
     fn test_get_formatted_sql_union() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT C1 UNION SELECT C2"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("SELECT C1 UNION SELECT C2")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1 UNION SELECT C2"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_union_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("SELECT C1 UNION SELECT C2")),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1
 UNION
@@ -1029,38 +986,25 @@ SELECT
 
     #[test]
     fn test_get_formatted_sql_union_complex() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 FROM TBL1
+            UNION SELECT C2 FROM TBL2
+            UNION SELECT C3 FROM TBL3
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT C1 FROM TBL1
-                    UNION SELECT C2 FROM TBL2
-                    UNION SELECT C3 FROM TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1 FROM TBL1
 UNION SELECT C2 FROM TBL2
 UNION SELECT C3 FROM TBL3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_union_complex_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT C1 FROM TBL1
-                    UNION SELECT C2 FROM TBL2
-                    UNION SELECT C3 FROM TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1
 FROM TBL1
@@ -1077,44 +1021,29 @@ FROM TBL3"#
 
     #[test]
     fn test_get_formatted_sql_comma_start_multiline() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            C1
+            ,C2
+            ,C3
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    C1
-                    ,C2
-                    ,C3
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1
     , C2
     , C3
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_comma_start_multiline_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                    C1
-                    ,C2
-                    ,C3
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     C2,
@@ -1125,44 +1054,29 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_sub_query_multiline() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT (
+            SELECT TOP 1 ID FROM TBL1
+            ) AS ID,
+            C1
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT (
-                    SELECT TOP 1 ID FROM TBL1
-                    ) AS ID,
-                    C1
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT (
         SELECT TOP 1 ID FROM TBL1
     ) AS ID,
     C1
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_sub_query_multiline_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT (
-                    SELECT TOP 1 ID FROM TBL1
-                    ) AS ID,
-                    C1
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     (SELECT TOP 1 ID FROM TBL1) AS ID,
     C1
@@ -1172,32 +1086,21 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_delimiter() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2= 2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2= 2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM TBL1; DECLARE C1 = 1; DECLARE C2 = 2; DECLARE C3 = 3; SELECT * FROM TBL1 DECLARE C4 = 4; DECLARE C5 = 5;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_delimiter_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT * FROM TBL1;DECLARE C1=1;DECLARE C2= 2;  DECLARE C3 = 3;SELECT * FROM TBL1  DECLARE C4=4;DECLARE C5=5;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL1;
@@ -1217,11 +1120,9 @@ DECLARE C5 = 5;"#
 
     #[test]
     fn test_get_formatted_sql_comments() {
-        assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
 -- COMMENT
   -- COMMENT
     -- COMMENT
@@ -1231,9 +1132,11 @@ DECLARE C5 = 5;"#
 /*COMMENT*//*COMMENT*/ /*COMMENT*/
     /*COMMENT*/ /*COMMENT*/
     /*COMMENT*/ /*COMMENT*/
-                    "#
-                )
-            ),
+                    "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
             r#"-- COMMENT
   -- COMMENT
     -- COMMENT
@@ -1244,29 +1147,10 @@ DECLARE C5 = 5;"#
     /*COMMENT*/ /*COMMENT*/
     /*COMMENT*/ /*COMMENT*/"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_comments_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
--- COMMENT
-  -- COMMENT
-    -- COMMENT
-  -- COMMENT
--- COMMENT
--- COMMENT
-/*COMMENT*//*COMMENT*/ /*COMMENT*/
-    /*COMMENT*/ /*COMMENT*/
-    /*COMMENT*/ /*COMMENT*/
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- COMMENT
   -- COMMENT
     -- COMMENT
@@ -1284,35 +1168,23 @@ DECLARE C5 = 5;"#
 
     #[test]
     fn test_get_formatted_sql_delimiter_comment() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            -- COMMENT
+            DECLARE C1=1;DECLARE C2=2;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    -- COMMENT
-                    DECLARE C1=1;DECLARE C2=2;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- COMMENT
 DECLARE C1 = 1; DECLARE C2 = 2;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_delimiter_comment_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    -- COMMENT
-                    DECLARE C1=1;DECLARE C2=2;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- COMMENT
 DECLARE C1 = 1;
 DECLARE C2 = 2;"#
@@ -1321,32 +1193,21 @@ DECLARE C2 = 2;"#
 
     #[test]
     fn test_get_formatted_sql_delimiter_change() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT 1;DELIMITER $$ SELECT 1; DELIMITER ;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT 1;DELIMITER $$ SELECT 1; DELIMITER ;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT 1; DELIMITER $$ SELECT 1; DELIMITER ;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_delimiter_change_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT 1;DELIMITER $$ SELECT 1; DELIMITER ;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     1;
 
@@ -1360,24 +1221,17 @@ DELIMITER ;"#
 
     #[test]
     fn test_get_formatted_sql_declare_no_delimiter() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"DECLARE C1 = 1 DECLARE C2 = 2   DECLARE C3 = 3 "#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("DECLARE C1 = 1 DECLARE C2 = 2   DECLARE C3 = 3 ")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE C1 = 1 DECLARE C2 = 2 DECLARE C3 = 3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_declare_no_delimiter_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from("DECLARE C1 = 1 DECLARE C2 = 2   DECLARE C3 = 3 ")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE C1 = 1
 DECLARE C2 = 2
 DECLARE C3 = 3"#
@@ -1386,21 +1240,17 @@ DECLARE C3 = 3"#
 
     #[test]
     fn test_get_formatted_sql_multiple_declare() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"DECLARE C1 = 1, C2 = 2, C3 = 3;"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("DECLARE C1 = 1, C2 = 2, C3 = 3;")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE C1 = 1, C2 = 2, C3 = 3;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_multiple_declare_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("DECLARE C1 = 1, C2 = 2, C3 = 3;")),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE C1 = 1,
     C2 = 2,
     C3 = 3;"#
@@ -1409,21 +1259,17 @@ DECLARE C3 = 3"#
 
     #[test]
     fn test_get_formatted_sql_set_no_delimiter() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SET C1 = 1 SET C2 = 2   SET C3 = 3 "#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("SET C1 = 1 SET C2 = 2   SET C3 = 3 ")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET C1 = 1 SET C2 = 2 SET C3 = 3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_set_no_delimiter_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("SET C1 = 1 SET C2 = 2   SET C3 = 3 ")),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET C1 = 1
 SET C2 = 2
 SET C3 = 3"#
@@ -1432,35 +1278,23 @@ SET C3 = 3"#
 
     #[test]
     fn test_get_formatted_sql_set() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SET C1 = 1
+            SET C2 = 2
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SET C1 = 1
-                    SET C2 = 2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET C1 = 1
 SET C2 = 2"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_set_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SET C1 = 1
-                    SET C2 = 2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET C1 = 1
 SET C2 = 2"#
         );
@@ -1468,44 +1302,29 @@ SET C2 = 2"#
 
     #[test]
     fn test_get_formatted_sql_update() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            UPDATE TBL1
+            SET
+            C1 = 1,
+            C2 = 2
+            WHERE C3 = 3
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    UPDATE TBL1
-                    SET
-                    C1 = 1,
-                    C2 = 2
-                    WHERE C3 = 3
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"UPDATE TBL1
 SET
     C1 = 1,
     C2 = 2
 WHERE C3 = 3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_update_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    UPDATE TBL1
-                    SET
-                    C1 = 1,
-                    C2 = 2
-                    WHERE C3 = 3
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"UPDATE TBL1
 SET C1 = 1,
     C2 = 2
@@ -1515,38 +1334,25 @@ WHERE C3 = 3"#
 
     #[test]
     fn test_get_formatted_sql_select_where_quote() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM TBL1
+            WHERE C1 = 'some value'
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL1
-                    WHERE C1 = 'some value'
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT *
 FROM TBL1
 WHERE C1 = 'some value'"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_where_quote_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL1
-                    WHERE C1 = 'some value'
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL1
@@ -1556,38 +1362,25 @@ WHERE C1 = 'some value'"#
 
     #[test]
     fn test_get_formatted_sql_select_where_in() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM TBL1
+            WHERE C1 IN (1,2,3)
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL1
-                    WHERE C1 IN (1,2,3)
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT *
 FROM TBL1
 WHERE C1 IN (1, 2, 3)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_where_in_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL1
-                    WHERE C1 IN (1,2,3)
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL1
@@ -1597,35 +1390,23 @@ WHERE C1 IN (1, 2, 3)"#
 
     #[test]
     fn test_get_formatted_sql_count_distinct() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT COUNT(DISTINCT YEAR(D1))
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT COUNT(DISTINCT YEAR(D1))
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT COUNT(DISTINCT YEAR(D1))
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_count_distinct_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT COUNT(DISTINCT YEAR(D1))
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     COUNT(DISTINCT YEAR(D1))
 FROM TBL1"#
@@ -1634,44 +1415,29 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_select_group_by() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1,
+            COUNT(*) AS CNT
+            FROM TBL1
+            GROUP BY C1
+            HAVING COUNT(*) > 1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT C1,
-                    COUNT(*) AS CNT
-                    FROM TBL1
-                    GROUP BY C1
-                    HAVING COUNT(*) > 1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1,
     COUNT(*) AS CNT
 FROM TBL1
 GROUP BY C1
 HAVING COUNT(*) > 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_group_by_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT C1,
-                    COUNT(*) AS CNT
-                    FROM TBL1
-                    GROUP BY C1
-                    HAVING COUNT(*) > 1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     COUNT(*) AS CNT
@@ -1683,41 +1449,27 @@ HAVING COUNT(*) > 1"#
 
     #[test]
     fn test_get_formatted_sql_join() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT T1.C1, T1.C2,
+            T2.C2
+            FROM TBL1 AS T1
+            INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT T1.C1, T1.C2,
-                    T2.C2
-                    FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT T1.C1, T1.C2,
     T2.C2
 FROM TBL1 AS T1
     INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_join_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT T1.C1, T1.C2,
-                    T2.C2
-                    FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     T1.C1,
     T1.C2,
@@ -1729,21 +1481,21 @@ FROM TBL1 AS T1
 
     #[test]
     fn test_get_formatted_sql_select_where() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            C1,
+            C2,
+            C3
+            FROM TBL1
+            WHERE C1>1
+            AND C2 IS NOT NULL
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    C2,
-                    C3
-                    FROM TBL1
-                    WHERE C1>1
-                    AND C2 IS NOT NULL
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     C2,
@@ -1752,27 +1504,10 @@ FROM TBL1
 WHERE C1 > 1
     AND C2 IS NOT NULL"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_where_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    C2,
-                    C3
-                    FROM TBL1
-                    WHERE C1>1
-                    AND C2 IS NOT NULL
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     C2,
@@ -1785,26 +1520,26 @@ WHERE C1 > 1
 
     #[test]
     fn test_get_formatted_sql_multi_join() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT DISTINCT
+            T1.C1 AS C1,
+            T2.C2 AS C2,
+            T3.C3 AS C3
+            FROM TBL1 AS T1
+            INNER JOIN TBL2 AS T2
+            ON T2.C1 = T1.C1
+            AND T2.C2 = T1.C2
+            INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
+            WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
+            ORDER BY T1.C1
+            LIMIT 1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT DISTINCT
-                    T1.C1 AS C1,
-                    T2.C2 AS C2,
-                    T3.C3 AS C3
-                    FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2
-                    ON T2.C1 = T1.C1
-                    AND T2.C2 = T1.C2
-                    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
-                    WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
-                    ORDER BY T1.C1
-                    LIMIT 1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT DISTINCT
     T1.C1 AS C1,
     T2.C2 AS C2,
@@ -1818,32 +1553,10 @@ WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
 ORDER BY T1.C1
 LIMIT 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_multi_join_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT DISTINCT
-                    T1.C1 AS C1,
-                    T2.C2 AS C2,
-                    T3.C3 AS C3
-                    FROM TBL1 AS T1
-                    INNER JOIN TBL2 AS T2
-                    ON T2.C1 = T1.C1
-                    AND T2.C2 = T1.C2
-                    INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
-                    WHERE (T1.C2<>T2.C2 OR T1.C2<>T3.C2)
-                    ORDER BY T1.C1
-                    LIMIT 1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     DISTINCT
     T1.C1 AS C1,
@@ -1861,24 +1574,17 @@ LIMIT 1"#
 
     #[test]
     fn test_get_formatted_sql_two_statements() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT * FROM TBL1;SELECT * FROM TBL1;"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             String::from("SELECT * FROM TBL1; SELECT * FROM TBL1;")
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_two_statements_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from("SELECT * FROM TBL1;SELECT * FROM TBL1;")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             String::from(
                 r#"SELECT
     *
@@ -1893,126 +1599,88 @@ FROM TBL1;"#
 
     #[test]
     fn test_get_formatted_sql_single_comments() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            -- top comment
+            SELECT C1,--inline comment
+            -- after comment 1
+            -- after comment 2
+            C2
+            -- after comment 3
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    -- top comment
-                    SELECT C1,--inline comment
-                    -- after comment 1
-                    -- after comment 2
-                    C2
-                    -- after comment 3
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- top comment
 SELECT C1, --inline comment
-                    -- after comment 1
-                    -- after comment 2
+            -- after comment 1
+            -- after comment 2
     C2
-                    -- after comment 3
+            -- after comment 3
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_single_comments_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    -- top comment
-                    SELECT C1,--inline comment
-                    -- after comment 1
-                    -- after comment 2
-                    C2
-                    -- after comment 3
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- top comment
 SELECT
     C1, --inline comment
-                    -- after comment 1
-                    -- after comment 2
+            -- after comment 1
+            -- after comment 2
     C2
-                    -- after comment 3
+            -- after comment 3
 FROM TBL1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_single_comment_new_statement() {
-        assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    -- comment
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1;
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            -- comment
+            SELECT
+                C1,
+                C2
+            FROM TBL1;
 
-                    -- comment
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1;
-                    "#,
-                )
-            ),
+            -- comment
+            SELECT
+                C1,
+                C2
+            FROM TBL1;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
             r#"-- comment
 SELECT
     C1,
     C2
 FROM TBL1;
 
-                    -- comment
+            -- comment
 SELECT
     C1,
     C2
 FROM TBL1;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_single_comment_new_statement_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    -- comment
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1;
-
-                    -- comment
-                    SELECT
-                        C1,
-                        C2
-                    FROM TBL1;
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"-- comment
 SELECT
     C1,
     C2
 FROM TBL1;
 
-                    -- comment
+            -- comment
 SELECT
     C1,
     C2
@@ -2022,142 +1690,106 @@ FROM TBL1;"#
 
     #[test]
     fn test_get_formatted_sql_single_comment_before_set() {
-        assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT C1
-                    FROM TBL1
-                    ORDER BY C1
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1
+            FROM TBL1
+            ORDER BY C1
 
-                    -- COMMENT
-                    SET V1 = 1
-                    "#,
-                )
-            ),
+            -- COMMENT
+            SET V1 = 1
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1
 FROM TBL1
 ORDER BY C1
 
-                    -- COMMENT
+            -- COMMENT
 SET V1 = 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_single_comment_before_set_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT C1
-                    FROM TBL1
-                    ORDER BY C1
-
-                    -- COMMENT
-                    SET V1 = 1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1
 FROM TBL1
 ORDER BY C1
-                    -- COMMENT
+            -- COMMENT
 SET V1 = 1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_multiline_comments() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            /* top comment */
+            SELECT C1/* inline comment */
+            /*
+
+            after
+
+            comment
+                indent
+
+            */FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    /* top comment */
-                    SELECT C1/* inline comment */
-                    /*
-
-                    after
-
-                    comment
-                      indent
-
-                    */FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"/* top comment */
 SELECT C1 /* inline comment */
-                    /*
+            /*
 
-                    after
+            after
 
-                    comment
-                      indent
+            comment
+                indent
 
-                    */ FROM TBL1"#
+            */ FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_multiline_comments_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    /* top comment */
-                    SELECT C1/* inline comment */
-                    /*
-
-                    after
-
-                    comment
-                      indent
-
-                    */FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"/* top comment */
 SELECT
     C1 /* inline comment */
-                    /*
+            /*
 
-                    after
+            after
 
-                    comment
-                      indent
+            comment
+                indent
 
-                    */
+            */
 FROM TBL1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_select_into() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            C1,
+            C2,
+            C3
+            INTO TBL2
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    C2,
-                    C3
-                    INTO TBL2
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     C2,
@@ -2165,26 +1797,10 @@ FROM TBL1"#
 INTO TBL2
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_into_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    C2,
-                    C3
-                    INTO TBL2
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     C2,
@@ -2197,41 +1813,27 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_cte_after_select() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 FROM TBL1
+            WITH CTE2 AS
+            (SELECT C2 FROM TBL2)
+            SELECT * FROM CTE2
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT C1 FROM TBL1
-                    WITH CTE2 AS
-                    (SELECT C2 FROM TBL2)
-                    SELECT * FROM CTE2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1 FROM TBL1
 WITH CTE2 AS
     (SELECT C2 FROM TBL2)
 SELECT * FROM CTE2"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_cte_after_select_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT C1 FROM TBL1
-                    WITH CTE2 AS
-                    (SELECT C2 FROM TBL2)
-                    SELECT * FROM CTE2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1
 FROM TBL1
@@ -2244,41 +1846,27 @@ FROM CTE2"#
 
     #[test]
     fn test_get_formatted_sql_insert_after_cte() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            WITH CTE1 AS
+            (SELECT C1 FROM TBL1)
+            INSERT INTO TBL2 (C1)
+            SELECT C1 FROM CTE1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    WITH CTE1 AS
-                    (SELECT C1 FROM TBL1)
-                    INSERT INTO TBL2 (C1)
-                    SELECT C1 FROM CTE1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"WITH CTE1 AS
     (SELECT C1 FROM TBL1)
 INSERT INTO TBL2(C1)
 SELECT C1 FROM CTE1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_insert_after_cte_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    WITH CTE1 AS
-                    (SELECT C1 FROM TBL1)
-                    INSERT INTO TBL2 (C1)
-                    SELECT C1 FROM CTE1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"WITH CTE1 AS (SELECT C1 FROM TBL1)
 INSERT INTO TBL2(C1)
 SELECT
@@ -2290,19 +1878,18 @@ FROM CTE1"#
     #[test]
     fn test_get_formatted_sql_insert_after_cte_config_newline_long() {
         let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            WITH CTE1 AS
+            (SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM TBL1)
+            INSERT INTO TBL2 (C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002)
+            SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM CTE1
+            "#,
+        );
+
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    WITH CTE1 AS
-                    (SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM TBL1)
-                    INSERT INTO TBL2 (C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002)
-                    SELECT C00000000000000000000000000000,C00000000000000000000000000001,C00000000000000000000000000002 FROM CTE1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"WITH CTE1 AS (
         SELECT
             C00000000000000000000000000000,
@@ -2325,20 +1912,20 @@ FROM CTE1"#
 
     #[test]
     fn test_get_formatted_sql_select_multiple_cte() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            WITH CTE1 AS
+            (SELECT C1 FROM TBL1),
+            CTE2 AS
+            (SELECT C2 FROM TBL2)
+            SELECT * FROM CTE1
+            INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    WITH CTE1 AS
-                    (SELECT C1 FROM TBL1),
-                    CTE2 AS
-                    (SELECT C2 FROM TBL2)
-                    SELECT * FROM CTE1
-                    INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"WITH CTE1 AS
     (SELECT C1 FROM TBL1),
     CTE2 AS
@@ -2346,26 +1933,10 @@ FROM CTE1"#
 SELECT * FROM CTE1
     INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_multiple_cte_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    WITH CTE1 AS
-                    (SELECT C1 FROM TBL1),
-                    CTE2 AS
-                    (SELECT C2 FROM TBL2)
-                    SELECT * FROM CTE1
-                    INNER JOIN CTE2 ON CTE2.C2 = CTE1.C1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"WITH CTE1 AS (SELECT C1 FROM TBL1),
     CTE2 AS (SELECT C2 FROM TBL2)
 SELECT
@@ -2377,35 +1948,23 @@ FROM CTE1
 
     #[test]
     fn test_get_formatted_sql_join_subquery() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT * FROM T1
+            LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM T1
     LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_join_subquery_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN (SELECT C2 FROM T2) AS ST1 ON ST1.C2 = T1.C1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM T1
@@ -2415,35 +1974,23 @@ FROM T1
 
     #[test]
     fn test_get_formatted_sql_join_multi_condition() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT * FROM T1
+            LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM T1
     LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_join_multi_condition_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM T1
@@ -2454,38 +2001,25 @@ FROM T1
 
     #[test]
     fn test_get_formatted_sql_join_multi_condition_embedded() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT * FROM T1
+            LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+            AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
-                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT * FROM T1
     LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
         AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_join_multi_condition_embedded_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT * FROM T1
-                    LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
-                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM T1
@@ -2496,24 +2030,17 @@ FROM T1
 
     #[test]
     fn test_get_formatted_sql_select_if() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT IIF(C1>5,1,0) AS C1 FROM TBL1"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("SELECT IIF(C1>5,1,0) AS C1 FROM TBL1")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT IIF(C1 > 5, 1, 0) AS C1 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_select_if_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from("SELECT IIF(C1>5,1,0) AS C1 FROM TBL1")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     IIF(C1 > 5, 1, 0) AS C1
 FROM TBL1"#
@@ -2522,21 +2049,21 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_case() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            C1,
+            CASE WHEN C1<=1 THEN 'small'
+            WHEN C1<=3 THEN 'medium'
+            ELSE 'large' END AS C2,
+            C3
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    CASE WHEN C1<=1 THEN 'small'
-                    WHEN C1<=3 THEN 'medium'
-                    ELSE 'large' END AS C2,
-                    C3
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     CASE WHEN C1 <= 1 THEN 'small'
@@ -2545,27 +2072,10 @@ FROM TBL1"#
     C3
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_case_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                    C1,
-                    CASE WHEN C1<=1 THEN 'small'
-                    WHEN C1<=3 THEN 'medium'
-                    ELSE 'large' END AS C2,
-                    C3
-                    FROM TBL1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1,
     CASE
@@ -2580,21 +2090,17 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_insert_simple() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"INSERT INTO TBL1(ID)VALUES(1)"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("INSERT INTO TBL1(ID)VALUES(1)")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(ID) VALUES (1)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_insert_simple_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("INSERT INTO TBL1(ID)VALUES(1)")),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(ID)
 VALUES (1)"#
         );
@@ -2602,28 +2108,19 @@ VALUES (1)"#
 
     #[test]
     fn test_get_formatted_sql_insert_multiple_columns() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)",
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21) VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_insert_multiple_columns_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    "INSERT INTO TBL1 (C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C17,C18,C19,C20,C21) VALUES (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)"
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(
     C1,
     C2,
@@ -2675,38 +2172,25 @@ VALUES (
 
     #[test]
     fn test_get_formatted_sql_insert_select() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            INSERT INTO TBL1 (C1,C2,C3)
+            SELECT C1,C2,C3
+            FROM TBL1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    INSERT INTO TBL1 (C1,C2,C3)
-                    SELECT C1,C2,C3
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(C1, C2, C3)
 SELECT C1, C2, C3
 FROM TBL1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_insert_select_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    INSERT INTO TBL1 (C1,C2,C3)
-                    SELECT C1,C2,C3
-                    FROM TBL1
-                    "#,
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"INSERT INTO TBL1(C1, C2, C3)
 SELECT
     C1,
@@ -2718,21 +2202,17 @@ FROM TBL1"#
 
     #[test]
     fn test_get_formatted_sql_delete_simple() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"DELETE FROM TBL1 WHERE C<=1"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("DELETE FROM TBL1 WHERE C<=1")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DELETE FROM TBL1 WHERE C <= 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_delete_simple_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("DELETE FROM TBL1 WHERE C<=1")),
+            get_formatted_sql(&config, sql.clone()),
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
@@ -2741,38 +2221,25 @@ WHERE C <= 1"#
 
     #[test]
     fn test_get_formatted_sql_delete_newline() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DELETE
+            FROM TBL1
+            WHERE C<=1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    DELETE
-                    FROM TBL1
-                    WHERE C<=1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_delete_newline_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    DELETE
-                    FROM TBL1
-                    WHERE C<=1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DELETE
 FROM TBL1
 WHERE C <= 1"#
@@ -2781,35 +2248,23 @@ WHERE C <= 1"#
 
     #[test]
     fn test_get_formatted_sql_truncate_table() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
+            TRUNCATE TABLE TBL3
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
-                    TRUNCATE TABLE TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
 TRUNCATE TABLE TBL3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_truncate_table_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    TRUNCATE TABLE TBL1 TRUNCATE TABLE TBL2
-                    TRUNCATE TABLE TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"TRUNCATE TABLE TBL1
 TRUNCATE TABLE TBL2
 TRUNCATE TABLE TBL3"#
@@ -2818,35 +2273,23 @@ TRUNCATE TABLE TBL3"#
 
     #[test]
     fn test_get_formatted_sql_drop_table() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DROP TABLE TBL1 DROP TABLE TBL2
+            DROP TABLE TBL3
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    DROP TABLE TBL1 DROP TABLE TBL2
-                    DROP TABLE TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DROP TABLE TBL1 DROP TABLE TBL2
 DROP TABLE TBL3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_drop_table_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    DROP TABLE TBL1 DROP TABLE TBL2
-                    DROP TABLE TBL3
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DROP TABLE TBL1
 DROP TABLE TBL2
 DROP TABLE TBL3"#
@@ -2855,35 +2298,23 @@ DROP TABLE TBL3"#
 
     #[test]
     fn test_get_formatted_sql_execute() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            EXEC SP1();EXEC SP1();
+            EXEC SP1();
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    EXEC SP1();EXEC SP1();
-                    EXEC SP1();
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1(); EXEC SP1();
 EXEC SP1();"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_execute_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    EXEC SP1();EXEC SP1();
-                    EXEC SP1();
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1();
 EXEC SP1();
 EXEC SP1();"#
@@ -2892,21 +2323,17 @@ EXEC SP1();"#
 
     #[test]
     fn test_get_formatted_sql_execute_no_delimiter() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"EXEC SP1() EXEC SP1() EXEC SP1()"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("EXEC SP1() EXEC SP1() EXEC SP1()")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1() EXEC SP1() EXEC SP1()"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_execute_no_delimiter_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("EXEC SP1() EXEC SP1() EXEC SP1()")),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1()
 EXEC SP1()
 EXEC SP1()"#
@@ -2915,24 +2342,17 @@ EXEC SP1()"#
 
     #[test]
     fn test_get_formatted_sql_execute_parameters() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_execute_parameters_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from("EXEC SP1 P1, P2, P3 EXEC SP1 P1, P2, P3")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"EXEC SP1 P1,
     P2,
     P3
@@ -2944,21 +2364,17 @@ EXEC SP1 P1,
 
     #[test]
     fn test_get_formatted_sql_call_no_delimiter() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"CALL SP1() CALL SP1() CALL SP1()"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("CALL SP1() CALL SP1() CALL SP1()")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CALL SP1() CALL SP1() CALL SP1()"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_call_no_delimiter_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("CALL SP1() CALL SP1() CALL SP1()")),
+            get_formatted_sql(&config, sql.clone()),
             r#"CALL SP1()
 CALL SP1()
 CALL SP1()"#
@@ -2967,38 +2383,25 @@ CALL SP1()"#
 
     #[test]
     fn test_get_formatted_sql_if() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
+            IF V1 IS NULL THEN SET V1 = 0 END IF
+            IF V2 IS NULL SET V2 = 0
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
-                    IF V1 IS NULL THEN SET V1 = 0 END IF
-                    IF V2 IS NULL SET V2 = 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
 IF V1 IS NULL THEN SET V1 = 0 END IF
 IF V2 IS NULL SET V2 = 0"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_if_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    IF V1 IS NULL AND V2 IS NULL BEGIN SET V1 = 0; SET V2 = 0; END
-                    IF V1 IS NULL THEN SET V1 = 0 END IF
-                    IF V2 IS NULL SET V2 = 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL
 AND V2 IS NULL
 BEGIN
@@ -3016,35 +2419,23 @@ SET V2 = 0"#
 
     #[test]
     fn test_get_formatted_sql_if_else() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            IF V1 IS NULL THEN SET V1 = 0
+            ELSE SET V2 = NULL
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    IF V1 IS NULL THEN SET V1 = 0
-                    ELSE SET V2 = NULL
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL THEN SET V1 = 0
     ELSE SET V2 = NULL"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_if_else_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    IF V1 IS NULL THEN SET V1 = 0
-                    ELSE SET V2 = NULL
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL THEN
     SET V1 = 0
     ELSE
@@ -3054,20 +2445,20 @@ SET V2 = 0"#
 
     #[test]
     fn test_get_formatted_sql_if_else_begin_end() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            IF V1 IS NULL BEGIN
+            SET V1 = 0;
+            END
+            ELSE BEGIN
+            SET V2 = NULL;
+            END
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    IF V1 IS NULL BEGIN
-                    SET V1 = 0;
-                    END
-                    ELSE BEGIN
-                    SET V2 = NULL;
-                    END
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL BEGIN
     SET V1 = 0;
 END
@@ -3075,32 +2466,12 @@ ELSE BEGIN
     SET V2 = NULL;
 END"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_if_else_begin_end_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    IF V1 IS NULL BEGIN
-                    SET V1 = 0;
-                    SET V1 = 0;
-                    SET V1 = 0;
-                    END
-                    ELSE BEGIN
-                    SET V2 = NULL;
-                    END
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"IF V1 IS NULL
 BEGIN
-    SET V1 = 0;
-    SET V1 = 0;
     SET V1 = 0;
 END
 ELSE
@@ -3112,22 +2483,22 @@ END"#
 
     #[test]
     fn test_get_formatted_sql_try_catch() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SET V1 = 0;
+            BEGIN TRY
+                CALL SP1;
+            END TRY
+            BEGIN CATCH
+                RETURN 1
+            END CATCH
+            RETURN 0
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SET V1 = 0;
-                    BEGIN TRY
-                        CALL SP1;
-                    END TRY
-                    BEGIN CATCH
-                        RETURN 1
-                    END CATCH
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET V1 = 0;
 BEGIN TRY
     CALL SP1;
@@ -3137,28 +2508,10 @@ BEGIN CATCH
 END CATCH
 RETURN 0"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_try_catch_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SET V1 = 0;
-                    BEGIN TRY
-                        CALL SP1;
-                    END TRY
-                    BEGIN CATCH
-                        RETURN 1
-                    END CATCH
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET V1 = 0;
 
 BEGIN TRY
@@ -3173,26 +2526,26 @@ RETURN 0"#
 
     #[test]
     fn test_get_formatted_sql_try_catch_insert() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SET V1 = 0;
+            BEGIN TRY
+                -- COMMENT
+                INSERT INTO TBL1 (C1) VALUES (1)
+            END TRY
+            BEGIN CATCH
+                RETURN 1
+            END CATCH
+            RETURN 0
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SET V1 = 0;
-                    BEGIN TRY
-                        -- COMMENT
-                        INSERT INTO TBL1 (C1) VALUES (1)
-                    END TRY
-                    BEGIN CATCH
-                        RETURN 1
-                    END CATCH
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET V1 = 0;
 BEGIN TRY
-                        -- COMMENT
+                -- COMMENT
     INSERT INTO TBL1(C1) VALUES (1)
 END TRY
 BEGIN CATCH
@@ -3200,33 +2553,14 @@ BEGIN CATCH
 END CATCH
 RETURN 0"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_try_catch_insert_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SET V1 = 0;
-                    BEGIN TRY
-                        -- COMMENT
-                        INSERT INTO TBL1 (C1) VALUES (1)
-                    END TRY
-                    BEGIN CATCH
-                        RETURN 1
-                    END CATCH
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SET V1 = 0;
 
 BEGIN TRY
-                        -- COMMENT
+                -- COMMENT
     INSERT INTO TBL1(C1)
     VALUES (1)
 END TRY
@@ -3239,32 +2573,21 @@ RETURN 0"#
 
     #[test]
     fn test_get_formatted_sql_catch_update() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_catch_update_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    BEGIN CATCH END CATCH UPDATE TBL1 SET C1 = 1
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"BEGIN CATCH
 END CATCH
 UPDATE TBL1
@@ -3274,38 +2597,25 @@ SET C1 = 1"#
 
     #[test]
     fn test_get_formatted_sql_return() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM TBL
+            RETURN 0
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT *
 FROM TBL
 RETURN 0"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_return_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT *
-                    FROM TBL
-                    RETURN 0
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     *
 FROM TBL
@@ -3315,79 +2625,52 @@ RETURN 0"#
 
     #[test]
     fn test_get_formatted_sql_declare_select() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DECLARE V1 INT = (
+            SELECT C1
+            FROM TBL
+            );
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    DECLARE V1 INT = (
-                    SELECT C1
-                    FROM TBL
-                    );
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE V1 INT = (
         SELECT C1
         FROM TBL
     );"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_declare_select_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    DECLARE V1 INT = (
-                    SELECT C1
-                    FROM TBL
-                    );
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE V1 INT = (SELECT C1 FROM TBL);"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_xml() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 AS ID
+            FROM TBL1
+            FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT C1 AS ID
-                    FROM TBL1
-                    FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT C1 AS ID
 FROM TBL1
 FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_xml_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT C1 AS ID
-                    FROM TBL1
-                    FOR XML RAW('ITEM'), TYPE, ELEMENTS, ROOT('VALUES'), BINARY BASE64
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     C1 AS ID
 FROM TBL1
@@ -3401,39 +2684,27 @@ FOR XML RAW('ITEM'),
 
     #[test]
     fn test_get_formatted_sql_xml_method() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT T2.Loc.QUERY('.')
+            FROM T
+            CROSS APPLY Instructions.VALUE('/root/Location') AS T2(Loc)
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT T2.Loc.QUERY('.')
-                    FROM T
-                    CROSS APPLY Instructions.VALUE('/root/Location') AS T2(Loc)
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT T2.Loc.query('.')
 FROM T
     CROSS APPLY Instructions.value('/root/Location') AS T2(Loc)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_xml_method_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
+
         config.case = ConfigCase::Uppercase;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    select T2.Loc.QUERY('.')
-                    from T
-                    cross apply Instructions.VALUE('/root/Location') as T2(Loc)
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     T2.Loc.query('.')
 FROM T
@@ -3443,42 +2714,28 @@ FROM T
 
     #[test]
     fn test_get_formatted_sql_keyword_column_name() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+            t.days as days, t.[days] as [days], 'days' as 'days'
+            FROM TBL1 AS T
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT
-                    T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
-                    t.days as days, t.[days] as [days], 'days' as 'days'
-                    FROM TBL1 AS T
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
     t.days as days, t.[days] as [days], 'days' as 'days'
 FROM TBL1 AS T"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_keyword_column_name_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         config.case = ConfigCase::Uppercase;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT
-                    T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
-                    t.days as days, t.[days] as [days], 'days' as 'days'
-                    FROM TBL1 AS T
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     T.VALUE AS VALUE,
     T.[VALUE] AS [VALUE],
@@ -3492,33 +2749,22 @@ FROM TBL1 AS T"#
 
     #[test]
     fn test_get_formatted_sql_stuff_comma_list() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_stuff_comma_list_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         config.chars = 40;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    STUFF((SELECT ', ' + C1 FROM TBL1 FOR XML PATH('')), 1, 2, '')
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"STUFF(
     (
         SELECT
@@ -3535,102 +2781,81 @@ FROM TBL1 AS T"#
 
     #[test]
     fn test_get_formatted_sql_create_table_simple() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"CREATE TABLE TBL1 (C1 INT)"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("CREATE TABLE TBL1 (C1 INT)")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(C1 INT)"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_create_table_simple_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 INT)")),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(C1 INT)"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_create_table_varchar() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"CREATE TABLE TBL1 (C1 VARCHAR(10))"#);
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(C1 VARCHAR(10))"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_create_table_varchar_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(&config, String::from("CREATE TABLE TBL1 (C1 VARCHAR(10))")),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(C1 VARCHAR(10))"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_create_table_default() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            CREATE TABLE TBL1 (
+                ID UUID NOT NULL DEFAULT UUID()
+            )
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    CREATE TABLE TBL1 (
-                      ID UUID NOT NULL DEFAULT UUID()
-                    )
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(
     ID UUID NOT NULL DEFAULT UUID()
 )"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_create_table_default_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    CREATE TABLE TBL1 (
-                      ID UUID NOT NULL DEFAULT UUID()
-                    )
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE TBL1(ID UUID NOT NULL DEFAULT UUID())"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_create_table_complex() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            CREATE TABLE IF NOT EXISTS TBL1 (
+                ID UUID NOT NULL DEFAULT UUID(),
+                C1 VARCHAR(10) NOT NULL,
+                D1 DATETIME NULL,
+                I1 INT,
+                I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
+                FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
+            )
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS TBL1 (
-                        ID UUID NOT NULL DEFAULT UUID(),
-                        C1 VARCHAR(10) NOT NULL,
-                        D1 DATETIME NULL,
-                        I1 INT,
-                        I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
-                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
-                    )
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
@@ -3640,29 +2865,10 @@ FROM TBL1 AS T"#
     FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_create_table_complex_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS TBL1 (
-                        ID UUID NOT NULL DEFAULT UUID(),
-                        C1 VARCHAR(10) NOT NULL,
-                        D1 DATETIME NULL,
-                        I1 INT,
-                        I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
-                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL,
-                        FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
-                    )
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TABLE IF NOT EXISTS TBL1(
     ID UUID NOT NULL DEFAULT UUID(),
     C1 VARCHAR(10) NOT NULL,
@@ -3671,7 +2877,6 @@ FROM TBL1 AS T"#
     I2 INT,
     PRIMARY KEY(ID),
     FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
-    FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL,
     FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
 )"#
         );
@@ -3679,21 +2884,21 @@ FROM TBL1 AS T"#
 
     #[test]
     fn test_get_formatted_sql_trigger() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            CREATE TRIGGER IF NOT EXISTS TR1
+            AFTER INSERT
+            ON TBL1
+            FOR EACH ROW
+            BEGIN
+            CALL SP1(NEW.ID);
+            END;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    CREATE TRIGGER IF NOT EXISTS TR1
-                    AFTER INSERT
-                    ON TBL1
-                    FOR EACH ROW
-                    BEGIN
-                    CALL SP1(NEW.ID);
-                    END;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER INSERT
     ON TBL1
@@ -3702,27 +2907,10 @@ BEGIN
     CALL SP1(NEW.ID);
 END;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_trigger_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    CREATE TRIGGER IF NOT EXISTS TR1
-                    AFTER INSERT
-                    ON TBL1
-                    FOR EACH ROW
-                    BEGIN
-                    CALL SP1(NEW.ID);
-                    END;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"CREATE TRIGGER IF NOT EXISTS TR1
 AFTER
 INSERT ON TBL1 FOR EACH ROW
@@ -3734,28 +2922,28 @@ END;"#
 
     #[test]
     fn test_get_formatted_sql_while_loop() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DECLARE VAR_COUNT INT;
+
+            SELECT COUNT(ID)
+            INTO VAR_COUNT
+            FROM TBL1;
+
+            WHILE VAR_COUNT > 0 DO
+            DELETE FROM TBL1
+            WHERE ID = VAR_COUNT;
+
+            SELECT COUNT(ID)
+            INTO VAR_COUNT
+            FROM TBL1;
+            END WHILE;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    DECLARE VAR_COUNT INT;
-
-                    SELECT COUNT(ID)
-                    INTO VAR_COUNT
-                    FROM TBL1;
-
-                    WHILE VAR_COUNT > 0 DO
-                    DELETE FROM TBL1
-                    WHERE ID = VAR_COUNT;
-
-                    SELECT COUNT(ID)
-                    INTO VAR_COUNT
-                    FROM TBL1;
-                    END WHILE;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE VAR_COUNT INT;
 
 SELECT COUNT(ID)
@@ -3771,34 +2959,10 @@ WHILE VAR_COUNT > 0 DO
         FROM TBL1;
     END WHILE;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_while_loop_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    DECLARE VAR_COUNT INT;
-
-                    SELECT COUNT(ID)
-                    INTO VAR_COUNT
-                    FROM TBL1;
-
-                    WHILE VAR_COUNT > 0 DO
-                    DELETE FROM TBL1
-                    WHERE ID = VAR_COUNT;
-
-                    SELECT COUNT(ID)
-                    INTO VAR_COUNT
-                    FROM TBL1;
-                    END WHILE;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE VAR_COUNT INT;
 
 SELECT
@@ -3824,24 +2988,24 @@ WHILE VAR_COUNT > 0
 
     #[test]
     fn test_get_formatted_sql_pivot() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT 'AverageCost' AS CostSortedByProductionDays,
+            [0],[1],[2],[3],[4]
+            FROM (
+            SELECT DaysToManufacture, StandardCost
+            FROM Production.Product
+            ) AS SourceTable
+            PIVOT (
+            AVG(StandardCost) FOR DaysToManufacture IN
+            ([0],[1],[2],[3],[4])
+            ) AS PivotTable;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    SELECT 'AverageCost' AS CostSortedByProductionDays,
-                    [0],[1],[2],[3],[4]
-                    FROM (
-                    SELECT DaysToManufacture, StandardCost
-                    FROM Production.Product
-                    ) AS SourceTable
-                    PIVOT (
-                    AVG(StandardCost) FOR DaysToManufacture IN
-                    ([0],[1],[2],[3],[4])
-                    ) AS PivotTable;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT 'AverageCost' AS CostSortedByProductionDays,
     [0], [1], [2], [3], [4]
 FROM (
@@ -3853,30 +3017,10 @@ PIVOT (
             ([0], [1], [2], [3], [4])
     ) AS PivotTable;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_pivot_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    SELECT 'AverageCost' AS CostSortedByProductionDays,
-                    [0],[1],[2],[3],[4]
-                    FROM (
-                    SELECT DaysToManufacture, StandardCost
-                    FROM Production.Product
-                    ) AS SourceTable
-                    PIVOT (
-                    AVG(StandardCost) FOR DaysToManufacture IN
-                    ([0],[1],[2],[3],[4])
-                    ) AS PivotTable;
-                    "#
-                )
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"SELECT
     'AverageCost' AS CostSortedByProductionDays,
     [0],
@@ -3899,32 +3043,32 @@ PIVOT (
 
     #[test]
     fn test_get_formatted_sql_cursor() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DECLARE @ID INT, @NAME NVARCHAR(50);
+
+            DECLARE SAMPLE_CURSOR CURSOR FOR
+            SELECT ID, NAME
+            FROM TBL1;
+
+            OPEN SAMPLE_CURSOR
+
+            FETCH NEXT FROM SAMPLE_CURSOR
+            INTO @ID, @NAME
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+            FETCH NEXT FROM SAMPLE_CURSOR
+            INTO @VENDOR_ID, @VENDOR_NAME
+            END
+            CLOSE SAMPLE_CURSOR;
+            DEALLOCATE SAMPLE_CURSOR;
+            "#,
+        );
+
         assert_eq!(
-            get_formatted_sql(
-                &Configuration::new(),
-                String::from(
-                    r#"
-                    DECLARE @ID INT, @NAME NVARCHAR(50);
-
-                    DECLARE SAMPLE_CURSOR CURSOR FOR
-                    SELECT ID, NAME
-                    FROM TBL1;
-
-                    OPEN SAMPLE_CURSOR
-
-                    FETCH NEXT FROM SAMPLE_CURSOR
-                    INTO @ID, @NAME
-
-                    WHILE @@FETCH_STATUS = 0
-                    BEGIN
-                    FETCH NEXT FROM SAMPLE_CURSOR
-                    INTO @VENDOR_ID, @VENDOR_NAME
-                    END
-                    CLOSE SAMPLE_CURSOR;
-                    DEALLOCATE SAMPLE_CURSOR;
-                    "#,
-                ),
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE @ID INT, @NAME NVARCHAR(50);
 
 DECLARE SAMPLE_CURSOR CURSOR FOR
@@ -3944,38 +3088,10 @@ OPEN SAMPLE_CURSOR
 CLOSE SAMPLE_CURSOR;
 DEALLOCATE SAMPLE_CURSOR;"#
         );
-    }
 
-    #[test]
-    fn test_get_formatted_sql_cursor_config_newline() {
-        let mut config: Configuration = Configuration::new();
         config.newlines = true;
         assert_eq!(
-            get_formatted_sql(
-                &config,
-                String::from(
-                    r#"
-                    DECLARE @ID INT, @NAME NVARCHAR(50);
-
-                    DECLARE SAMPLE_CURSOR CURSOR FOR
-                    SELECT ID, NAME
-                    FROM TBL1;
-
-                    OPEN SAMPLE_CURSOR
-
-                    FETCH NEXT FROM SAMPLE_CURSOR
-                    INTO @ID, @NAME
-
-                    WHILE @@FETCH_STATUS = 0
-                    BEGIN
-                    FETCH NEXT FROM SAMPLE_CURSOR
-                    INTO @VENDOR_ID, @VENDOR_NAME
-                    END
-                    CLOSE SAMPLE_CURSOR;
-                    DEALLOCATE SAMPLE_CURSOR;
-                    "#,
-                ),
-            ),
+            get_formatted_sql(&config, sql.clone()),
             r#"DECLARE @ID INT,
     @NAME NVARCHAR(50);
 
