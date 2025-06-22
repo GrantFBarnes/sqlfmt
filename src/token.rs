@@ -20,6 +20,7 @@ const PLUS: char = '+';
 const QUOTE_DOUBLE: char = '"';
 const QUOTE_SINGLE: char = '\'';
 const SLASH_FORWARD: char = '/';
+pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
 #[derive(Debug, PartialEq, Clone)]

@@ -583,12 +583,7 @@ fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> Strin
     let mut current_line_char_count: usize = 0;
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
-        let curr_ch: char = sql_bytes[i].into();
-        match curr_ch {
-            NEW_LINE => {
-                current_line_char_count = 0;
-                continue;
-            }
+        match sql_bytes[i].into() {
             PAREN_OPEN => {
                 let mut paren_level: usize = 1;
                 for j in i + 1..sql_bytes.len() {
@@ -613,10 +608,11 @@ fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> Strin
 
                     // continue to count until next newline
                     for k in j + 1..sql_bytes.len() {
-                        if char::from(sql_bytes[k]) == NEW_LINE {
-                            break;
+                        match char::from(sql_bytes[k]) {
+                            NEW_LINE => break,
+                            TAB => current_line_char_count += 4,
+                            _ => current_line_char_count += 1,
                         }
-                        current_line_char_count += 1;
                     }
 
                     if current_line_char_count + paren_collapsed.len() > config.chars.into() {
@@ -634,10 +630,12 @@ fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> Strin
                         config,
                     );
                 }
+                current_line_char_count += 1;
             }
-            _ => (),
+            TAB => current_line_char_count += 4,
+            NEW_LINE => current_line_char_count = 0,
+            _ => current_line_char_count += 1,
         }
-        current_line_char_count += 1;
     }
 
     return sql;
@@ -670,41 +668,32 @@ mod tests {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(r#""#);
 
-        assert_eq!(
-            get_formatted_sql(&config, sql.clone()),
-            r#""#
-        );
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#""#);
 
         config.newlines = true;
-        assert_eq!(
-            get_formatted_sql(&config, sql.clone()),
-            r#""#
-        );
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#""#);
     }
 
     #[test]
     fn test_get_formatted_sql_whitespace_only() {
         let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(r#"
+        let sql: String = String::from(
+            r#"
 
-        
 
-        "#);
+        "#,
+        );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
 
 
-
 "#
         );
 
         config.newlines = true;
-        assert_eq!(
-            get_formatted_sql(&config, sql.clone()),
-            r#""#
-        );
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#""#);
     }
 
     #[test]
@@ -848,33 +837,65 @@ FROM TBL1"#
     }
 
     #[test]
-    fn test_get_formatted_sql_config_chars_short() {
+    fn test_get_formatted_sql_config_chars() {
         let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(r#"(SELECT C1, C2 FROM TBL1)"#);
+        let sql: String = String::from(
+            r#"
+            SELECT
+            (SELECT C1, C2 FROM TBL1)
+            "#,
+        );
 
         config.newlines = true;
-        config.chars = 10;
+
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"(
-    SELECT
-        C1,
-        C2
-    FROM TBL1
-)"#
+            r#"SELECT
+                (SELECT C1, C2 FROM TBL1)"#
+        );
+
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+                (
+                    SELECT
+                        C1,
+                        C2
+                    FROM TBL1
+                )"#
         );
     }
 
     #[test]
-    fn test_get_formatted_sql_config_chars_long() {
+    fn test_get_formatted_sql_config_chars_tabs() {
         let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(r#"(SELECT C1, C2 FROM TBL1)"#);
+        let sql: String = String::from(
+            r#"
+			SELECT
+			(SELECT C1, C2 FROM TBL1)
+			"#,
+        );
 
+        config.tabs = ConfigTab::Tab;
         config.newlines = true;
-        config.chars = 120;
+
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"(SELECT C1, C2 FROM TBL1)"#
+            r#"SELECT
+				(SELECT C1, C2 FROM TBL1)"#
+        );
+
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+				(
+					SELECT
+						C1,
+						C2
+					FROM TBL1
+				)"#
         );
     }
 
