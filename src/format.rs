@@ -235,6 +235,7 @@ impl FormatState {
             .contains(&TokenBehavior::NewLineBeforeIfNotEvent)
         {
             if prev1_token.value.to_uppercase() != "ON"
+                && prev1_token.value.to_uppercase() != "BEFORE"
                 && prev1_token.value.to_uppercase() != "AFTER"
                 && prev3_token.is_none_or(|t| t.value.to_uppercase() != "ON")
             {
