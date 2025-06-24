@@ -143,6 +143,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             Some(TokenCategory::ParenClose) => behavior.push(TokenBehavior::NoSpaceBefore),
+            Some(TokenCategory::Operator) => behavior.push(TokenBehavior::NewLineAfterIfLong),
             Some(TokenCategory::Comma) => {
                 behavior.push(TokenBehavior::NoSpaceBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
@@ -1368,6 +1369,7 @@ pub enum TokenBehavior {
     DecreaseIndentOnSingleLine,
     IncreaseIndent,
     NewLineAfter,
+    NewLineAfterIfLong,
     NewLineAfterX2,
     NewLineBefore,
     NewLineBeforeIfNotEvent,
