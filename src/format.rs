@@ -164,7 +164,7 @@ impl FormatState {
 
         if prev1_token
             .behavior
-            .contains(&TokenBehavior::DoubleNewLineAfter)
+            .contains(&TokenBehavior::NewLineAfterX2)
         {
             self.push(Token::newline());
             self.push(Token::newline());
@@ -584,9 +584,9 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                 {
                     let prev_token: Option<&Token> = state.tokens.last();
                     if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
-                        if prev_token.is_some_and(|t| {
-                            t.behavior.contains(&TokenBehavior::DoubleNewLineAfter)
-                        }) {
+                        if prev_token
+                            .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterX2))
+                        {
                             state.push(Token::newline());
                             state.push(Token::newline());
                         } else {

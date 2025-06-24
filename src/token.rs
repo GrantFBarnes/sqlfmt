@@ -137,7 +137,7 @@ impl Token {
 
         match self.category {
             Some(TokenCategory::NewLine) => behavior.push(TokenBehavior::NoWhiteSpaceBefore),
-            Some(TokenCategory::Delimiter) => behavior.push(TokenBehavior::DoubleNewLineAfter),
+            Some(TokenCategory::Delimiter) => behavior.push(TokenBehavior::NewLineAfterX2),
             Some(TokenCategory::ParenOpen) => {
                 behavior.push(TokenBehavior::NoSpaceAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -1365,18 +1365,18 @@ pub enum TokenCategory {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenBehavior {
-    NewLineBefore,
-    NewLineAfter,
-    NewLineBeforeIfNotEvent,
-    NewLineAfterIfLong,
-    DoubleNewLineAfter,
-    NoNewLineBeforeUnlessMatch,
-    NoWhiteSpaceBefore,
-    NoSpaceBefore,
-    NoSpaceAfter,
-    IncreaseIndent,
     DecreaseIndentIfFound,
     DecreaseIndentOnSingleLine,
+    IncreaseIndent,
+    NewLineAfter,
+    NewLineAfterIfLong,
+    NewLineAfterX2,
+    NewLineBefore,
+    NewLineBeforeIfNotEvent,
+    NoNewLineBeforeUnlessMatch,
+    NoSpaceAfter,
+    NoSpaceBefore,
+    NoWhiteSpaceBefore,
 }
 
 enum InterpolationCategory {
