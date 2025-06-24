@@ -216,10 +216,9 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotEvent)
         {
-            if prev1_token.value.to_uppercase() != "ON"
-                && prev1_token.value.to_uppercase() != "BEFORE"
-                && prev1_token.value.to_uppercase() != "AFTER"
-                && prev3_token.is_none_or(|t| t.value.to_uppercase() != "ON")
+            if prev1_token.category != Some(TokenCategory::DataType)
+                && prev1_token.category != Some(TokenCategory::Event)
+                && prev3_token.is_none_or(|t| t.category != Some(TokenCategory::Event))
             {
                 self.push(Token::newline());
                 return;
@@ -235,12 +234,6 @@ impl FormatState {
         }
 
         match token.value.to_uppercase().as_str() {
-            "IF" => {
-                if prev3_token.is_none_or(|t| t.value.to_uppercase() != "CREATE") {
-                    self.push(Token::newline());
-                    return;
-                }
-            }
             "WHILE" => {
                 if prev1_token.value.to_uppercase() != "END" {
                     self.push(Token::newline());
@@ -497,6 +490,7 @@ impl FormatState {
             match token.category {
                 Some(TokenCategory::Keyword)
                 | Some(TokenCategory::DataType)
+                | Some(TokenCategory::Event)
                 | Some(TokenCategory::Method) => match config.case {
                     ConfigCase::Uppercase => token_value = token_value.to_uppercase(),
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
@@ -2479,7 +2473,7 @@ WHERE C <= 1"#
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
-            DROP TABLE TBL1 DROP TABLE TBL2
+            DROP TABLE IF EXISTS TBL1 DROP TABLE TBL2
             DROP TABLE TBL3
             "#,
         );
@@ -2487,7 +2481,7 @@ WHERE C <= 1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
-            DROP TABLE TBL1 DROP TABLE TBL2
+            DROP TABLE IF EXISTS TBL1 DROP TABLE TBL2
             DROP TABLE TBL3
 "#
         );
@@ -2495,7 +2489,7 @@ WHERE C <= 1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"            DROP TABLE TBL1
+            r#"            DROP TABLE IF EXISTS TBL1
             DROP TABLE TBL2
             DROP TABLE TBL3"#
         );
