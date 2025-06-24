@@ -23,11 +23,17 @@ const SLASH_FORWARD: char = '/';
 pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub value: String,
     pub category: Option<TokenCategory>,
     pub behavior: Vec<TokenBehavior>,
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.category == other.category
+    }
 }
 
 impl Token {
@@ -35,6 +41,15 @@ impl Token {
         Token {
             value: String::new(),
             category: None,
+            behavior: vec![],
+        }
+    }
+
+    #[allow(dead_code)]
+    fn new_test(value: &str, category: Option<TokenCategory>) -> Token {
+        Token {
+            value: String::from(value),
+            category: category,
             behavior: vec![],
         }
     }
@@ -1802,45 +1817,13 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT * FROM TBL1")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
             ]
         );
     }
@@ -1850,65 +1833,17 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT T.* FROM TBL1 T")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("T"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("T"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("T", None),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("T", None),
             ]
         );
     }
@@ -1918,38 +1853,11 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT 1 --comment inline")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("--comment inline"),
-                    category: Some(TokenCategory::Comment),
-                    behavior: vec![
-                        TokenBehavior::NoNewLineBeforeUnlessMatch,
-                        TokenBehavior::NewLineAfter
-                    ],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("--comment inline", Some(TokenCategory::Comment)),
             ]
         );
     }
@@ -1963,68 +1871,17 @@ mod tests {
                 FROM TBL1"#
             )),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("\n"),
-                    category: Some(TokenCategory::NewLine),
-                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
-                },
-                Token {
-                    value: String::from("                "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("-- comment newline"),
-                    category: Some(TokenCategory::Comment),
-                    behavior: vec![
-                        TokenBehavior::NoNewLineBeforeUnlessMatch,
-                        TokenBehavior::NewLineAfter
-                    ],
-                },
-                Token {
-                    value: String::from("\n"),
-                    category: Some(TokenCategory::NewLine),
-                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
-                },
-                Token {
-                    value: String::from("                "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test("\n", Some(TokenCategory::NewLine)),
+                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("-- comment newline", Some(TokenCategory::Comment)),
+                Token::new_test("\n", Some(TokenCategory::NewLine)),
+                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
             ]
         );
     }
@@ -2034,58 +1891,15 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("/*multi inline*/"),
-                    category: Some(TokenCategory::Comment),
-                    behavior: vec![
-                        TokenBehavior::NoNewLineBeforeUnlessMatch,
-                        TokenBehavior::NewLineAfter
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("/*multi inline*/", Some(TokenCategory::Comment)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
             ]
         );
     }
@@ -2095,24 +1909,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("*/*multi odd*/*")),
             vec![
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("/*multi odd*/"),
-                    category: Some(TokenCategory::Comment),
-                    behavior: vec![
-                        TokenBehavior::NoNewLineBeforeUnlessMatch,
-                        TokenBehavior::NewLineAfter
-                    ],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test("/*multi odd*/", Some(TokenCategory::Comment)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
             ]
         );
     }
@@ -2121,14 +1920,10 @@ mod tests {
     fn test_get_sql_tokens_comment_multi_double() {
         assert_eq!(
             get_sql_tokens(String::from("/*multi double*//*multi double*/")),
-            vec![Token {
-                value: String::from("/*multi double*//*multi double*/"),
-                category: Some(TokenCategory::Comment),
-                behavior: vec![
-                    TokenBehavior::NoNewLineBeforeUnlessMatch,
-                    TokenBehavior::NewLineAfter
-                ],
-            },]
+            vec![Token::new_test(
+                "/*multi double*//*multi double*/",
+                Some(TokenCategory::Comment)
+            )],
         );
     }
 
@@ -2144,73 +1939,23 @@ mod tests {
                 FROM TBL1"#
             )),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("\n"),
-                    category: Some(TokenCategory::NewLine),
-                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
-                },
-                Token {
-                    value: String::from("                "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(
-                        r#"/*
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test("\n", Some(TokenCategory::NewLine)),
+                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test(
+                    r#"/*
                     multi line
                     comment
-                */"#
-                    ),
-                    category: Some(TokenCategory::Comment),
-                    behavior: vec![
-                        TokenBehavior::NoNewLineBeforeUnlessMatch,
-                        TokenBehavior::NewLineAfter
-                    ],
-                },
-                Token {
-                    value: String::from("\n"),
-                    category: Some(TokenCategory::NewLine),
-                    behavior: vec![TokenBehavior::NoWhiteSpaceBefore],
-                },
-                Token {
-                    value: String::from("                "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                */"#,
+                    Some(TokenCategory::Comment)
+                ),
+                Token::new_test("\n", Some(TokenCategory::NewLine)),
+                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
             ]
         );
     }
@@ -2220,25 +1965,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT `Column 1`")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("`Column 1`"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("`Column 1`", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2248,25 +1977,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT 'Column 1'")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("'Column 1'"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("'Column 1'", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2276,25 +1989,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT \"Column 1\"")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("\"Column 1\""),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("\"Column 1\"", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2304,25 +2001,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT [Column 1]")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("[Column 1]"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("[Column 1]", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2331,11 +2012,7 @@ mod tests {
     fn test_get_sql_tokens_quote_bracket_datatype() {
         assert_eq!(
             get_sql_tokens(String::from("[NVARCHAR]")),
-            vec![Token {
-                value: String::from("[NVARCHAR]"),
-                category: Some(TokenCategory::Quote),
-                behavior: vec![],
-            },]
+            vec![Token::new_test("[NVARCHAR]", Some(TokenCategory::Quote))],
         );
     }
 
@@ -2344,55 +2021,15 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("[S]"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("[TBL1]"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("[S]", Some(TokenCategory::Quote)),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("[TBL1]", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2402,35 +2039,11 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT TBL1.[C1]")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("TBL1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("[C1]"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("TBL1", None),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("[C1]", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2439,11 +2052,7 @@ mod tests {
     fn test_get_sql_tokens_interpolation_bracket() {
         assert_eq!(
             get_sql_tokens(String::from("{value}")),
-            vec![Token {
-                value: String::from("{value}"),
-                category: None,
-                behavior: vec![],
-            },]
+            vec![Token::new_test("{value}", None)],
         );
     }
 
@@ -2451,11 +2060,7 @@ mod tests {
     fn test_get_sql_tokens_interpolation_percent() {
         assert_eq!(
             get_sql_tokens(String::from("%T")),
-            vec![Token {
-                value: String::from("%T"),
-                category: None,
-                behavior: vec![],
-            },]
+            vec![Token::new_test("%T", None)],
         );
     }
 
@@ -2463,11 +2068,7 @@ mod tests {
     fn test_get_sql_tokens_interpolation_bracket_in_quote() {
         assert_eq!(
             get_sql_tokens(String::from("'{value}'")),
-            vec![Token {
-                value: String::from("'{value}'"),
-                category: Some(TokenCategory::Quote),
-                behavior: vec![],
-            },]
+            vec![Token::new_test("'{value}'", Some(TokenCategory::Quote))],
         );
     }
 
@@ -2475,11 +2076,7 @@ mod tests {
     fn test_get_sql_tokens_interpolation_percent_in_quote() {
         assert_eq!(
             get_sql_tokens(String::from("'%%'")),
-            vec![Token {
-                value: String::from("'%%'"),
-                category: Some(TokenCategory::Quote),
-                behavior: vec![],
-            },]
+            vec![Token::new_test("'%%'", Some(TokenCategory::Quote))],
         );
     }
 
@@ -2488,45 +2085,13 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]}")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("{tableNames[i]}"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("{tableNames[i]}", None),
             ]
         );
     }
@@ -2536,45 +2101,13 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT C1 FROM %v")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("FROM"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("%v"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("%v", None),
             ]
         );
     }
@@ -2584,50 +2117,14 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("CALL SCH.{procedureName}();")),
             vec![
-                Token {
-                    value: String::from("CALL"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::IncreaseIndent,
-                        TokenBehavior::DecreaseIndentOnSingleLine,
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("SCH"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("{procedureName}"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("("),
-                    category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(")"),
-                    category: Some(TokenCategory::ParenClose),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("CALL", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("SCH", None),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("{procedureName}", None),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -2637,50 +2134,14 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("CALL SCH.%s();")),
             vec![
-                Token {
-                    value: String::from("CALL"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::IncreaseIndent,
-                        TokenBehavior::DecreaseIndentOnSingleLine,
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("SCH"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("%s"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("("),
-                    category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(")"),
-                    category: Some(TokenCategory::ParenClose),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("CALL", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("SCH", None),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("%s", None),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -2690,50 +2151,14 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("DECLARE V1 = '';")),
             vec![
-                Token {
-                    value: String::from("DECLARE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::IncreaseIndent,
-                        TokenBehavior::DecreaseIndentOnSingleLine
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("V1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("''"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("V1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("''", Some(TokenCategory::Quote)),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -2743,50 +2168,14 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("DECLARE V1 = '''';")),
             vec![
-                Token {
-                    value: String::from("DECLARE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::IncreaseIndent,
-                        TokenBehavior::DecreaseIndentOnSingleLine
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("V1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("''''"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("V1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("''''", Some(TokenCategory::Quote)),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -2796,25 +2185,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT N'Column Name'")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("N'Column Name'"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("N'Column Name'", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2824,25 +2197,9 @@ mod tests {
         assert_eq!(
             get_sql_tokens(String::from("SELECT 'Column''s Name'")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("'Column''s Name'"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("'Column''s Name'", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2855,28 +2212,13 @@ mod tests {
 Name'"#
             )),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(
-                        r#"'Column
-Name'"#
-                    ),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(
+                    r#"'Column
+Name'"#,
+                    Some(TokenCategory::Quote)
+                ),
             ]
         );
     }
@@ -2886,25 +2228,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT 'Column")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("'Column"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("'Column", Some(TokenCategory::Quote)),
             ]
         );
     }
@@ -2914,30 +2240,10 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT 1;")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -2947,59 +2253,15 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT 1; SELECT 1;")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -3011,94 +2273,22 @@ Name'"#
                 "SELECT 1; DELIMITER $$ SELECT 1; DELIMITER \\"
             )),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(";"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("DELIMITER"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("$$"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1;"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("DELIMITER"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("\\"),
-                    category: Some(TokenCategory::Delimiter),
-                    behavior: vec![TokenBehavior::DoubleNewLineAfter],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("$$", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1;", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("\\", Some(TokenCategory::Delimiter)),
             ]
         );
     }
@@ -3108,50 +2298,14 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT 1,2, 3")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(","),
-                    category: Some(TokenCategory::Comma),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NewLineAfter],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(","),
-                    category: Some(TokenCategory::Comma),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NewLineAfter],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("2", None),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3161,25 +2315,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT -1")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("-1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("-1", None),
             ]
         );
     }
@@ -3189,35 +2327,11 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT MIN()")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("MIN"),
-                    category: Some(TokenCategory::Method),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("("),
-                    category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(")"),
-                    category: Some(TokenCategory::ParenClose),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("MIN", Some(TokenCategory::Method)),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
             ]
         );
     }
@@ -3227,49 +2341,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("SELECT (SELECT 1)")),
             vec![
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("("),
-                    category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from("SELECT"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![
-                        TokenBehavior::NewLineBefore,
-                        TokenBehavior::NewLineAfter,
-                        TokenBehavior::IncreaseIndent
-                    ],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(")"),
-                    category: Some(TokenCategory::ParenClose),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
-                },
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("1", None),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
             ]
         );
     }
@@ -3279,41 +2357,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("1+2 + 3")),
             vec![
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("+"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("+"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("1", None),
+                Token::new_test("+", Some(TokenCategory::Operator)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("+", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3323,41 +2373,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("1-2 - 3")),
             vec![
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("-"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("-"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("1", None),
+                Token::new_test("-", Some(TokenCategory::Operator)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("-", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3367,41 +2389,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("1*2 * 3")),
             vec![
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("1", None),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3411,41 +2405,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("1/2 / 3")),
             vec![
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("/"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("/"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("1", None),
+                Token::new_test("/", Some(TokenCategory::Operator)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("/", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3455,41 +2421,13 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("1%2 % 3")),
             vec![
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("%"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("%"),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("3"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("1", None),
+                Token::new_test("%", Some(TokenCategory::Operator)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("%", Some(TokenCategory::Operator)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("3", None),
             ]
         );
     }
@@ -3499,21 +2437,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V+=1")),
             vec![
-                Token {
-                    value: String::from("V"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("+="),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V", None),
+                Token::new_test("+=", Some(TokenCategory::Operator)),
+                Token::new_test("1", None),
             ]
         );
     }
@@ -3523,21 +2449,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V-=1")),
             vec![
-                Token {
-                    value: String::from("V"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("-="),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V", None),
+                Token::new_test("-=", Some(TokenCategory::Operator)),
+                Token::new_test("1", None),
             ]
         );
     }
@@ -3547,21 +2461,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V*=1")),
             vec![
-                Token {
-                    value: String::from("V"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("*="),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V", None),
+                Token::new_test("*=", Some(TokenCategory::Operator)),
+                Token::new_test("1", None),
             ]
         );
     }
@@ -3571,21 +2473,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V/=1")),
             vec![
-                Token {
-                    value: String::from("V"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("/="),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V", None),
+                Token::new_test("/=", Some(TokenCategory::Operator)),
+                Token::new_test("1", None),
             ]
         );
     }
@@ -3595,21 +2485,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V%=1")),
             vec![
-                Token {
-                    value: String::from("V"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("%="),
-                    category: Some(TokenCategory::Operator),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("1"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V", None),
+                Token::new_test("%=", Some(TokenCategory::Operator)),
+                Token::new_test("1", None),
             ]
         );
     }
@@ -3619,21 +2497,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V1&V2")),
             vec![
-                Token {
-                    value: String::from("V1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("&"),
-                    category: Some(TokenCategory::Bitwise),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("V2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V1", None),
+                Token::new_test("&", Some(TokenCategory::Bitwise)),
+                Token::new_test("V2", None),
             ]
         );
     }
@@ -3643,21 +2509,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V1|V2")),
             vec![
-                Token {
-                    value: String::from("V1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("|"),
-                    category: Some(TokenCategory::Bitwise),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("V2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V1", None),
+                Token::new_test("|", Some(TokenCategory::Bitwise)),
+                Token::new_test("V2", None),
             ]
         );
     }
@@ -3667,21 +2521,9 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("V1^V2")),
             vec![
-                Token {
-                    value: String::from("V1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("^"),
-                    category: Some(TokenCategory::Bitwise),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("V2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("V1", None),
+                Token::new_test("^", Some(TokenCategory::Bitwise)),
+                Token::new_test("V2", None),
             ]
         );
     }
@@ -3691,71 +2533,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test("<", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("<", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -3765,71 +2555,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(">"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(">"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(">", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(">", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -3839,71 +2577,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test("=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -3913,71 +2599,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<>"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<>"),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test("<>", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("<>", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -3987,71 +2621,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(">="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(">="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(">=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(">=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -4061,71 +2643,19 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2")),
             vec![
-                Token {
-                    value: String::from("WHERE"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("AND"),
-                    category: Some(TokenCategory::Keyword),
-                    behavior: vec![TokenBehavior::NewLineBefore],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C1"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("<="),
-                    category: Some(TokenCategory::Compare),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(" "),
-                    category: Some(TokenCategory::Space),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("C2"),
-                    category: None,
-                    behavior: vec![],
-                },
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test("<=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("<=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C2", None),
             ]
         );
     }
@@ -4135,36 +2665,12 @@ Name'"#
         assert_eq!(
             get_sql_tokens(String::from("Instructions.nodes('/root/Location')")),
             vec![
-                Token {
-                    value: String::from("Instructions"),
-                    category: None,
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("."),
-                    category: Some(TokenCategory::FullStop),
-                    behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
-                },
-                Token {
-                    value: String::from("nodes"),
-                    category: Some(TokenCategory::XmlMethod),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from("("),
-                    category: Some(TokenCategory::ParenOpen),
-                    behavior: vec![TokenBehavior::NoSpaceAfter, TokenBehavior::IncreaseIndent],
-                },
-                Token {
-                    value: String::from("'/root/Location'"),
-                    category: Some(TokenCategory::Quote),
-                    behavior: vec![],
-                },
-                Token {
-                    value: String::from(")"),
-                    category: Some(TokenCategory::ParenClose),
-                    behavior: vec![TokenBehavior::NoSpaceBefore],
-                },
+                Token::new_test("Instructions", None),
+                Token::new_test(".", Some(TokenCategory::FullStop)),
+                Token::new_test("nodes", Some(TokenCategory::XmlMethod)),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test("'/root/Location'", Some(TokenCategory::Quote)),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
             ]
         );
     }
