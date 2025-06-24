@@ -208,7 +208,16 @@ impl FormatState {
         }
 
         if token.behavior.contains(&TokenBehavior::NewLineBefore) {
+            self.push(Token::newline());
+            return;
+        }
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::NewLineBeforeIfNotEvent)
+        {
             if prev1_token.value.to_uppercase() != "ON"
+                && prev1_token.value.to_uppercase() != "AFTER"
                 && prev3_token.is_none_or(|t| t.value.to_uppercase() != "ON")
             {
                 self.push(Token::newline());
@@ -3139,8 +3148,8 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            CREATE TRIGGER IF NOT EXISTS TR1
-            AFTER
-            INSERT ON TBL1 FOR EACH ROW
+            AFTER INSERT ON TBL1
+            FOR EACH ROW
             BEGIN
                 CALL SP1(NEW.ID);
             END;"#

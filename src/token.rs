@@ -185,7 +185,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
-            "DELETE" => behavior.push(TokenBehavior::NewLineBefore),
+            "DELETE" => behavior.push(TokenBehavior::NewLineBeforeIfNotEvent),
             "DELIMITER" => behavior.push(TokenBehavior::NewLineBefore),
             "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
             "DO" => {
@@ -225,7 +225,7 @@ impl Token {
             }
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
             "INSERT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "JOIN" => {
@@ -257,7 +257,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "SET" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
             }
             "TRUNCATE" => behavior.push(TokenBehavior::NewLineBefore),
@@ -266,7 +266,7 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfter);
             }
             "UPDATE" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
             "VALUES" => {
@@ -1366,6 +1366,7 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     NewLineBefore,
     NewLineAfter,
+    NewLineBeforeIfNotEvent,
     DoubleNewLineAfter,
     NoNewLineBeforeUnlessMatch,
     NoWhiteSpaceBefore,
