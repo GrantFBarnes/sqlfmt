@@ -77,7 +77,7 @@ impl FormatState {
         }
 
         if config.newlines {
-            self.add_pre_newline(token, config);
+            self.add_pre_newline(token);
             self.remove_extra_newline(token);
         }
 
@@ -134,7 +134,7 @@ impl FormatState {
         self.push(Token::new_space(String::from(" ")));
     }
 
-    fn add_pre_newline(&mut self, token: &Token, config: &Configuration) {
+    fn add_pre_newline(&mut self, token: &Token) {
         if self.tokens.is_empty() {
             return;
         }
@@ -169,24 +169,6 @@ impl FormatState {
             self.push(Token::newline());
             self.push(Token::newline());
             return;
-        }
-
-        if prev1_token
-            .behavior
-            .contains(&TokenBehavior::NewLineAfterIfLong)
-        {
-            let mut current_line_char_count: usize = 0;
-            for i in (0..self.tokens.len()).rev() {
-                let prev_token: &Token = &self.tokens[i];
-                match prev_token.category {
-                    Some(TokenCategory::NewLine) => break,
-                    _ => current_line_char_count += prev_token.value.len(),
-                }
-            }
-            if current_line_char_count > config.chars.into() {
-                self.push(Token::newline());
-                return;
-            }
         }
 
         match prev1_token.category {
@@ -941,33 +923,6 @@ FROM TBL1"#
 						C2
 					FROM TBL1
 				)"#
-        );
-    }
-
-    #[test]
-    fn test_get_formatted_sql_config_chars_operator() {
-        let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(
-            r#"
-            SELECT 'C1: ' + C1 + ', C2: ' + C2
-            "#,
-        );
-
-        config.newlines = true;
-
-        assert_eq!(
-            get_formatted_sql(&config, sql.clone()),
-            r#"            SELECT
-                'C1: ' + C1 + ', C2: ' + C2"#
-        );
-
-        config.chars = 20;
-        assert_eq!(
-            get_formatted_sql(&config, sql.clone()),
-            r#"            SELECT
-                'C1: ' +
-                C1 + ', C2: ' +
-                C2"#
         );
     }
 
