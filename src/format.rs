@@ -353,19 +353,15 @@ impl FormatState {
         }
     }
 
-    fn decrease_indent_stack(&mut self, tokens: &Vec<Token>, i: usize) {
+    fn decrease_indent_stack(&mut self, token: &Token) {
         if self.indent_stack.is_empty() {
             return;
         }
 
-        let token: &Token = &tokens[i];
+        let indent_stack_top_token: &Token = self.indent_stack.last().unwrap();
+        let indent_stack_top_token_value: &String = &indent_stack_top_token.value.to_uppercase();
 
         let token_value: String = token.value.to_uppercase();
-        let top_of_stack: &Token = self
-            .indent_stack
-            .last()
-            .expect("should always have item on stack");
-        let top_of_stack_value: &String = &top_of_stack.value.to_uppercase();
 
         let required_to_decrease: HashMap<&str, &str> = HashMap::from([
             ("(", ")"),
@@ -376,105 +372,74 @@ impl FormatState {
             ("THEN", "END"),
         ]);
 
-        if let Some(v) = required_to_decrease.get(top_of_stack_value.as_str()) {
-            if &token_value == v {
-                self.indent_stack.pop();
+        let mut decrease_until: Vec<&str> = vec![];
+        for kv in &required_to_decrease {
+            if kv.1 == &token_value {
+                decrease_until.push(kv.0);
             }
-            return;
         }
 
-        match token.category {
-            Some(TokenCategory::Delimiter) => {
-                if top_of_stack
-                    .behavior
-                    .contains(&TokenBehavior::DecreaseIndentOnSingleLine)
-                {
-                    self.indent_stack.pop();
+        if !decrease_until.is_empty() {
+            loop {
+                let top: Option<Token> = self.indent_stack.pop();
+                if top.is_none() {
+                    return;
+                }
+                let top: Token = top.unwrap();
+                let top_value: String = top.value.to_uppercase();
+
+                if decrease_until.contains(&top_value.as_str()) {
+                    return;
+                }
+
+                if required_to_decrease.get(top_value.as_str()).is_some() {
+                    self.indent_stack.push(top);
                     return;
                 }
             }
-            _ => (),
         }
 
-        if top_of_stack
-            .behavior
-            .contains(&TokenBehavior::DecreaseIndentIfFound)
+        if required_to_decrease
+            .get(indent_stack_top_token_value.as_str())
+            .is_some()
         {
-            if &token.value.to_uppercase() == top_of_stack_value
-                || tokens
-                    .get(i + 1)
-                    .is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
-                || tokens
-                    .get(i + 2)
-                    .is_some_and(|t| &t.value.to_uppercase() == top_of_stack_value)
-            {
+            return;
+        }
+
+        if indent_stack_top_token
+            .behavior
+            .contains(&TokenBehavior::DecreaseIndentOnSingleLine)
+        {
+            if token.category == Some(TokenCategory::Delimiter) {
                 self.indent_stack.pop();
                 return;
             }
         }
 
-        let decrease_until_match: Vec<&str> = match token_value.as_str() {
-            ")" => vec!["("],
-            "CLOSE" => vec!["OPEN"],
-            "END" => vec!["BEGIN", "CASE", "THEN", "ELSE"],
-            "INTO" => vec!["SELECT", "INSERT"],
-            "SET" => vec!["UPDATE"],
-            "VALUES" => vec!["INTO"],
-            "BEGIN" | "CALL" | "DECLARE" | "DELETE" | "DELIMITER" | "DROP" | "ELSE" | "EXEC"
-            | "EXECUTE" | "FOR" | "IF" | "INSERT" | "OPEN" | "PIVOT" | "RETURN" | "SELECT"
-            | "TRUNCATE" | "UNION" | "UPDATE" | "WITH" => {
-                vec![
-                    "BEGIN",
-                    "CALL",
-                    "DECLARE",
-                    "DELETE",
-                    "DELIMITER",
-                    "DROP",
-                    "EXEC",
-                    "EXECUTE",
-                    "ELSE",
-                    "FOR",
-                    "FROM",
-                    "GROUP",
-                    "HAVING",
-                    "IF",
-                    "INSERT",
-                    "OPEN",
-                    "PIVOT",
-                    "RETURN",
-                    "SELECT",
-                    "SET",
-                    "TRUNCATE",
-                    "UNION",
-                    "UPDATE",
-                    "WHERE",
-                    "WHILE",
-                    "WITH",
-                ]
-            }
-            "FROM" => vec!["SELECT", "DELETE", "UPDATE", "INTO"],
-            "WHERE" | "ORDER" | "GROUP" | "HAVING" | "LIMIT" | "WHILE" => {
-                vec!["FROM"]
-            }
-            _ => vec![],
-        };
-        if !decrease_until_match.is_empty() {
+        if token
+            .behavior
+            .contains(&TokenBehavior::DecreaseIndentUntilNewLine)
+        {
             loop {
                 let top: Option<Token> = self.indent_stack.pop();
                 if top.is_none() {
-                    break;
+                    return;
                 }
                 let top: Token = top.unwrap();
 
-                if let Some(v) = required_to_decrease.get(top.value.as_str()) {
-                    if &token_value != v {
-                        self.indent_stack.push(top);
-                    }
+                if required_to_decrease
+                    .get(top.value.to_uppercase().as_str())
+                    .is_some()
+                {
+                    self.indent_stack.push(top);
                     return;
                 }
 
-                if decrease_until_match.contains(&top.value.as_str()) {
-                    break;
+                if top
+                    .behavior
+                    .contains(&TokenBehavior::DecreaseIndentUntilNewLine)
+                {
+                    return;
                 }
             }
         }
@@ -584,7 +549,7 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
         }
 
         state.increase_paren_stack(token);
-        state.decrease_indent_stack(&tokens, i);
+        state.decrease_indent_stack(token);
         state.add_pre_space(token, config);
         state.push(token.clone());
         state.increase_indent_stack(token);
@@ -1712,8 +1677,8 @@ SET C3 = 3"#
                 T3.C3 AS C3
             FROM TBL1 AS T1
                 INNER JOIN TBL2 AS T2
-                    ON T2.C1 = T1.C1
-                    AND T2.C2 = T1.C2
+                ON T2.C1 = T1.C1
+                AND T2.C2 = T1.C2
                 INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
             WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
             ORDER BY T1.C1
@@ -1731,7 +1696,7 @@ SET C3 = 3"#
                 T3.C3 AS C3
             FROM TBL1 AS T1
                 INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
-                    AND T2.C2 = T1.C2
+                AND T2.C2 = T1.C2
                 INNER JOIN TBL3 AS T3 ON T3.C2 = T2.C2
             WHERE (T1.C2 <> T2.C2 OR T1.C2 <> T3.C2)
             ORDER BY T1.C1
@@ -2182,7 +2147,7 @@ FROM TBL1;"#
                 *
             FROM T1
                 LEFT JOIN T2 ON T2.C1 = T1.C1
-                    OR T2.C2 = T1.C2"#
+                OR T2.C2 = T1.C2"#
         );
     }
 
@@ -2202,7 +2167,7 @@ FROM TBL1;"#
             r#"
             SELECT * FROM T1
                 LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
-                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
+                AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
 "#
         );
 
@@ -2213,7 +2178,7 @@ FROM TBL1;"#
                 *
             FROM T1
                 LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
-                    AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
+                AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
         );
     }
 
@@ -3183,13 +3148,13 @@ CALL SP1()"#
             FROM TBL1;
 
             WHILE VAR_COUNT > 0 DO
-                    DELETE FROM TBL1
-                    WHERE ID = VAR_COUNT;
+                DELETE FROM TBL1
+                WHERE ID = VAR_COUNT;
 
-                    SELECT COUNT(ID)
-                    INTO VAR_COUNT
-                    FROM TBL1;
-                END WHILE;
+                SELECT COUNT(ID)
+                INTO VAR_COUNT
+                FROM TBL1;
+            END WHILE;
 "#
         );
 
@@ -3205,17 +3170,18 @@ CALL SP1()"#
             FROM TBL1;
 
             WHILE VAR_COUNT > 0
-                DO
-                    DELETE
-                    FROM TBL1
-                    WHERE ID = VAR_COUNT;
+            DO
+                DELETE
+                FROM TBL1
+                WHERE ID = VAR_COUNT;
 
-                    SELECT
-                        COUNT(ID)
-                    INTO
-                        VAR_COUNT
-                    FROM TBL1;
-                END WHILE;"#
+                SELECT
+                    COUNT(ID)
+                INTO
+                    VAR_COUNT
+                FROM TBL1;
+            END
+            WHILE;"#
         );
     }
 

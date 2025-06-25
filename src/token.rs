@@ -174,11 +174,13 @@ impl Token {
             "BEGIN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "CALL" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "CASE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -193,104 +195,148 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "DELETE" => behavior.push(TokenBehavior::NewLineBeforeIfNotEvent),
-            "DELIMITER" => behavior.push(TokenBehavior::NewLineBefore),
+            "DELETE" => {
+                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
+            "DELIMITER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
             "DO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "DROP" => behavior.push(TokenBehavior::NewLineBefore),
-            "ELSE" => behavior.push(TokenBehavior::NewLineBefore),
+            "DROP" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
+            "ELSE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "END" => behavior.push(TokenBehavior::NewLineBefore),
             "EXEC" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "EXECUTE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
             "FOR" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "FROM" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "GROUP" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "HAVING" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "IF" => behavior.push(TokenBehavior::NewLineBeforeIfNotEvent),
+            "IF" => {
+                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "INNER" => behavior.push(TokenBehavior::NewLineBefore),
             "INSERT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "JOIN" => {
-                behavior.push(TokenBehavior::IncreaseIndent);
-                behavior.push(TokenBehavior::DecreaseIndentIfFound);
-            }
+            "INTO" => behavior.push(TokenBehavior::DecreaseIndentUntilNewLine),
             "LEFT" => behavior.push(TokenBehavior::NewLineBefore),
-            "LIMIT" => behavior.push(TokenBehavior::NewLineBefore),
+            "LIMIT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "OPEN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "OR" => behavior.push(TokenBehavior::NewLineBefore),
             "ORDER" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "OUTER" => behavior.push(TokenBehavior::NewLineBefore),
             "PIVOT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "PRIMARY" => behavior.push(TokenBehavior::NewLineBefore),
-            "RETURN" => behavior.push(TokenBehavior::NewLineBefore),
+            "RETURN" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "RIGHT" => behavior.push(TokenBehavior::NewLineBefore),
             "SELECT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "SET" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::DecreaseIndentOnSingleLine);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "TRUNCATE" => behavior.push(TokenBehavior::NewLineBefore),
+            "TRUNCATE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "UNION" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "UPDATE" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "VALUES" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
             "WHERE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
-            "WHILE" => behavior.push(TokenBehavior::IncreaseIndent),
+            "WHILE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
+            }
             "WITH" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndentUntilNewLine);
             }
             _ => (),
         };
@@ -1378,8 +1424,8 @@ pub enum TokenCategory {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenBehavior {
-    DecreaseIndentIfFound,
     DecreaseIndentOnSingleLine,
+    DecreaseIndentUntilNewLine,
     IncreaseIndent,
     NewLineAfter,
     NewLineAfterX2,
