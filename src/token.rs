@@ -3,6 +3,7 @@ const ASTERISK: char = '*';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
+const CARRIAGE_RETURN: char = '\r';
 const CIRCUMFLEX: char = '^';
 const COMMA: char = ',';
 const CURLY_BRACKET_CLOSE: char = '}';
@@ -1465,6 +1466,10 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let sql_bytes: &[u8] = sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
+
+        if curr_ch == CARRIAGE_RETURN {
+            continue;
+        }
 
         let prev2_ch: Option<char> = if i >= 2 {
             Some(sql_bytes[i - 2].into())
