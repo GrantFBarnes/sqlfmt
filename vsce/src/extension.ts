@@ -85,6 +85,10 @@ function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Pr
 
     process.on("close", (code: any) => {
       if (code === 0) {
+        // remove single extra newline if found
+        if (formattedSql.endsWith("\n")) {
+          formattedSql = formattedSql.replace(/\n$/, "");
+        }
         resolve(formattedSql);
       } else {
         reject(`Process exited with code ${code}`);
