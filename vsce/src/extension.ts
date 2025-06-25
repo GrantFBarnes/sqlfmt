@@ -16,6 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     getFormattedSql(editor.document, range).then((formattedSql: string) => {
+      vscode.window.showInformationMessage("SQL is formatted.");
       editor.edit((editBuilder) => {
         editBuilder.replace(range, formattedSql);
       });
@@ -84,7 +85,6 @@ function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Pr
 
     process.on("close", (code: any) => {
       if (code === 0) {
-        vscode.window.showInformationMessage("SQL is formatted.");
         resolve(formattedSql);
       } else {
         reject(`Process exited with code ${code}`);
