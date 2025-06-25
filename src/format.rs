@@ -2157,19 +2157,38 @@ FROM TBL1;"#
     #[test]
     fn test_get_formatted_sql_select_if() {
         let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(r#"SELECT IIF(C1>5,1,0) AS C1 FROM TBL1"#);
+        let sql: String = String::from(
+            r#"
+            SELECT
+                C1,
+                IIF(C1 > 5, 1, 0) AS 'IIF',
+                C2,
+                IF(C2 > 5, 1, 0) AS 'IF'
+            FROM TBL1
+            "#,
+        );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT IIF(C1 > 5, 1, 0) AS C1 FROM TBL1"#
+            r#"
+            SELECT
+                C1,
+                IIF(C1 > 5, 1, 0) AS 'IIF',
+                C2,
+            IF(C2 > 5, 1, 0) AS 'IF'
+            FROM TBL1
+"#,
         );
 
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"SELECT
-    IIF(C1 > 5, 1, 0) AS C1
-FROM TBL1"#
+            r#"            SELECT
+                C1,
+                IIF(C1 > 5, 1, 0) AS 'IIF',
+                C2,
+            IF(C2 > 5, 1, 0) AS 'IF'
+            FROM TBL1"#,
         );
     }
 
