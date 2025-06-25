@@ -68,7 +68,7 @@ impl Token {
         Token {
             value: space,
             category: Some(TokenCategory::Space),
-            behavior: vec![],
+            behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
         }
     }
 
@@ -76,7 +76,10 @@ impl Token {
         Token {
             value: "\n".to_string(),
             category: Some(TokenCategory::NewLine),
-            behavior: vec![],
+            behavior: vec![
+                TokenBehavior::NoWhiteSpaceBefore,
+                TokenBehavior::NoNewLineAfterX2Skip,
+            ],
         }
     }
 
@@ -146,13 +149,20 @@ impl Token {
         let mut behavior: Vec<TokenBehavior> = vec![];
 
         match self.category {
-            Some(TokenCategory::NewLine) => behavior.push(TokenBehavior::NoWhiteSpaceBefore),
-            Some(TokenCategory::Delimiter) => behavior.push(TokenBehavior::NewLineAfterX2),
+            Some(TokenCategory::NewLine) => (), // defined in self.newline() method
+            Some(TokenCategory::Space) => (),   // defined in self.new_space() method
+            Some(TokenCategory::Delimiter) => {
+                behavior.push(TokenBehavior::NewLineAfterX2);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
+            }
             Some(TokenCategory::ParenOpen) => {
                 behavior.push(TokenBehavior::NoSpaceAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
-            Some(TokenCategory::ParenClose) => behavior.push(TokenBehavior::NoSpaceBefore),
+            Some(TokenCategory::ParenClose) => {
+                behavior.push(TokenBehavior::NoSpaceBefore);
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             Some(TokenCategory::Comma) => {
                 behavior.push(TokenBehavior::NoSpaceBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
@@ -162,23 +172,31 @@ impl Token {
                 behavior.push(TokenBehavior::NoSpaceAfter);
             }
             Some(TokenCategory::Interpolation) => {
-                behavior.push(TokenBehavior::NoSpaceAroundIfNotInput);
+                behavior.push(TokenBehavior::NoSpaceAroundIfNotProvidedInput);
             }
             Some(TokenCategory::Comment) => {
                 behavior.push(TokenBehavior::InputSpaceBeforeIfAfterNewline);
                 behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
             _ => (),
         }
 
         match self.value.to_uppercase().as_str() {
-            "AFTER" => behavior.push(TokenBehavior::NewLineBefore),
-            "AND" => behavior.push(TokenBehavior::NewLineBefore),
-            "BEFORE" => behavior.push(TokenBehavior::NewLineBefore),
+            "AFTER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
+            "AND" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
+            "BEFORE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "BEGIN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -196,26 +214,35 @@ impl Token {
                 behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
-            "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
-            "CREATE" => behavior.push(TokenBehavior::NewLineBefore),
-            "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
+            "CLOSE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
+            "CREATE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
+            "CROSS" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "DECLARE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "DELETE" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "DELIMITER" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "DISTINCT" => behavior.push(TokenBehavior::NewLineAfter),
+            "DISTINCT" => {
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
             "DO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -225,9 +252,13 @@ impl Token {
             }
             "ELSE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NoNewLineBeforeX2);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "END" => behavior.push(TokenBehavior::NewLineBefore),
+            "END" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NoNewLineBeforeX2);
+            }
             "EXEC" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -238,7 +269,9 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "FETCH" => behavior.push(TokenBehavior::NewLineBefore),
+            "FETCH" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "FOR" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -260,17 +293,26 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "IF" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "INNER" => behavior.push(TokenBehavior::NewLineBefore),
+            "INNER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "INSERT" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "INTO" => behavior.push(TokenBehavior::DecreaseIndent),
-            "LEFT" => behavior.push(TokenBehavior::NewLineBefore),
+            "INTO" => {
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineAfterIfNotAfterKeyword);
+                behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "LEFT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "LIMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
@@ -280,24 +322,32 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "OR" => behavior.push(TokenBehavior::NewLineBefore),
+            "OR" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "ORDER" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "OUTER" => behavior.push(TokenBehavior::NewLineBefore),
+            "OUTER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "PIVOT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "PRIMARY" => behavior.push(TokenBehavior::NewLineBefore),
+            "PRIMARY" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "RETURN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "RIGHT" => behavior.push(TokenBehavior::NewLineBefore),
+            "RIGHT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "SELECT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
@@ -305,8 +355,15 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "SET" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
+                behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
                 behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "THEN" => {
+                behavior.push(TokenBehavior::IncreaseIndentIfInsideCase);
+            }
+            "TOP" => {
+                behavior.push(TokenBehavior::NewLineAfterSkip);
             }
             "TRUNCATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -322,7 +379,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "UPDATE" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotEvent);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -330,7 +387,9 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "WHEN" => behavior.push(TokenBehavior::NewLineBefore),
+            "WHEN" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "WHERE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -1435,15 +1494,22 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     DecreaseIndent,
     IncreaseIndent,
+    IncreaseIndentIfNotAfterKeyword,
+    IncreaseIndentIfInsideCase,
     InputSpaceBeforeIfAfterNewline,
     NewLineAfter,
+    NewLineAfterIfNotAfterKeyword,
+    NewLineAfterSkip,
     NewLineAfterX2,
     NewLineBefore,
-    NewLineBeforeIfNotEvent,
+    NewLineBeforeIfNotAfterEvent,
+    NewLineBeforeIfNotAfterKeyword,
+    NoNewLineAfterX2Skip,
     NoNewLineBefore,
     NoNewLineBeforeUnlessMatch,
+    NoNewLineBeforeX2,
     NoSpaceAfter,
-    NoSpaceAroundIfNotInput,
+    NoSpaceAroundIfNotProvidedInput,
     NoSpaceBefore,
     NoWhiteSpaceBefore,
 }

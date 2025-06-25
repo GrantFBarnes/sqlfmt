@@ -83,7 +83,7 @@ impl FormatState {
 
         if token
             .behavior
-            .contains(&TokenBehavior::NoSpaceAroundIfNotInput)
+            .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
                 t.category != Some(TokenCategory::Space)
                     && t.category != Some(TokenCategory::NewLine)
@@ -126,7 +126,7 @@ impl FormatState {
 
         if prev_token
             .behavior
-            .contains(&TokenBehavior::NoSpaceAroundIfNotInput)
+            .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
                 t.category != Some(TokenCategory::Space)
                     && t.category != Some(TokenCategory::NewLine)
@@ -135,23 +135,19 @@ impl FormatState {
             return;
         }
 
-        match prev_token.category {
-            Some(TokenCategory::NewLine) => {
-                if let Some(prefix) = &self.prefix {
-                    if !prefix.is_empty() {
-                        self.push(Token::new_space(prefix.clone()));
-                    }
+        if prev_token.category == Some(TokenCategory::NewLine) {
+            if let Some(prefix) = &self.prefix {
+                if !prefix.is_empty() {
+                    self.push(Token::new_space(prefix.clone()));
                 }
-                if !self.indent_stack.is_empty() {
-                    self.push(Token::new_space(match config.tabs {
-                        ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                        ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-                    }));
-                }
-                return;
             }
-            Some(TokenCategory::Space) => return,
-            _ => (),
+            if !self.indent_stack.is_empty() {
+                self.push(Token::new_space(match config.tabs {
+                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+                }));
+            }
+            return;
         }
 
         if token.behavior.contains(&TokenBehavior::NoSpaceBefore) {
@@ -202,32 +198,10 @@ impl FormatState {
             return;
         }
 
-        match prev1_token.category {
-            Some(TokenCategory::ParenOpen) => {
-                if token.category != Some(TokenCategory::ParenClose) {
-                    self.push(Token::newline());
-                }
-                return;
+        if prev1_token.category == Some(TokenCategory::ParenOpen) {
+            if token.category != Some(TokenCategory::ParenClose) {
+                self.push(Token::newline());
             }
-            _ => (),
-        }
-
-        match prev1_token.value.to_uppercase().as_str() {
-            "INTO" => {
-                if self.tokens.iter().nth_back(2).is_some_and(|t| {
-                    t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
-                }) {
-                    self.push(Token::newline());
-                    return;
-                }
-            }
-            _ => (),
-        }
-
-        let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
-
-        if prev3_token.is_some_and(|t| t.value.to_uppercase() == "TOP") {
-            self.push(Token::newline());
             return;
         }
 
@@ -238,7 +212,19 @@ impl FormatState {
 
         if token
             .behavior
-            .contains(&TokenBehavior::NewLineBeforeIfNotEvent)
+            .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeyword)
+        {
+            if prev1_token.category != Some(TokenCategory::Keyword) {
+                self.push(Token::newline());
+                return;
+            }
+        }
+
+        let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::NewLineBeforeIfNotAfterEvent)
         {
             if prev1_token.category != Some(TokenCategory::DataType)
                 && prev1_token.category != Some(TokenCategory::Event)
@@ -249,36 +235,25 @@ impl FormatState {
             }
         }
 
-        match &token.category {
-            Some(TokenCategory::ParenClose) => {
+        if prev1_token
+            .behavior
+            .contains(&TokenBehavior::NewLineAfterIfNotAfterKeyword)
+        {
+            if prev3_token.is_some_and(|t| t.category != Some(TokenCategory::Keyword)) {
                 self.push(Token::newline());
                 return;
             }
-            _ => (),
         }
 
-        match token.value.to_uppercase().as_str() {
-            "WHILE" => {
-                if prev1_token.value.to_uppercase() != "END" {
-                    self.push(Token::newline());
-                    return;
-                }
-            }
-            "INTO" => {
-                if prev1_token.value.to_uppercase() != "INSERT"
-                    && prev1_token.value.to_uppercase() != "IGNORE"
-                {
-                    self.push(Token::newline());
-                    return;
-                }
-            }
-            _ => (),
+        if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)) {
+            self.push(Token::newline());
+            return;
         }
     }
 
     fn remove_extra_newline(&mut self, token: &Token) {
-        // remove double newline for end of section
-        if token.value.to_uppercase() == "END" || token.value.to_uppercase() == "ELSE" {
+        // remove double newline
+        if token.behavior.contains(&TokenBehavior::NoNewLineBeforeX2) {
             if self.tokens.len() < 2 {
                 return;
             }
@@ -325,11 +300,9 @@ impl FormatState {
             }
 
             if prev_endline_tokens.len() == 2
-                || prev_endline_tokens[2].value.to_uppercase() == String::from("BEGIN")
-                || prev_endline_tokens[2].value.to_uppercase() == String::from("DO")
-                || prev_endline_tokens[2].category == Some(TokenCategory::Delimiter)
-                || prev_endline_tokens[2].category == Some(TokenCategory::NewLine)
-                || prev_endline_tokens[2].category == Some(TokenCategory::Comment)
+                || prev_endline_tokens[2]
+                    .behavior
+                    .contains(&TokenBehavior::NoNewLineAfterX2Skip)
             {
                 self.tokens.remove(prev_newline_positions[0]);
                 return;
@@ -343,37 +316,33 @@ impl FormatState {
             return;
         }
 
-        match token.value.to_uppercase().as_str() {
-            "INTO" => {
-                if self.tokens.iter().nth_back(2).is_some_and(|t| {
-                    t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
-                }) {
-                    self.indent_stack.push(token.clone());
-                    return;
-                }
+        if token
+            .behavior
+            .contains(&TokenBehavior::IncreaseIndentIfNotAfterKeyword)
+        {
+            if self
+                .tokens
+                .iter()
+                .nth_back(2)
+                .is_none_or(|t| t.category != Some(TokenCategory::Keyword))
+            {
+                self.indent_stack.push(token.clone());
+                return;
             }
-            "SET" => {
-                if self
-                    .tokens
-                    .iter()
-                    .nth_back(2)
-                    .is_some_and(|t| t.value.to_uppercase() != "DELETE")
-                {
-                    self.indent_stack.push(token.clone());
-                    return;
-                }
+        }
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::IncreaseIndentIfInsideCase)
+        {
+            if self
+                .indent_stack
+                .last()
+                .is_none_or(|t| t.value.to_uppercase() != "CASE")
+            {
+                self.indent_stack.push(token.clone());
+                return;
             }
-            "THEN" => {
-                if self
-                    .indent_stack
-                    .last()
-                    .is_none_or(|t| t.value.to_uppercase() != "CASE")
-                {
-                    self.indent_stack.push(token.clone());
-                    return;
-                }
-            }
-            _ => (),
         }
     }
 
