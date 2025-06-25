@@ -358,11 +358,6 @@ impl FormatState {
             return;
         }
 
-        let indent_stack_top_token: &Token = self.indent_stack.last().unwrap();
-        let indent_stack_top_token_value: &String = &indent_stack_top_token.value.to_uppercase();
-
-        let token_value: String = token.value.to_uppercase();
-
         let required_to_decrease: HashMap<&str, &str> = HashMap::from([
             ("(", ")"),
             ("OPEN", "CLOSE"),
@@ -374,7 +369,7 @@ impl FormatState {
 
         let mut decrease_until: Vec<&str> = vec![];
         for kv in &required_to_decrease {
-            if kv.1 == &token_value {
+            if kv.1 == &token.value.to_uppercase() {
                 decrease_until.push(kv.0);
             }
         }
@@ -399,27 +394,7 @@ impl FormatState {
             }
         }
 
-        if required_to_decrease
-            .get(indent_stack_top_token_value.as_str())
-            .is_some()
-        {
-            return;
-        }
-
-        if indent_stack_top_token
-            .behavior
-            .contains(&TokenBehavior::DecreaseIndentOnSingleLine)
-        {
-            if token.category == Some(TokenCategory::Delimiter) {
-                self.indent_stack.pop();
-                return;
-            }
-        }
-
-        if token
-            .behavior
-            .contains(&TokenBehavior::DecreaseIndentUntilNewLine)
-        {
+        if token.behavior.contains(&TokenBehavior::DecreaseIndent) {
             loop {
                 let top: Option<Token> = self.indent_stack.pop();
                 if top.is_none() {
@@ -435,10 +410,7 @@ impl FormatState {
                     return;
                 }
 
-                if top
-                    .behavior
-                    .contains(&TokenBehavior::DecreaseIndentUntilNewLine)
-                {
+                if top.behavior.contains(&TokenBehavior::DecreaseIndent) {
                     return;
                 }
             }
