@@ -178,6 +178,7 @@ impl Token {
             "BEFORE" => behavior.push(TokenBehavior::NewLineBefore),
             "BEGIN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -191,7 +192,10 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::IncreaseIndent);
             }
-            "CATCH" => behavior.push(TokenBehavior::NewLineAfter),
+            "CATCH" => {
+                behavior.push(TokenBehavior::NoNewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
+            }
             "CLOSE" => behavior.push(TokenBehavior::NewLineBefore),
             "CREATE" => behavior.push(TokenBehavior::NewLineBefore),
             "CROSS" => behavior.push(TokenBehavior::NewLineBefore),
@@ -307,6 +311,10 @@ impl Token {
             "TRUNCATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "TRY" => {
+                behavior.push(TokenBehavior::NoNewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfter);
             }
             "UNION" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1432,6 +1440,7 @@ pub enum TokenBehavior {
     NewLineAfterX2,
     NewLineBefore,
     NewLineBeforeIfNotEvent,
+    NoNewLineBefore,
     NoNewLineBeforeUnlessMatch,
     NoSpaceAfter,
     NoSpaceAroundIfNotInput,

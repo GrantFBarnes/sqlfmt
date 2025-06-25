@@ -170,6 +170,10 @@ impl FormatState {
             return;
         }
 
+        if token.behavior.contains(&TokenBehavior::NoNewLineBefore) {
+            return;
+        }
+
         let prev1_token: &Token = self
             .tokens
             .last()
@@ -209,13 +213,6 @@ impl FormatState {
         }
 
         match prev1_token.value.to_uppercase().as_str() {
-            "BEGIN" => match token.value.to_uppercase().as_str() {
-                "TRY" | "CATCH" => return,
-                _ => {
-                    self.push(Token::newline());
-                    return;
-                }
-            },
             "INTO" => {
                 if self.tokens.iter().nth_back(2).is_some_and(|t| {
                     t.value.to_uppercase() != "INSERT" && t.value.to_uppercase() != "IGNORE"
