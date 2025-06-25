@@ -23,11 +23,20 @@ const SLASH_FORWARD: char = '/';
 pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Token {
     pub value: String,
     pub category: Option<TokenCategory>,
     pub behavior: Vec<TokenBehavior>,
+}
+
+impl std::fmt::Debug for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Token")
+            .field("value", &self.value)
+            .field("category", &self.category)
+            .finish()
+    }
 }
 
 impl PartialEq for Token {
