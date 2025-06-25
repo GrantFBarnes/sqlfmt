@@ -1010,18 +1010,18 @@ FROM TBL1"#
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
-            SELECT *
-            FROM {tableNames[i]}
-            WHERE C1 = 1
+            SELECT T.*
+            FROM {tableNames[i]} AS T
+            WHERE T.C1 = 1
             "#,
         );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
-            SELECT *
-            FROM {tableNames[i]}
-            WHERE C1 = 1
+            SELECT T.*
+            FROM {tableNames[i]} AS T
+            WHERE T.C1 = 1
 "#
         );
 
@@ -1029,9 +1029,9 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            SELECT
-                *
-            FROM {tableNames[i]}
-            WHERE C1 = 1"#
+                T.*
+            FROM {tableNames[i]} AS T
+            WHERE T.C1 = 1"#
         );
     }
 
