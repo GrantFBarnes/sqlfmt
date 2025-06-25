@@ -162,10 +162,10 @@ impl Token {
                 behavior.push(TokenBehavior::NoSpaceAfter);
             }
             Some(TokenCategory::Interpolation) => {
-                behavior.push(TokenBehavior::KeepSpaceAround);
+                behavior.push(TokenBehavior::NoSpaceAroundIfNotInput);
             }
             Some(TokenCategory::Comment) => {
-                behavior.push(TokenBehavior::KeepSpaceBeforeOnNewLine);
+                behavior.push(TokenBehavior::InputSpaceBeforeIfAfterNewline);
                 behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
@@ -1427,14 +1427,14 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     DecreaseIndent,
     IncreaseIndent,
-    KeepSpaceAround,
-    KeepSpaceBeforeOnNewLine,
+    InputSpaceBeforeIfAfterNewline,
     NewLineAfter,
     NewLineAfterX2,
     NewLineBefore,
     NewLineBeforeIfNotEvent,
     NoNewLineBeforeUnlessMatch,
     NoSpaceAfter,
+    NoSpaceAroundIfNotInput,
     NoSpaceBefore,
     NoWhiteSpaceBefore,
 }

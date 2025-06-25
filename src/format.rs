@@ -63,7 +63,12 @@ impl FormatState {
         }
     }
 
-    fn add_pre_space(&mut self, token: &Token, config: &Configuration) {
+    fn add_pre_space(
+        &mut self,
+        token: &Token,
+        prev_input_token: Option<&Token>,
+        config: &Configuration,
+    ) {
         if self
             .tokens
             .last()
@@ -72,8 +77,17 @@ impl FormatState {
             return;
         }
 
-        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore)
-            || token.behavior.contains(&TokenBehavior::KeepSpaceAround)
+        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore) {
+            return;
+        }
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::NoSpaceAroundIfNotInput)
+            && prev_input_token.is_none_or(|t| {
+                t.category != Some(TokenCategory::Space)
+                    && t.category != Some(TokenCategory::NewLine)
+            })
         {
             return;
         }
@@ -87,13 +101,6 @@ impl FormatState {
             .tokens
             .last()
             .expect("should always have a previous token");
-
-        if prev_token
-            .behavior
-            .contains(&TokenBehavior::KeepSpaceAround)
-        {
-            return;
-        }
 
         match token.category {
             Some(TokenCategory::Delimiter) => {
@@ -114,6 +121,17 @@ impl FormatState {
         }
 
         if prev_token.behavior.contains(&TokenBehavior::NoSpaceAfter) {
+            return;
+        }
+
+        if prev_token
+            .behavior
+            .contains(&TokenBehavior::NoSpaceAroundIfNotInput)
+            && prev_input_token.is_none_or(|t| {
+                t.category != Some(TokenCategory::Space)
+                    && t.category != Some(TokenCategory::NewLine)
+            })
+        {
             return;
         }
 
@@ -475,45 +493,33 @@ enum ParenCategory {
     Space1Newline1,
 }
 
-pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
+pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
     let mut state: FormatState = FormatState::new();
 
-    let tokens: Vec<Token> = get_sql_tokens(sql);
-    for i in 0..tokens.len() {
-        let token: &Token = &tokens[i];
+    let input_tokens: Vec<Token> = get_sql_tokens(input_sql);
+    for i in 0..input_tokens.len() {
+        let input_token: &Token = &input_tokens[i];
+        let prev_input_token: Option<&Token> = if i > 0 { input_tokens.get(i - 1) } else { None };
 
-        match token.category {
+        match input_token.category {
             Some(TokenCategory::NewLine) => {
                 if config.newlines {
                     continue;
                 }
             }
             Some(TokenCategory::Space) => {
-                // define and keep user provided space as prefix if not found
+                // define and keep user input space as prefix if not found
                 if state.prefix.is_none() {
-                    state.prefix = Some(token.value.clone());
-                    state.push(token.clone());
+                    state.prefix = Some(input_token.value.clone());
+                    state.push(input_token.clone());
                     continue;
                 }
 
-                // keep user provided space around
-                if tokens
-                    .get(i - 1)
-                    .is_some_and(|t| t.behavior.contains(&TokenBehavior::KeepSpaceAround))
-                    || tokens
-                        .get(i + 1)
-                        .is_some_and(|t| t.behavior.contains(&TokenBehavior::KeepSpaceAround))
-                {
-                    state.push(Token::new_space(String::from(" ")));
-                    continue;
-                }
-
-                // keep user provided space before if newline
-                if tokens.get(i + 1).is_some_and(|t| {
+                // keep user input space before after newline
+                if input_tokens.get(i + 1).is_some_and(|t| {
                     t.behavior
-                        .contains(&TokenBehavior::KeepSpaceBeforeOnNewLine)
-                }) && tokens
-                    .get(i - 1)
+                        .contains(&TokenBehavior::InputSpaceBeforeIfAfterNewline)
+                }) && prev_input_token
                     .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
                 {
                     let prev_token: Option<&Token> = state.tokens.last();
@@ -527,11 +533,11 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                             state.push(Token::newline());
                         }
                     }
-                    state.push(token.clone());
+                    state.push(input_token.clone());
                     continue;
                 }
 
-                // ignore all other user provided spaces
+                // ignore all other user input spaces
                 continue;
             }
             _ => {
@@ -541,12 +547,12 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
             }
         }
 
-        state.increase_paren_stack(token);
-        state.decrease_indent_stack(token);
-        state.add_pre_space(token, config);
-        state.push(token.clone());
-        state.increase_indent_stack(token);
-        state.decrease_paren_stack(token);
+        state.increase_paren_stack(input_token);
+        state.decrease_indent_stack(input_token);
+        state.add_pre_space(input_token, prev_input_token, config);
+        state.push(input_token.clone());
+        state.increase_indent_stack(input_token);
+        state.decrease_paren_stack(input_token);
     }
 
     let mut result: String = state.get_result(config);
@@ -968,11 +974,12 @@ FROM TBL1"#
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
-            SELECT T1.*
+            SELECT T1.*,  {columnName1},{columnName2} , {columnName3}
             FROM {tableNames[i]} AS T1
             INNER JOIN   {tableNames[i]}   AS T2 ON T2.C1 = T1.C1
             INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
             INNER JOIN   T{tableNames[i]}4   AS T4 ON T4.C1 = T1.C1
+            {otherJoin}
             WHERE T1.C2 = 1
             "#,
         );
@@ -980,11 +987,12 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
-            SELECT T1.*
+            SELECT T1.*, {columnName1},{columnName2}, {columnName3}
             FROM {tableNames[i]} AS T1
                 INNER JOIN {tableNames[i]} AS T2 ON T2.C1 = T1.C1
                 INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
                 INNER JOIN T{tableNames[i]}4 AS T4 ON T4.C1 = T1.C1
+                {otherJoin}
             WHERE T1.C2 = 1
 "#
         );
@@ -993,11 +1001,13 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            SELECT
-                T1.*
+                T1.*,
+                {columnName1},{columnName2},
+                {columnName3}
             FROM {tableNames[i]} AS T1
                 INNER JOIN {tableNames[i]} AS T2 ON T2.C1 = T1.C1
                 INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
-                INNER JOIN T{tableNames[i]}4 AS T4 ON T4.C1 = T1.C1
+                INNER JOIN T{tableNames[i]}4 AS T4 ON T4.C1 = T1.C1 {otherJoin}
             WHERE T1.C2 = 1"#
         );
     }
