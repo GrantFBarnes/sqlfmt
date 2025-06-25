@@ -161,7 +161,11 @@ impl Token {
                 behavior.push(TokenBehavior::NoSpaceBefore);
                 behavior.push(TokenBehavior::NoSpaceAfter);
             }
+            Some(TokenCategory::Interpolation) => {
+                behavior.push(TokenBehavior::KeepSpaceAround);
+            }
             Some(TokenCategory::Comment) => {
+                behavior.push(TokenBehavior::KeepSpaceBeforeOnNewLine);
                 behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
@@ -1399,11 +1403,12 @@ pub fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenCategory {
+    NewLine,
     Space,
+    Delimiter,
+    Interpolation,
     Comment,
     Quote,
-    NewLine,
-    Delimiter,
     Comma,
     FullStop,
     ParenOpen,
@@ -1422,6 +1427,8 @@ pub enum TokenCategory {
 pub enum TokenBehavior {
     DecreaseIndent,
     IncreaseIndent,
+    KeepSpaceAround,
+    KeepSpaceBeforeOnNewLine,
     NewLineAfter,
     NewLineAfterX2,
     NewLineBefore,
@@ -1535,6 +1542,17 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
             in_interpolation =
                 get_in_interpolation(in_interpolation, prev2_ch, prev_ch, curr_ch, next_ch);
             if in_interpolation.is_some() {
+                if was_in_interpolation.is_none() {
+                    // start of new interpolation, add any current token if any
+                    if !curr_token.is_empty() {
+                        curr_token.setup();
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
+                    curr_token.category = Some(TokenCategory::Interpolation);
+                    curr_token.setup();
+                }
+
                 curr_token.value.push(curr_ch);
                 continue;
             } else if was_in_interpolation.is_some() {
@@ -2126,7 +2144,10 @@ mod tests {
     fn test_get_sql_tokens_interpolation_bracket() {
         assert_eq!(
             get_sql_tokens(String::from("{value}")),
-            vec![Token::new_test("{value}", None)],
+            vec![Token::new_test(
+                "{value}",
+                Some(TokenCategory::Interpolation)
+            )],
         );
     }
 
@@ -2134,7 +2155,7 @@ mod tests {
     fn test_get_sql_tokens_interpolation_percent() {
         assert_eq!(
             get_sql_tokens(String::from("%T")),
-            vec![Token::new_test("%T", None)],
+            vec![Token::new_test("%T", Some(TokenCategory::Interpolation))],
         );
     }
 
@@ -2165,7 +2186,7 @@ mod tests {
                 Token::new_test(" ", Some(TokenCategory::Space)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::Space)),
-                Token::new_test("{tableNames[i]}", None),
+                Token::new_test("{tableNames[i]}", Some(TokenCategory::Interpolation)),
                 Token::new_test(" ", Some(TokenCategory::Space)),
                 Token::new_test("AS", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::Space)),
@@ -2177,7 +2198,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_table_name_percent() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT C1 FROM %v")),
+            get_sql_tokens(String::from("SELECT C1 FROM %v AS T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::Space)),
@@ -2185,7 +2206,55 @@ mod tests {
                 Token::new_test(" ", Some(TokenCategory::Space)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::Space)),
-                Token::new_test("%v", None),
+                Token::new_test("%v", Some(TokenCategory::Interpolation)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AS", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("T", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_table_name_part_bracket() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT C1 FROM B{tableNames[i]}E AS T")),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("B", None),
+                Token::new_test("{tableNames[i]}", Some(TokenCategory::Interpolation)),
+                Token::new_test("E", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AS", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("T", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_table_name_part_percent() {
+        assert_eq!(
+            get_sql_tokens(String::from("SELECT C1 FROM B%vE AS T")),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("B", None),
+                Token::new_test("%v", Some(TokenCategory::Interpolation)),
+                Token::new_test("E", None),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("AS", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test("T", None),
             ]
         );
     }
@@ -2199,7 +2268,7 @@ mod tests {
                 Token::new_test(" ", Some(TokenCategory::Space)),
                 Token::new_test("SCH", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
-                Token::new_test("{procedureName}", None),
+                Token::new_test("{procedureName}", Some(TokenCategory::Interpolation)),
                 Token::new_test("(", Some(TokenCategory::ParenOpen)),
                 Token::new_test(")", Some(TokenCategory::ParenClose)),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
@@ -2216,7 +2285,7 @@ mod tests {
                 Token::new_test(" ", Some(TokenCategory::Space)),
                 Token::new_test("SCH", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
-                Token::new_test("%s", None),
+                Token::new_test("%s", Some(TokenCategory::Interpolation)),
                 Token::new_test("(", Some(TokenCategory::ParenOpen)),
                 Token::new_test(")", Some(TokenCategory::ParenClose)),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),

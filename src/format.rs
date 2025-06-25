@@ -72,7 +72,9 @@ impl FormatState {
             return;
         }
 
-        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore) {
+        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore)
+            || token.behavior.contains(&TokenBehavior::KeepSpaceAround)
+        {
             return;
         }
 
@@ -85,6 +87,13 @@ impl FormatState {
             .tokens
             .last()
             .expect("should always have a previous token");
+
+        if prev_token
+            .behavior
+            .contains(&TokenBehavior::KeepSpaceAround)
+        {
+            return;
+        }
 
         match token.category {
             Some(TokenCategory::Delimiter) => {
@@ -487,13 +496,25 @@ pub fn get_formatted_sql(config: &Configuration, sql: String) -> String {
                     continue;
                 }
 
-                // keep user provided space if before newline comment
+                // keep user provided space around
                 if tokens
-                    .get(i + 1)
-                    .is_some_and(|t| t.category == Some(TokenCategory::Comment))
-                    && tokens
-                        .get(i - 1)
-                        .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+                    .get(i - 1)
+                    .is_some_and(|t| t.behavior.contains(&TokenBehavior::KeepSpaceAround))
+                    || tokens
+                        .get(i + 1)
+                        .is_some_and(|t| t.behavior.contains(&TokenBehavior::KeepSpaceAround))
+                {
+                    state.push(Token::new_space(String::from(" ")));
+                    continue;
+                }
+
+                // keep user provided space before if newline
+                if tokens.get(i + 1).is_some_and(|t| {
+                    t.behavior
+                        .contains(&TokenBehavior::KeepSpaceBeforeOnNewLine)
+                }) && tokens
+                    .get(i - 1)
+                    .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
                 {
                     let prev_token: Option<&Token> = state.tokens.last();
                     if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
@@ -947,18 +968,24 @@ FROM TBL1"#
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
-            SELECT T.*
-            FROM {tableNames[i]} AS T
-            WHERE T.C1 = 1
+            SELECT T1.*
+            FROM {tableNames[i]} AS T1
+            INNER JOIN   {tableNames[i]}   AS T2 ON T2.C1 = T1.C1
+            INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
+            INNER JOIN   T{tableNames[i]}4   AS T4 ON T4.C1 = T1.C1
+            WHERE T1.C2 = 1
             "#,
         );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
-            SELECT T.*
-            FROM {tableNames[i]} AS T
-            WHERE T.C1 = 1
+            SELECT T1.*
+            FROM {tableNames[i]} AS T1
+                INNER JOIN {tableNames[i]} AS T2 ON T2.C1 = T1.C1
+                INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
+                INNER JOIN T{tableNames[i]}4 AS T4 ON T4.C1 = T1.C1
+            WHERE T1.C2 = 1
 "#
         );
 
@@ -966,26 +993,38 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            SELECT
-                T.*
-            FROM {tableNames[i]} AS T
-            WHERE T.C1 = 1"#
+                T1.*
+            FROM {tableNames[i]} AS T1
+                INNER JOIN {tableNames[i]} AS T2 ON T2.C1 = T1.C1
+                INNER JOIN T{tableNames[i]}3 AS T3 ON T3.C1 = T1.C1
+                INNER JOIN T{tableNames[i]}4 AS T4 ON T4.C1 = T1.C1
+            WHERE T1.C2 = 1"#
         );
     }
 
     #[test]
     fn test_get_formatted_sql_call_curly_string() {
         let mut config: Configuration = Configuration::new();
-        let sql: String = String::from(r#"CALL SCH.{procedureName}();"#);
+        let sql: String = String::from(
+            r#"
+            CALL SCH.{procedureName}();
+            CALL SCH.B{procedureName}E();
+            "#,
+        );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"CALL SCH.{procedureName}();"#
+            r#"
+            CALL SCH.{procedureName}();
+            CALL SCH.B{procedureName}E();
+"#,
         );
 
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"CALL SCH.{procedureName}();"#
+            r#"            CALL SCH.{procedureName}();
+            CALL SCH.B{procedureName}E();"#,
         );
     }
 
