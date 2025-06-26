@@ -196,20 +196,11 @@ impl FormatState {
 
         if let Some(prev_token) = self.tokens.last() {
             match prev_token.category {
-                Some(TokenCategory::DataType) | Some(TokenCategory::XmlMethod) => {
+                Some(TokenCategory::Quote)
+                | Some(TokenCategory::DataType)
+                | Some(TokenCategory::XmlMethod) => {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
-                }
-                Some(TokenCategory::Quote) => {
-                    let mut quote_chars = prev_token.value.chars();
-                    quote_chars.next();
-                    quote_chars.next_back();
-                    if get_token_category_from_value(quote_chars.as_str().to_uppercase().as_str())
-                        == Some(TokenCategory::DataType)
-                    {
-                        self.paren_stack.push(ParenCategory::Space0Newline0);
-                        return;
-                    }
                 }
                 Some(TokenCategory::Method) | None => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
