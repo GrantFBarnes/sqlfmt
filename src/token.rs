@@ -35,13 +35,11 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
 
-    let sql_bytes: &[u8] = input_sql.as_bytes();
+    let mut sql_bytes: Vec<char> = input_sql.chars().collect();
+    sql_bytes.retain(|c: &char| c != &CARRIAGE_RETURN);
+
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
-
-        if curr_ch == CARRIAGE_RETURN {
-            continue;
-        }
 
         let prev2_ch: Option<char> = if i >= 2 {
             Some(sql_bytes[i - 2].into())

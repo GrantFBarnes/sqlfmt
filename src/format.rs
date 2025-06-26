@@ -1542,6 +1542,58 @@ SET C3 = 3"#
     }
 
     #[test]
+    fn test_get_formatted_sql_select_where_in_cr() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM TBL1
+            WHERE C1 IN (
+                'VALUE 1',
+                'VALUE 2',
+                'VALUE 3',
+                'VALUE 4',
+                'VALUE 5',
+                'VALUE 6'
+            );
+            "#,
+        );
+        let sql: String = sql.replace('\n', "\r\n");
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT *
+            FROM TBL1
+            WHERE C1 IN (
+                    'VALUE 1',
+                    'VALUE 2',
+                    'VALUE 3',
+                    'VALUE 4',
+                    'VALUE 5',
+                    'VALUE 6'
+                );
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                *
+            FROM TBL1
+            WHERE C1 IN (
+                    'VALUE 1',
+                    'VALUE 2',
+                    'VALUE 3',
+                    'VALUE 4',
+                    'VALUE 5',
+                    'VALUE 6'
+                );"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_count_distinct() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
