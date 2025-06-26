@@ -1479,7 +1479,17 @@ SET C3 = 3"#
             r#"
             SELECT *
             FROM TBL1
-            WHERE C1 IN (1,2,3)
+            WHERE C1 IN ('VALUE 1','VALUE 2','VALUE 3','VALUE 4','VALUE 5','VALUE 6');
+            SELECT *
+            FROM TBL1
+            WHERE C1 IN (
+                'VALUE 1',
+                'VALUE 2',
+                'VALUE 3',
+                'VALUE 4',
+                'VALUE 5',
+                'VALUE 6'
+            );
             "#,
         );
 
@@ -1488,7 +1498,17 @@ SET C3 = 3"#
             r#"
             SELECT *
             FROM TBL1
-            WHERE C1 IN (1, 2, 3)
+            WHERE C1 IN ('VALUE 1', 'VALUE 2', 'VALUE 3', 'VALUE 4', 'VALUE 5', 'VALUE 6');
+            SELECT *
+            FROM TBL1
+            WHERE C1 IN (
+                    'VALUE 1',
+                    'VALUE 2',
+                    'VALUE 3',
+                    'VALUE 4',
+                    'VALUE 5',
+                    'VALUE 6'
+                );
 "#
         );
 
@@ -1498,7 +1518,26 @@ SET C3 = 3"#
             r#"            SELECT
                 *
             FROM TBL1
-            WHERE C1 IN (1, 2, 3)"#
+            WHERE C1 IN (
+                    'VALUE 1',
+                    'VALUE 2',
+                    'VALUE 3',
+                    'VALUE 4',
+                    'VALUE 5',
+                    'VALUE 6'
+                );
+
+            SELECT
+                *
+            FROM TBL1
+            WHERE C1 IN (
+                    'VALUE 1',
+                    'VALUE 2',
+                    'VALUE 3',
+                    'VALUE 4',
+                    'VALUE 5',
+                    'VALUE 6'
+                );"#
         );
     }
 
