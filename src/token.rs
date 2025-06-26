@@ -35,24 +35,16 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
 
-    let mut sql_bytes: Vec<char> = input_sql.chars().collect();
-    sql_bytes.retain(|c: &char| c != &CARRIAGE_RETURN);
+    let mut sql_chars: Vec<char> = input_sql.chars().collect();
+    sql_chars.retain(|c: &char| c != &CARRIAGE_RETURN);
 
-    for i in 0..sql_bytes.len() {
-        let curr_ch: char = sql_bytes[i].into();
+    for i in 0..sql_chars.len() {
+        let curr_ch: char = sql_chars[i];
 
-        let prev2_ch: Option<char> = if i >= 2 {
-            Some(sql_bytes[i - 2].into())
-        } else {
-            None
-        };
-        let prev_ch: Option<char> = if i >= 1 {
-            Some(sql_bytes[i - 1].into())
-        } else {
-            None
-        };
-        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-            Some(sql_bytes[i + 1].into())
+        let prev2_ch: Option<char> = if i >= 2 { Some(sql_chars[i - 2]) } else { None };
+        let prev_ch: Option<char> = if i >= 1 { Some(sql_chars[i - 1]) } else { None };
+        let next_ch: Option<char> = if (i + 1) < sql_chars.len() {
+            Some(sql_chars[i + 1])
         } else {
             None
         };

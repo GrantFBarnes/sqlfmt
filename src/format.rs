@@ -39,13 +39,13 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
 
 fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> String {
     let mut current_line_char_count: usize = 0;
-    let sql_bytes: &[u8] = sql.as_bytes();
-    for i in 0..sql_bytes.len() {
-        match sql_bytes[i].into() {
+    let sql_chars: Vec<char> = sql.chars().collect();
+    for i in 0..sql_chars.len() {
+        match sql_chars[i] {
             PAREN_OPEN => {
                 let mut paren_level: usize = 1;
-                for j in i + 1..sql_bytes.len() {
-                    let next_ch: char = sql_bytes[j].into();
+                for j in i + 1..sql_chars.len() {
+                    let next_ch: char = sql_chars[j];
 
                     match next_ch {
                         PAREN_OPEN => paren_level += 1,
@@ -65,8 +65,8 @@ fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> Strin
                     }
 
                     // continue to count until next newline
-                    for k in j + 1..sql_bytes.len() {
-                        match char::from(sql_bytes[k]) {
+                    for k in j + 1..sql_chars.len() {
+                        match char::from(sql_chars[k]) {
                             NEW_LINE => break,
                             TAB => current_line_char_count += 4,
                             _ => current_line_char_count += 1,
