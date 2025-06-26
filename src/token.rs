@@ -39,28 +39,23 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
     sql_chars.retain(|c: &char| c != &CARRIAGE_RETURN);
 
     for i in 0..sql_chars.len() {
+        let prev2_ch: Option<&char> = if i >= 2 { sql_chars.get(i - 2) } else { None };
+        let prev1_ch: Option<&char> = if i >= 1 { sql_chars.get(i - 1) } else { None };
         let curr_ch: char = sql_chars[i];
-
-        let prev2_ch: Option<char> = if i >= 2 { Some(sql_chars[i - 2]) } else { None };
-        let prev_ch: Option<char> = if i >= 1 { Some(sql_chars[i - 1]) } else { None };
-        let next_ch: Option<char> = if (i + 1) < sql_chars.len() {
-            Some(sql_chars[i + 1])
-        } else {
-            None
-        };
+        let next1_ch: Option<&char> = sql_chars.get(i + 1);
 
         if !in_delimiter_change
             && in_interpolation.is_none()
             && in_comment.is_none()
             && in_quote.is_none()
         {
-            if curr_ch.is_whitespace() && prev_ch.is_some_and(|c| !c.is_whitespace()) {
+            if curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()) {
                 if !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
-            } else if !curr_ch.is_whitespace() && prev_ch.is_some_and(|c| c.is_whitespace()) {
+            } else if !curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()) {
                 if !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
@@ -95,7 +90,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
         if !in_delimiter_change && in_comment.is_none() && in_quote.is_none() {
             let was_in_interpolation: Option<InterpolationCategory> = in_interpolation.clone();
             in_interpolation =
-                get_in_interpolation(in_interpolation, prev2_ch, prev_ch, curr_ch, next_ch);
+                get_in_interpolation(in_interpolation, prev2_ch, prev1_ch, curr_ch, next1_ch);
             if in_interpolation.is_some() {
                 if was_in_interpolation.is_none() {
                     // start of new interpolation, add any current token if any
@@ -122,9 +117,9 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
             in_comment = get_in_comment(
                 &in_comment,
                 prev2_ch,
-                prev_ch,
+                prev1_ch,
                 curr_ch,
-                next_ch,
+                next1_ch,
                 curr_token.len(),
             );
             if in_comment.is_some() {
@@ -150,7 +145,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
 
         if !in_delimiter_change && in_interpolation.is_none() && in_comment.is_none() {
             let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-            in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
+            in_quote = get_in_quote(&in_quote, prev1_ch, curr_ch, next1_ch, &curr_token);
             if in_quote.is_some() {
                 if was_in_quote.is_none() {
                     // start of new quote, add any current token if any
@@ -196,7 +191,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 curr_token.value.push(curr_ch);
                 curr_token.setup();
 
-                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
+                if next1_ch != Some(&EQUAL) && next1_ch != Some(&GREATER_THAN) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -205,30 +200,30 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
             }
             EQUAL | GREATER_THAN => {
                 if !curr_token.is_empty()
-                    && prev_ch != Some(LESS_THAN)
-                    && prev_ch != Some(GREATER_THAN)
-                    && prev_ch != Some(PLUS)
-                    && prev_ch != Some(HYPHEN)
-                    && prev_ch != Some(ASTERISK)
-                    && prev_ch != Some(SLASH_FORWARD)
-                    && prev_ch != Some(PERCENT)
+                    && prev1_ch != Some(&LESS_THAN)
+                    && prev1_ch != Some(&GREATER_THAN)
+                    && prev1_ch != Some(&PLUS)
+                    && prev1_ch != Some(&HYPHEN)
+                    && prev1_ch != Some(&ASTERISK)
+                    && prev1_ch != Some(&SLASH_FORWARD)
+                    && prev1_ch != Some(&PERCENT)
                 {
                     curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.category = match prev_ch {
-                    Some(PLUS) => Some(TokenCategory::Operator),
-                    Some(HYPHEN) => Some(TokenCategory::Operator),
-                    Some(ASTERISK) => Some(TokenCategory::Operator),
-                    Some(SLASH_FORWARD) => Some(TokenCategory::Operator),
-                    Some(PERCENT) => Some(TokenCategory::Operator),
+                curr_token.category = match prev1_ch {
+                    Some(&PLUS) => Some(TokenCategory::Operator),
+                    Some(&HYPHEN) => Some(TokenCategory::Operator),
+                    Some(&ASTERISK) => Some(TokenCategory::Operator),
+                    Some(&SLASH_FORWARD) => Some(TokenCategory::Operator),
+                    Some(&PERCENT) => Some(TokenCategory::Operator),
                     _ => Some(TokenCategory::Compare),
                 };
                 curr_token.setup();
 
-                if next_ch != Some(EQUAL) {
+                if next1_ch != Some(&EQUAL) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -249,7 +244,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
 
                 curr_token.setup();
 
-                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
+                if next1_ch != Some(&EQUAL) && next1_ch != Some(&GREATER_THAN) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -313,20 +308,20 @@ fn get_in_delimiter_change(
 
 fn get_in_interpolation(
     in_interpolation: Option<InterpolationCategory>,
-    prev2_ch: Option<char>,
-    prev_ch: Option<char>,
+    prev2_ch: Option<&char>,
+    prev1_ch: Option<&char>,
     curr_ch: char,
-    next_ch: Option<char>,
+    next1_ch: Option<&char>,
 ) -> Option<InterpolationCategory> {
     match in_interpolation {
         Some(InterpolationCategory::Bracket) => {
-            if prev_ch == Some(CURLY_BRACKET_CLOSE) {
+            if prev1_ch == Some(&CURLY_BRACKET_CLOSE) {
                 return None;
             }
             return Some(InterpolationCategory::Bracket);
         }
         Some(InterpolationCategory::Percent) => {
-            if prev2_ch == Some(PERCENT) {
+            if prev2_ch == Some(&PERCENT) {
                 None
             } else {
                 Some(InterpolationCategory::Percent)
@@ -335,7 +330,7 @@ fn get_in_interpolation(
         None => {
             return match curr_ch {
                 CURLY_BRACKET_OPEN => Some(InterpolationCategory::Bracket),
-                PERCENT => match next_ch {
+                PERCENT => match next1_ch {
                     // golang format verbs
                     Some('v') | Some('T') | Some('%') | Some('t') | Some('b') | Some('c')
                     | Some('d') | Some('o') | Some('O') | Some('q') | Some('x') | Some('X')
@@ -351,10 +346,10 @@ fn get_in_interpolation(
 
 fn get_in_comment(
     in_comment: &Option<CommentCategory>,
-    prev2_ch: Option<char>,
-    prev_ch: Option<char>,
+    prev2_ch: Option<&char>,
+    prev1_ch: Option<&char>,
     curr_ch: char,
-    next_ch: Option<char>,
+    next1_ch: Option<&char>,
     curr_token_len: usize,
 ) -> Option<CommentCategory> {
     match in_comment {
@@ -371,10 +366,10 @@ fn get_in_comment(
                     return Some(CommentCategory::SingleLine);
                 }
                 CommentCategory::MultiLine => {
-                    if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+                    if curr_ch == SLASH_FORWARD && next1_ch == Some(&ASTERISK) {
                         return Some(CommentCategory::MultiLine);
                     }
-                    if prev2_ch == Some(ASTERISK) && prev_ch == Some(SLASH_FORWARD) {
+                    if prev2_ch == Some(&ASTERISK) && prev1_ch == Some(&SLASH_FORWARD) {
                         return None;
                     }
                     return Some(CommentCategory::MultiLine);
@@ -382,11 +377,11 @@ fn get_in_comment(
             }
         }
         None => {
-            if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
+            if curr_ch == HYPHEN && next1_ch == Some(&HYPHEN) {
                 return Some(CommentCategory::SingleLine);
             }
 
-            if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+            if curr_ch == SLASH_FORWARD && next1_ch == Some(&ASTERISK) {
                 return Some(CommentCategory::MultiLine);
             }
 
@@ -397,9 +392,9 @@ fn get_in_comment(
 
 fn get_in_quote(
     in_quote: &Option<QuoteCategory>,
-    prev_ch: Option<char>,
+    prev1_ch: Option<&char>,
     curr_ch: char,
-    next_ch: Option<char>,
+    next1_ch: Option<&char>,
     curr_token: &Token,
 ) -> Option<QuoteCategory> {
     match in_quote {
@@ -410,13 +405,13 @@ fn get_in_quote(
 
             match qc {
                 QuoteCategory::Backtick => {
-                    if prev_ch == Some(BACKTICK) {
+                    if prev1_ch == Some(&BACKTICK) {
                         return None;
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::QuoteSingle => {
-                    if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
+                    if prev1_ch == Some(&QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
                         if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
                             return None;
                         }
@@ -424,13 +419,13 @@ fn get_in_quote(
                     return in_quote.clone();
                 }
                 QuoteCategory::QuoteDouble => {
-                    if prev_ch == Some(QUOTE_DOUBLE) {
+                    if prev1_ch == Some(&QUOTE_DOUBLE) {
                         return None;
                     }
                     return in_quote.clone();
                 }
                 QuoteCategory::Bracket => {
-                    if prev_ch == Some(BRACKET_CLOSE) {
+                    if prev1_ch == Some(&BRACKET_CLOSE) {
                         return None;
                     }
                     return in_quote.clone();
@@ -444,7 +439,7 @@ fn get_in_quote(
                 QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
                 BRACKET_OPEN => Some(QuoteCategory::Bracket),
                 'N' => {
-                    if next_ch == Some(QUOTE_SINGLE) {
+                    if next1_ch == Some(&QUOTE_SINGLE) {
                         return Some(QuoteCategory::QuoteSingle);
                     }
                     return None;
