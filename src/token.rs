@@ -150,7 +150,7 @@ impl Token {
 
         match self.category {
             Some(TokenCategory::WhiteSpace) => (), // defined in self.new_whitespace() method
-            Some(TokenCategory::NewLine) => (), // defined in self.new_newline() method
+            Some(TokenCategory::NewLine) => (),    // defined in self.new_newline() method
             Some(TokenCategory::Delimiter) => {
                 behavior.push(TokenBehavior::NewLineAfterX2);
                 behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
@@ -360,7 +360,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "THEN" => {
-                behavior.push(TokenBehavior::IncreaseIndentIfInsideCase);
+                behavior.push(TokenBehavior::IncreaseIndentIfNotInsideCase);
             }
             "TOP" => {
                 behavior.push(TokenBehavior::NewLineAfterSkip);
@@ -1495,7 +1495,7 @@ pub enum TokenBehavior {
     DecreaseIndent,
     IncreaseIndent,
     IncreaseIndentIfNotAfterKeyword,
-    IncreaseIndentIfInsideCase,
+    IncreaseIndentIfNotInsideCase,
     InputSpaceBeforeIfAfterNewline,
     NewLineAfter,
     NewLineAfterIfNotAfterKeyword,
@@ -1534,7 +1534,7 @@ enum QuoteCategory {
     Bracket,
 }
 
-pub fn get_sql_tokens(sql: String) -> Vec<Token> {
+pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
     let mut delimiter: String = String::from(";");
@@ -1545,7 +1545,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
     let mut in_comment: Option<CommentCategory> = None;
     let mut in_quote: Option<QuoteCategory> = None;
 
-    let sql_bytes: &[u8] = sql.as_bytes();
+    let sql_bytes: &[u8] = input_sql.as_bytes();
     for i in 0..sql_bytes.len() {
         let curr_ch: char = sql_bytes[i].into();
 

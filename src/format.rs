@@ -24,6 +24,57 @@ impl FormatState {
         self.tokens.push(token);
     }
 
+    fn continue_on_input_whitespace(
+        &mut self,
+        input_token: &Token,
+        prev_input_token: Option<&Token>,
+        next_input_token: Option<&Token>,
+        config: &Configuration,
+    ) -> bool {
+        return match input_token.category {
+            Some(TokenCategory::NewLine) => config.newlines,
+            Some(TokenCategory::WhiteSpace) => {
+                // define and keep user input space as prefix if not found
+                if self.prefix.is_none() {
+                    self.prefix = Some(input_token.value.clone());
+                    self.push(input_token.clone());
+                    return true;
+                }
+
+                // keep user input space before after newline
+                if prev_input_token.is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+                    && next_input_token.is_some_and(|t| {
+                        t.behavior
+                            .contains(&TokenBehavior::InputSpaceBeforeIfAfterNewline)
+                    })
+                {
+                    let prev_token: Option<&Token> = self.tokens.last();
+                    if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
+                        if prev_token
+                            .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterX2))
+                        {
+                            self.push(Token::new_newline());
+                            self.push(Token::new_newline());
+                        } else {
+                            self.push(Token::new_newline());
+                        }
+                    }
+                    self.push(input_token.clone());
+                    return true;
+                }
+
+                // ignore all other user input spaces
+                return true;
+            }
+            _ => {
+                if self.prefix.is_none() {
+                    self.prefix = Some(String::new());
+                }
+                return false;
+            }
+        };
+    }
+
     fn increase_paren_stack(&mut self, token: &Token) {
         if token.category != Some(TokenCategory::ParenOpen) {
             return;
@@ -333,7 +384,7 @@ impl FormatState {
 
         if token
             .behavior
-            .contains(&TokenBehavior::IncreaseIndentIfInsideCase)
+            .contains(&TokenBehavior::IncreaseIndentIfNotInsideCase)
         {
             if self
                 .indent_stack
@@ -466,53 +517,16 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
     for i in 0..input_tokens.len() {
         let input_token: &Token = &input_tokens[i];
         let prev_input_token: Option<&Token> = if i > 0 { input_tokens.get(i - 1) } else { None };
+        let next_input_token: Option<&Token> = input_tokens.get(i + 1);
 
-        match input_token.category {
-            Some(TokenCategory::NewLine) => {
-                if config.newlines {
-                    continue;
-                }
-            }
-            Some(TokenCategory::WhiteSpace) => {
-                // define and keep user input space as prefix if not found
-                if state.prefix.is_none() {
-                    state.prefix = Some(input_token.value.clone());
-                    state.push(input_token.clone());
-                    continue;
-                }
-
-                // keep user input space before after newline
-                if input_tokens.get(i + 1).is_some_and(|t| {
-                    t.behavior
-                        .contains(&TokenBehavior::InputSpaceBeforeIfAfterNewline)
-                }) && prev_input_token
-                    .is_some_and(|t| t.category == Some(TokenCategory::NewLine))
-                {
-                    let prev_token: Option<&Token> = state.tokens.last();
-                    if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
-                        if prev_token
-                            .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterX2))
-                        {
-                            state.push(Token::new_newline());
-                            state.push(Token::new_newline());
-                        } else {
-                            state.push(Token::new_newline());
-                        }
-                    }
-                    state.push(input_token.clone());
-                    continue;
-                }
-
-                // ignore all other user input spaces
-                continue;
-            }
-            _ => {
-                if state.prefix.is_none() {
-                    state.prefix = Some(String::new());
-                }
-            }
+        if state.continue_on_input_whitespace(
+            input_token,
+            prev_input_token,
+            next_input_token,
+            config,
+        ) {
+            continue;
         }
-
         state.increase_paren_stack(input_token);
         state.decrease_indent_stack(input_token);
         state.add_pre_space(input_token, prev_input_token, config);
