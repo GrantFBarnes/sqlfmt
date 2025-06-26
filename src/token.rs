@@ -24,6 +24,447 @@ const SLASH_FORWARD: char = '/';
 pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
+pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
+    let mut tokens: Vec<Token> = vec![];
+
+    let mut delimiter: String = String::from(";");
+
+    let mut curr_token: Token = Token::new();
+    let mut in_delimiter_change: bool = false;
+    let mut in_interpolation: Option<InterpolationCategory> = None;
+    let mut in_comment: Option<CommentCategory> = None;
+    let mut in_quote: Option<QuoteCategory> = None;
+
+    let sql_bytes: &[u8] = input_sql.as_bytes();
+    for i in 0..sql_bytes.len() {
+        let curr_ch: char = sql_bytes[i].into();
+
+        if curr_ch == CARRIAGE_RETURN {
+            continue;
+        }
+
+        let prev2_ch: Option<char> = if i >= 2 {
+            Some(sql_bytes[i - 2].into())
+        } else {
+            None
+        };
+        let prev_ch: Option<char> = if i >= 1 {
+            Some(sql_bytes[i - 1].into())
+        } else {
+            None
+        };
+        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
+            Some(sql_bytes[i + 1].into())
+        } else {
+            None
+        };
+
+        if !in_delimiter_change
+            && in_interpolation.is_none()
+            && in_comment.is_none()
+            && in_quote.is_none()
+        {
+            if curr_ch.is_whitespace() && prev_ch.is_some_and(|c| !c.is_whitespace()) {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            } else if !curr_ch.is_whitespace() && prev_ch.is_some_and(|c| c.is_whitespace()) {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            }
+        }
+
+        if in_interpolation.is_none() && in_comment.is_none() && in_quote.is_none() {
+            let was_in_delimiter_change: bool = in_delimiter_change;
+            in_delimiter_change = get_in_delimiter_change(
+                in_delimiter_change,
+                get_last_nonspace_token(&tokens),
+                curr_ch,
+            );
+            if in_delimiter_change {
+                if !was_in_delimiter_change {
+                    // start of new delimiter change
+                    curr_token.category = Some(TokenCategory::Delimiter);
+                    curr_token.setup();
+                }
+                curr_token.value.push(curr_ch);
+                continue;
+            } else if was_in_delimiter_change {
+                // delimiter change just ended, add delimiter token
+                delimiter = curr_token.value.clone();
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+        }
+
+        if !in_delimiter_change && in_comment.is_none() && in_quote.is_none() {
+            let was_in_interpolation: Option<InterpolationCategory> = in_interpolation.clone();
+            in_interpolation =
+                get_in_interpolation(in_interpolation, prev2_ch, prev_ch, curr_ch, next_ch);
+            if in_interpolation.is_some() {
+                if was_in_interpolation.is_none() {
+                    // start of new interpolation, add any current token if any
+                    if !curr_token.is_empty() {
+                        curr_token.setup();
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
+                    curr_token.category = Some(TokenCategory::Interpolation);
+                    curr_token.setup();
+                }
+
+                curr_token.value.push(curr_ch);
+                continue;
+            } else if was_in_interpolation.is_some() {
+                // interpolation just ended, add token
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+        }
+
+        if !in_delimiter_change && in_interpolation.is_none() && in_quote.is_none() {
+            let was_in_comment: Option<CommentCategory> = in_comment.clone();
+            in_comment = get_in_comment(
+                &in_comment,
+                prev2_ch,
+                prev_ch,
+                curr_ch,
+                next_ch,
+                curr_token.len(),
+            );
+            if in_comment.is_some() {
+                if was_in_comment.is_none() {
+                    // start of new comment, add any current token if any
+                    if !curr_token.is_empty() {
+                        curr_token.setup();
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
+                    curr_token.category = Some(TokenCategory::Comment);
+                    curr_token.setup();
+                }
+
+                curr_token.value.push(curr_ch);
+                continue;
+            } else if was_in_comment.is_some() {
+                // comment just ended, add comment token
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+        }
+
+        if !in_delimiter_change && in_interpolation.is_none() && in_comment.is_none() {
+            let was_in_quote: Option<QuoteCategory> = in_quote.clone();
+            in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
+            if in_quote.is_some() {
+                if was_in_quote.is_none() {
+                    // start of new quote, add any current token if any
+                    if !curr_token.is_empty() {
+                        curr_token.setup();
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
+                    curr_token.category = Some(TokenCategory::Quote);
+                    curr_token.setup();
+                }
+
+                curr_token.value.push(curr_ch);
+                continue;
+            } else if was_in_quote.is_some() {
+                // quote just ended, add quote token
+                curr_token.setup();
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+        }
+
+        match curr_ch {
+            NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
+            | CIRCUMFLEX => {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.setup();
+                tokens.push(curr_token);
+                curr_token = Token::new();
+                continue;
+            }
+            LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.setup();
+
+                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
+            }
+            EQUAL | GREATER_THAN => {
+                if !curr_token.is_empty()
+                    && prev_ch != Some(LESS_THAN)
+                    && prev_ch != Some(GREATER_THAN)
+                    && prev_ch != Some(PLUS)
+                    && prev_ch != Some(HYPHEN)
+                    && prev_ch != Some(ASTERISK)
+                    && prev_ch != Some(SLASH_FORWARD)
+                    && prev_ch != Some(PERCENT)
+                {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+                curr_token.category = match prev_ch {
+                    Some(PLUS) => Some(TokenCategory::Operator),
+                    Some(HYPHEN) => Some(TokenCategory::Operator),
+                    Some(ASTERISK) => Some(TokenCategory::Operator),
+                    Some(SLASH_FORWARD) => Some(TokenCategory::Operator),
+                    Some(PERCENT) => Some(TokenCategory::Operator),
+                    _ => Some(TokenCategory::Compare),
+                };
+                curr_token.setup();
+
+                if next_ch != Some(EQUAL) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
+            }
+            PLUS | HYPHEN => {
+                if !curr_token.is_empty() {
+                    curr_token.setup();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+                curr_token.value.push(curr_ch);
+
+                if get_last_nonspace_token(&tokens).is_some_and(|t| t.category.is_some()) {
+                    continue;
+                }
+
+                curr_token.setup();
+
+                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+
+                continue;
+            }
+            _ => (),
+        }
+
+        curr_token.value.push(curr_ch);
+
+        if curr_token.value.ends_with(&delimiter) {
+            curr_token.value = curr_token.value.replace(&delimiter, "");
+            if !curr_token.is_empty() {
+                curr_token.setup();
+                tokens.push(curr_token);
+            }
+            curr_token = Token::new();
+            curr_token.value = delimiter.clone();
+            curr_token.category = Some(TokenCategory::Delimiter);
+            curr_token.setup();
+            tokens.push(curr_token);
+            curr_token = Token::new();
+        }
+    }
+
+    if !curr_token.is_empty() {
+        curr_token.setup();
+        tokens.push(curr_token);
+    }
+
+    return tokens;
+}
+
+fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
+    for i in (0..tokens.len()).rev() {
+        let token: &Token = &tokens[i];
+        if token.category == Some(TokenCategory::WhiteSpace) {
+            continue;
+        }
+        return Some(token);
+    }
+    None
+}
+
+fn get_in_delimiter_change(
+    in_delimiter_change: bool,
+    prev_token: Option<&Token>,
+    curr_ch: char,
+) -> bool {
+    if curr_ch.is_whitespace() {
+        return false;
+    }
+
+    if prev_token.is_some_and(|t| t.value.to_uppercase() == "DELIMITER") {
+        return true;
+    }
+
+    return in_delimiter_change;
+}
+
+fn get_in_interpolation(
+    in_interpolation: Option<InterpolationCategory>,
+    prev2_ch: Option<char>,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    next_ch: Option<char>,
+) -> Option<InterpolationCategory> {
+    match in_interpolation {
+        Some(InterpolationCategory::Bracket) => {
+            if prev_ch == Some(CURLY_BRACKET_CLOSE) {
+                return None;
+            }
+            return Some(InterpolationCategory::Bracket);
+        }
+        Some(InterpolationCategory::Percent) => {
+            if prev2_ch == Some(PERCENT) {
+                None
+            } else {
+                Some(InterpolationCategory::Percent)
+            }
+        }
+        None => {
+            return match curr_ch {
+                CURLY_BRACKET_OPEN => Some(InterpolationCategory::Bracket),
+                PERCENT => match next_ch {
+                    // golang format verbs
+                    Some('v') | Some('T') | Some('%') | Some('t') | Some('b') | Some('c')
+                    | Some('d') | Some('o') | Some('O') | Some('q') | Some('x') | Some('X')
+                    | Some('U') | Some('e') | Some('E') | Some('f') | Some('F') | Some('g')
+                    | Some('G') | Some('s') | Some('p') => Some(InterpolationCategory::Percent),
+                    _ => None,
+                },
+                _ => None,
+            };
+        }
+    }
+}
+
+fn get_in_comment(
+    in_comment: &Option<CommentCategory>,
+    prev2_ch: Option<char>,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    next_ch: Option<char>,
+    curr_token_len: usize,
+) -> Option<CommentCategory> {
+    match in_comment {
+        Some(cc) => {
+            if curr_token_len <= 1 {
+                return in_comment.clone();
+            }
+
+            match cc {
+                CommentCategory::SingleLine => {
+                    if curr_ch == NEW_LINE {
+                        return None;
+                    }
+                    return Some(CommentCategory::SingleLine);
+                }
+                CommentCategory::MultiLine => {
+                    if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+                        return Some(CommentCategory::MultiLine);
+                    }
+                    if prev2_ch == Some(ASTERISK) && prev_ch == Some(SLASH_FORWARD) {
+                        return None;
+                    }
+                    return Some(CommentCategory::MultiLine);
+                }
+            }
+        }
+        None => {
+            if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
+                return Some(CommentCategory::SingleLine);
+            }
+
+            if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
+                return Some(CommentCategory::MultiLine);
+            }
+
+            return None;
+        }
+    }
+}
+
+fn get_in_quote(
+    in_quote: &Option<QuoteCategory>,
+    prev_ch: Option<char>,
+    curr_ch: char,
+    next_ch: Option<char>,
+    curr_token: &Token,
+) -> Option<QuoteCategory> {
+    match in_quote {
+        Some(qc) => {
+            if curr_token.len() <= 1 {
+                return in_quote.clone();
+            }
+
+            match qc {
+                QuoteCategory::Backtick => {
+                    if prev_ch == Some(BACKTICK) {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+                QuoteCategory::QuoteSingle => {
+                    if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
+                        if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
+                            return None;
+                        }
+                    }
+                    return in_quote.clone();
+                }
+                QuoteCategory::QuoteDouble => {
+                    if prev_ch == Some(QUOTE_DOUBLE) {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+                QuoteCategory::Bracket => {
+                    if prev_ch == Some(BRACKET_CLOSE) {
+                        return None;
+                    }
+                    return in_quote.clone();
+                }
+            }
+        }
+        None => {
+            return match curr_ch {
+                BACKTICK => Some(QuoteCategory::Backtick),
+                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
+                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
+                BRACKET_OPEN => Some(QuoteCategory::Bracket),
+                'N' => {
+                    if next_ch == Some(QUOTE_SINGLE) {
+                        return Some(QuoteCategory::QuoteSingle);
+                    }
+                    return None;
+                }
+                _ => None,
+            };
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Token {
     pub value: String,
@@ -1532,447 +1973,6 @@ enum QuoteCategory {
     QuoteSingle,
     QuoteDouble,
     Bracket,
-}
-
-pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
-    let mut tokens: Vec<Token> = vec![];
-
-    let mut delimiter: String = String::from(";");
-
-    let mut curr_token: Token = Token::new();
-    let mut in_delimiter_change: bool = false;
-    let mut in_interpolation: Option<InterpolationCategory> = None;
-    let mut in_comment: Option<CommentCategory> = None;
-    let mut in_quote: Option<QuoteCategory> = None;
-
-    let sql_bytes: &[u8] = input_sql.as_bytes();
-    for i in 0..sql_bytes.len() {
-        let curr_ch: char = sql_bytes[i].into();
-
-        if curr_ch == CARRIAGE_RETURN {
-            continue;
-        }
-
-        let prev2_ch: Option<char> = if i >= 2 {
-            Some(sql_bytes[i - 2].into())
-        } else {
-            None
-        };
-        let prev_ch: Option<char> = if i >= 1 {
-            Some(sql_bytes[i - 1].into())
-        } else {
-            None
-        };
-        let next_ch: Option<char> = if (i + 1) < sql_bytes.len() {
-            Some(sql_bytes[i + 1].into())
-        } else {
-            None
-        };
-
-        if !in_delimiter_change
-            && in_interpolation.is_none()
-            && in_comment.is_none()
-            && in_quote.is_none()
-        {
-            if curr_ch.is_whitespace() && prev_ch.is_some_and(|c| !c.is_whitespace()) {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-            } else if !curr_ch.is_whitespace() && prev_ch.is_some_and(|c| c.is_whitespace()) {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-            }
-        }
-
-        if in_interpolation.is_none() && in_comment.is_none() && in_quote.is_none() {
-            let was_in_delimiter_change: bool = in_delimiter_change;
-            in_delimiter_change = get_in_delimiter_change(
-                in_delimiter_change,
-                get_last_nonspace_token(&tokens),
-                curr_ch,
-            );
-            if in_delimiter_change {
-                if !was_in_delimiter_change {
-                    // start of new delimiter change
-                    curr_token.category = Some(TokenCategory::Delimiter);
-                    curr_token.setup();
-                }
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_delimiter_change {
-                // delimiter change just ended, add delimiter token
-                delimiter = curr_token.value.clone();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_comment.is_none() && in_quote.is_none() {
-            let was_in_interpolation: Option<InterpolationCategory> = in_interpolation.clone();
-            in_interpolation =
-                get_in_interpolation(in_interpolation, prev2_ch, prev_ch, curr_ch, next_ch);
-            if in_interpolation.is_some() {
-                if was_in_interpolation.is_none() {
-                    // start of new interpolation, add any current token if any
-                    if !curr_token.is_empty() {
-                        curr_token.setup();
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
-                    curr_token.category = Some(TokenCategory::Interpolation);
-                    curr_token.setup();
-                }
-
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_interpolation.is_some() {
-                // interpolation just ended, add token
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_interpolation.is_none() && in_quote.is_none() {
-            let was_in_comment: Option<CommentCategory> = in_comment.clone();
-            in_comment = get_in_comment(
-                &in_comment,
-                prev2_ch,
-                prev_ch,
-                curr_ch,
-                next_ch,
-                curr_token.len(),
-            );
-            if in_comment.is_some() {
-                if was_in_comment.is_none() {
-                    // start of new comment, add any current token if any
-                    if !curr_token.is_empty() {
-                        curr_token.setup();
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
-                    curr_token.category = Some(TokenCategory::Comment);
-                    curr_token.setup();
-                }
-
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_comment.is_some() {
-                // comment just ended, add comment token
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_interpolation.is_none() && in_comment.is_none() {
-            let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-            in_quote = get_in_quote(&in_quote, prev_ch, curr_ch, next_ch, &curr_token);
-            if in_quote.is_some() {
-                if was_in_quote.is_none() {
-                    // start of new quote, add any current token if any
-                    if !curr_token.is_empty() {
-                        curr_token.setup();
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
-                    curr_token.category = Some(TokenCategory::Quote);
-                    curr_token.setup();
-                }
-
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_quote.is_some() {
-                // quote just ended, add quote token
-                curr_token.setup();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        match curr_ch {
-            NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
-            | CIRCUMFLEX => {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-                curr_token.value.push(curr_ch);
-                curr_token.setup();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-                continue;
-            }
-            LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-                curr_token.value.push(curr_ch);
-                curr_token.setup();
-
-                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-
-                continue;
-            }
-            EQUAL | GREATER_THAN => {
-                if !curr_token.is_empty()
-                    && prev_ch != Some(LESS_THAN)
-                    && prev_ch != Some(GREATER_THAN)
-                    && prev_ch != Some(PLUS)
-                    && prev_ch != Some(HYPHEN)
-                    && prev_ch != Some(ASTERISK)
-                    && prev_ch != Some(SLASH_FORWARD)
-                    && prev_ch != Some(PERCENT)
-                {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-                curr_token.value.push(curr_ch);
-                curr_token.category = match prev_ch {
-                    Some(PLUS) => Some(TokenCategory::Operator),
-                    Some(HYPHEN) => Some(TokenCategory::Operator),
-                    Some(ASTERISK) => Some(TokenCategory::Operator),
-                    Some(SLASH_FORWARD) => Some(TokenCategory::Operator),
-                    Some(PERCENT) => Some(TokenCategory::Operator),
-                    _ => Some(TokenCategory::Compare),
-                };
-                curr_token.setup();
-
-                if next_ch != Some(EQUAL) {
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-
-                continue;
-            }
-            PLUS | HYPHEN => {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-                curr_token.value.push(curr_ch);
-
-                if get_last_nonspace_token(&tokens).is_some_and(|t| t.category.is_some()) {
-                    continue;
-                }
-
-                curr_token.setup();
-
-                if next_ch != Some(EQUAL) && next_ch != Some(GREATER_THAN) {
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-
-                continue;
-            }
-            _ => (),
-        }
-
-        curr_token.value.push(curr_ch);
-
-        if curr_token.value.ends_with(&delimiter) {
-            curr_token.value = curr_token.value.replace(&delimiter, "");
-            if !curr_token.is_empty() {
-                curr_token.setup();
-                tokens.push(curr_token);
-            }
-            curr_token = Token::new();
-            curr_token.value = delimiter.clone();
-            curr_token.category = Some(TokenCategory::Delimiter);
-            curr_token.setup();
-            tokens.push(curr_token);
-            curr_token = Token::new();
-        }
-    }
-
-    if !curr_token.is_empty() {
-        curr_token.setup();
-        tokens.push(curr_token);
-    }
-
-    return tokens;
-}
-
-fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
-    for i in (0..tokens.len()).rev() {
-        let token: &Token = &tokens[i];
-        if token.category == Some(TokenCategory::WhiteSpace) {
-            continue;
-        }
-        return Some(token);
-    }
-    None
-}
-
-fn get_in_delimiter_change(
-    in_delimiter_change: bool,
-    prev_token: Option<&Token>,
-    curr_ch: char,
-) -> bool {
-    if curr_ch.is_whitespace() {
-        return false;
-    }
-
-    if prev_token.is_some_and(|t| t.value.to_uppercase() == "DELIMITER") {
-        return true;
-    }
-
-    return in_delimiter_change;
-}
-
-fn get_in_interpolation(
-    in_interpolation: Option<InterpolationCategory>,
-    prev2_ch: Option<char>,
-    prev_ch: Option<char>,
-    curr_ch: char,
-    next_ch: Option<char>,
-) -> Option<InterpolationCategory> {
-    match in_interpolation {
-        Some(InterpolationCategory::Bracket) => {
-            if prev_ch == Some(CURLY_BRACKET_CLOSE) {
-                return None;
-            }
-            return Some(InterpolationCategory::Bracket);
-        }
-        Some(InterpolationCategory::Percent) => {
-            if prev2_ch == Some(PERCENT) {
-                None
-            } else {
-                Some(InterpolationCategory::Percent)
-            }
-        }
-        None => {
-            return match curr_ch {
-                CURLY_BRACKET_OPEN => Some(InterpolationCategory::Bracket),
-                PERCENT => match next_ch {
-                    // golang format verbs
-                    Some('v') | Some('T') | Some('%') | Some('t') | Some('b') | Some('c')
-                    | Some('d') | Some('o') | Some('O') | Some('q') | Some('x') | Some('X')
-                    | Some('U') | Some('e') | Some('E') | Some('f') | Some('F') | Some('g')
-                    | Some('G') | Some('s') | Some('p') => Some(InterpolationCategory::Percent),
-                    _ => None,
-                },
-                _ => None,
-            };
-        }
-    }
-}
-
-fn get_in_comment(
-    in_comment: &Option<CommentCategory>,
-    prev2_ch: Option<char>,
-    prev_ch: Option<char>,
-    curr_ch: char,
-    next_ch: Option<char>,
-    curr_token_len: usize,
-) -> Option<CommentCategory> {
-    match in_comment {
-        Some(cc) => {
-            if curr_token_len <= 1 {
-                return in_comment.clone();
-            }
-
-            match cc {
-                CommentCategory::SingleLine => {
-                    if curr_ch == NEW_LINE {
-                        return None;
-                    }
-                    return Some(CommentCategory::SingleLine);
-                }
-                CommentCategory::MultiLine => {
-                    if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
-                        return Some(CommentCategory::MultiLine);
-                    }
-                    if prev2_ch == Some(ASTERISK) && prev_ch == Some(SLASH_FORWARD) {
-                        return None;
-                    }
-                    return Some(CommentCategory::MultiLine);
-                }
-            }
-        }
-        None => {
-            if curr_ch == HYPHEN && next_ch == Some(HYPHEN) {
-                return Some(CommentCategory::SingleLine);
-            }
-
-            if curr_ch == SLASH_FORWARD && next_ch == Some(ASTERISK) {
-                return Some(CommentCategory::MultiLine);
-            }
-
-            return None;
-        }
-    }
-}
-
-fn get_in_quote(
-    in_quote: &Option<QuoteCategory>,
-    prev_ch: Option<char>,
-    curr_ch: char,
-    next_ch: Option<char>,
-    curr_token: &Token,
-) -> Option<QuoteCategory> {
-    match in_quote {
-        Some(qc) => {
-            if curr_token.len() <= 1 {
-                return in_quote.clone();
-            }
-
-            match qc {
-                QuoteCategory::Backtick => {
-                    if prev_ch == Some(BACKTICK) {
-                        return None;
-                    }
-                    return in_quote.clone();
-                }
-                QuoteCategory::QuoteSingle => {
-                    if prev_ch == Some(QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
-                        if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
-                            return None;
-                        }
-                    }
-                    return in_quote.clone();
-                }
-                QuoteCategory::QuoteDouble => {
-                    if prev_ch == Some(QUOTE_DOUBLE) {
-                        return None;
-                    }
-                    return in_quote.clone();
-                }
-                QuoteCategory::Bracket => {
-                    if prev_ch == Some(BRACKET_CLOSE) {
-                        return None;
-                    }
-                    return in_quote.clone();
-                }
-            }
-        }
-        None => {
-            return match curr_ch {
-                BACKTICK => Some(QuoteCategory::Backtick),
-                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
-                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
-                BRACKET_OPEN => Some(QuoteCategory::Bracket),
-                'N' => {
-                    if next_ch == Some(QUOTE_SINGLE) {
-                        return Some(QuoteCategory::QuoteSingle);
-                    }
-                    return None;
-                }
-                _ => None,
-            };
-        }
-    }
 }
 
 #[cfg(test)]

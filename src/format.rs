@@ -3,6 +3,120 @@ use std::collections::HashMap;
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
+pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
+    let mut state: FormatState = FormatState::new();
+
+    let input_tokens: Vec<Token> = get_sql_tokens(input_sql);
+    for i in 0..input_tokens.len() {
+        let input_token: &Token = &input_tokens[i];
+        let prev_input_token: Option<&Token> = if i > 0 { input_tokens.get(i - 1) } else { None };
+        let next_input_token: Option<&Token> = input_tokens.get(i + 1);
+
+        if state.continue_on_input_whitespace(
+            input_token,
+            prev_input_token,
+            next_input_token,
+            config,
+        ) {
+            continue;
+        }
+        state.increase_paren_stack(input_token);
+        state.decrease_indent_stack(input_token);
+        state.add_pre_space(input_token, prev_input_token, config);
+        state.push(input_token.clone());
+        state.increase_indent_stack(input_token);
+        state.decrease_paren_stack(input_token);
+    }
+
+    let mut result: String = state.get_result(config);
+
+    if config.newlines {
+        result = get_result_with_collapsed_paren(result, config);
+    }
+
+    return result;
+}
+
+fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> String {
+    let mut current_line_char_count: usize = 0;
+    let sql_bytes: &[u8] = sql.as_bytes();
+    for i in 0..sql_bytes.len() {
+        match sql_bytes[i].into() {
+            PAREN_OPEN => {
+                let mut paren_level: usize = 1;
+                for j in i + 1..sql_bytes.len() {
+                    let next_ch: char = sql_bytes[j].into();
+
+                    match next_ch {
+                        PAREN_OPEN => paren_level += 1,
+                        PAREN_CLOSE => paren_level -= 1,
+                        _ => continue,
+                    }
+
+                    if paren_level > 0 {
+                        continue;
+                    }
+
+                    let paren: String = sql[i..=j].to_string();
+                    let paren_collapsed: String = get_collapsed_paren(paren.clone());
+                    if paren_collapsed == paren {
+                        // no changes made
+                        break;
+                    }
+
+                    // continue to count until next newline
+                    for k in j + 1..sql_bytes.len() {
+                        match char::from(sql_bytes[k]) {
+                            NEW_LINE => break,
+                            TAB => current_line_char_count += 4,
+                            _ => current_line_char_count += 1,
+                        }
+                    }
+
+                    if current_line_char_count + paren_collapsed.len() > config.chars.into() {
+                        // too long, keep with line breaks
+                        break;
+                    }
+
+                    return get_result_with_collapsed_paren(
+                        format!(
+                            "{}{}{}",
+                            sql[0..i].to_string(),
+                            paren_collapsed,
+                            sql[j + 1..].to_string(),
+                        ),
+                        config,
+                    );
+                }
+                current_line_char_count += 1;
+            }
+            TAB => current_line_char_count += 4,
+            NEW_LINE => current_line_char_count = 0,
+            _ => current_line_char_count += 1,
+        }
+    }
+
+    return sql;
+}
+
+fn get_collapsed_paren(mut sql: String) -> String {
+    let find_replace_with_space: [&'static str; 3] = ["\n", "\t", "  "];
+    for f in find_replace_with_space {
+        while sql.contains(f) {
+            sql = sql.replace(f, " ")
+        }
+    }
+
+    let find_trim_space: [&'static str; 2] = ["( ", " )"];
+    for f in find_trim_space {
+        while sql.contains(f) {
+            sql = sql.replace(f, f.trim())
+        }
+    }
+
+    return sql;
+}
+
 struct FormatState {
     tokens: Vec<Token>,
     prefix: Option<String>,
@@ -508,120 +622,6 @@ enum ParenCategory {
     Space0Newline0,
     Space0Newline1,
     Space1Newline1,
-}
-
-pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
-    let mut state: FormatState = FormatState::new();
-
-    let input_tokens: Vec<Token> = get_sql_tokens(input_sql);
-    for i in 0..input_tokens.len() {
-        let input_token: &Token = &input_tokens[i];
-        let prev_input_token: Option<&Token> = if i > 0 { input_tokens.get(i - 1) } else { None };
-        let next_input_token: Option<&Token> = input_tokens.get(i + 1);
-
-        if state.continue_on_input_whitespace(
-            input_token,
-            prev_input_token,
-            next_input_token,
-            config,
-        ) {
-            continue;
-        }
-        state.increase_paren_stack(input_token);
-        state.decrease_indent_stack(input_token);
-        state.add_pre_space(input_token, prev_input_token, config);
-        state.push(input_token.clone());
-        state.increase_indent_stack(input_token);
-        state.decrease_paren_stack(input_token);
-    }
-
-    let mut result: String = state.get_result(config);
-
-    if config.newlines {
-        result = get_result_with_collapsed_paren(result, config);
-    }
-
-    return result;
-}
-
-fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> String {
-    let mut current_line_char_count: usize = 0;
-    let sql_bytes: &[u8] = sql.as_bytes();
-    for i in 0..sql_bytes.len() {
-        match sql_bytes[i].into() {
-            PAREN_OPEN => {
-                let mut paren_level: usize = 1;
-                for j in i + 1..sql_bytes.len() {
-                    let next_ch: char = sql_bytes[j].into();
-
-                    match next_ch {
-                        PAREN_OPEN => paren_level += 1,
-                        PAREN_CLOSE => paren_level -= 1,
-                        _ => continue,
-                    }
-
-                    if paren_level > 0 {
-                        continue;
-                    }
-
-                    let paren: String = sql[i..=j].to_string();
-                    let paren_collapsed: String = get_collapsed_paren(paren.clone());
-                    if paren_collapsed == paren {
-                        // no changes made
-                        break;
-                    }
-
-                    // continue to count until next newline
-                    for k in j + 1..sql_bytes.len() {
-                        match char::from(sql_bytes[k]) {
-                            NEW_LINE => break,
-                            TAB => current_line_char_count += 4,
-                            _ => current_line_char_count += 1,
-                        }
-                    }
-
-                    if current_line_char_count + paren_collapsed.len() > config.chars.into() {
-                        // too long, keep with line breaks
-                        break;
-                    }
-
-                    return get_result_with_collapsed_paren(
-                        format!(
-                            "{}{}{}",
-                            sql[0..i].to_string(),
-                            paren_collapsed,
-                            sql[j + 1..].to_string(),
-                        ),
-                        config,
-                    );
-                }
-                current_line_char_count += 1;
-            }
-            TAB => current_line_char_count += 4,
-            NEW_LINE => current_line_char_count = 0,
-            _ => current_line_char_count += 1,
-        }
-    }
-
-    return sql;
-}
-
-fn get_collapsed_paren(mut sql: String) -> String {
-    let find_replace_with_space: [&'static str; 3] = ["\n", "\t", "  "];
-    for f in find_replace_with_space {
-        while sql.contains(f) {
-            sql = sql.replace(f, " ")
-        }
-    }
-
-    let find_trim_space: [&'static str; 2] = ["( ", " )"];
-    for f in find_trim_space {
-        while sql.contains(f) {
-            sql = sql.replace(f, f.trim())
-        }
-    }
-
-    return sql;
 }
 
 #[cfg(test)]
