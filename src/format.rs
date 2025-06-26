@@ -72,7 +72,7 @@ impl FormatState {
         if self
             .tokens
             .last()
-            .is_none_or(|t| t.category == Some(TokenCategory::Space))
+            .is_none_or(|t| t.category == Some(TokenCategory::WhiteSpace))
         {
             return;
         }
@@ -85,7 +85,7 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
-                t.category != Some(TokenCategory::Space)
+                t.category != Some(TokenCategory::WhiteSpace)
                     && t.category != Some(TokenCategory::NewLine)
             })
         {
@@ -128,7 +128,7 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
-                t.category != Some(TokenCategory::Space)
+                t.category != Some(TokenCategory::WhiteSpace)
                     && t.category != Some(TokenCategory::NewLine)
             })
         {
@@ -138,11 +138,11 @@ impl FormatState {
         if prev_token.category == Some(TokenCategory::NewLine) {
             if let Some(prefix) = &self.prefix {
                 if !prefix.is_empty() {
-                    self.push(Token::new_space(prefix.clone()));
+                    self.push(Token::new_whitespace(prefix.clone()));
                 }
             }
             if !self.indent_stack.is_empty() {
-                self.push(Token::new_space(match config.tabs {
+                self.push(Token::new_whitespace(match config.tabs {
                     ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
                     ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
                 }));
@@ -154,7 +154,7 @@ impl FormatState {
             return;
         }
 
-        self.push(Token::new_space(String::from(" ")));
+        self.push(Token::new_whitespace(String::from(" ")));
     }
 
     fn add_pre_newline(&mut self, token: &Token) {
@@ -185,7 +185,7 @@ impl FormatState {
         }
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            self.push(Token::newline());
+            self.push(Token::new_newline());
             return;
         }
 
@@ -193,20 +193,20 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NewLineAfterX2)
         {
-            self.push(Token::newline());
-            self.push(Token::newline());
+            self.push(Token::new_newline());
+            self.push(Token::new_newline());
             return;
         }
 
         if prev1_token.category == Some(TokenCategory::ParenOpen) {
             if token.category != Some(TokenCategory::ParenClose) {
-                self.push(Token::newline());
+                self.push(Token::new_newline());
             }
             return;
         }
 
         if token.behavior.contains(&TokenBehavior::NewLineBefore) {
-            self.push(Token::newline());
+            self.push(Token::new_newline());
             return;
         }
 
@@ -215,7 +215,7 @@ impl FormatState {
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeyword)
         {
             if prev1_token.category != Some(TokenCategory::Keyword) {
-                self.push(Token::newline());
+                self.push(Token::new_newline());
                 return;
             }
         }
@@ -230,7 +230,7 @@ impl FormatState {
                 && prev1_token.category != Some(TokenCategory::Event)
                 && prev3_token.is_none_or(|t| t.category != Some(TokenCategory::Event))
             {
-                self.push(Token::newline());
+                self.push(Token::new_newline());
                 return;
             }
         }
@@ -240,13 +240,13 @@ impl FormatState {
             .contains(&TokenBehavior::NewLineAfterIfNotAfterKeyword)
         {
             if prev3_token.is_some_and(|t| t.category != Some(TokenCategory::Keyword)) {
-                self.push(Token::newline());
+                self.push(Token::new_newline());
                 return;
             }
         }
 
         if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)) {
-            self.push(Token::newline());
+            self.push(Token::new_newline());
             return;
         }
     }
@@ -473,7 +473,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
                     continue;
                 }
             }
-            Some(TokenCategory::Space) => {
+            Some(TokenCategory::WhiteSpace) => {
                 // define and keep user input space as prefix if not found
                 if state.prefix.is_none() {
                     state.prefix = Some(input_token.value.clone());
@@ -493,10 +493,10 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
                         if prev_token
                             .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterX2))
                         {
-                            state.push(Token::newline());
-                            state.push(Token::newline());
+                            state.push(Token::new_newline());
+                            state.push(Token::new_newline());
                         } else {
-                            state.push(Token::newline());
+                            state.push(Token::new_newline());
                         }
                     }
                     state.push(input_token.clone());

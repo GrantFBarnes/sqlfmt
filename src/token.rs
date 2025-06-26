@@ -64,15 +64,15 @@ impl Token {
         }
     }
 
-    pub fn new_space(space: String) -> Token {
+    pub fn new_whitespace(value: String) -> Token {
         Token {
-            value: space,
-            category: Some(TokenCategory::Space),
+            value,
+            category: Some(TokenCategory::WhiteSpace),
             behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
         }
     }
 
-    pub fn newline() -> Token {
+    pub fn new_newline() -> Token {
         Token {
             value: "\n".to_string(),
             category: Some(TokenCategory::NewLine),
@@ -124,7 +124,7 @@ impl Token {
                 PERCENT => Some(TokenCategory::Operator),
                 _ => {
                     if value_char.is_whitespace() {
-                        return Some(TokenCategory::Space);
+                        return Some(TokenCategory::WhiteSpace);
                     }
                     None
                 }
@@ -139,7 +139,7 @@ impl Token {
             }
         }
         if all_whitespace {
-            return Some(TokenCategory::Space);
+            return Some(TokenCategory::WhiteSpace);
         }
 
         return get_token_category_from_value(self.value.to_uppercase().as_str());
@@ -149,8 +149,8 @@ impl Token {
         let mut behavior: Vec<TokenBehavior> = vec![];
 
         match self.category {
-            Some(TokenCategory::NewLine) => (), // defined in self.newline() method
-            Some(TokenCategory::Space) => (),   // defined in self.new_space() method
+            Some(TokenCategory::WhiteSpace) => (), // defined in self.new_whitespace() method
+            Some(TokenCategory::NewLine) => (), // defined in self.new_newline() method
             Some(TokenCategory::Delimiter) => {
                 behavior.push(TokenBehavior::NewLineAfterX2);
                 behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
@@ -1471,7 +1471,7 @@ pub fn get_token_category_from_value(value: &str) -> Option<TokenCategory> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenCategory {
     NewLine,
-    Space,
+    WhiteSpace,
     Delimiter,
     Interpolation,
     Comment,
@@ -1807,7 +1807,7 @@ pub fn get_sql_tokens(sql: String) -> Vec<Token> {
 fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
     for i in (0..tokens.len()).rev() {
         let token: &Token = &tokens[i];
-        if token.category == Some(TokenCategory::Space) {
+        if token.category == Some(TokenCategory::WhiteSpace) {
             continue;
         }
         return Some(token);
@@ -1985,11 +1985,11 @@ mod tests {
             get_sql_tokens(String::from("SELECT * FROM TBL1")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
             ]
         );
@@ -2001,15 +2001,15 @@ mod tests {
             get_sql_tokens(String::from("SELECT T.* FROM TBL1 T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
             ]
         );
@@ -2021,9 +2021,9 @@ mod tests {
             get_sql_tokens(String::from("SELECT 1 --comment inline")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("--comment inline", Some(TokenCategory::Comment)),
             ]
         );
@@ -2039,15 +2039,15 @@ mod tests {
             )),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
                 Token::new_test("\n", Some(TokenCategory::NewLine)),
-                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("                ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("-- comment newline", Some(TokenCategory::Comment)),
                 Token::new_test("\n", Some(TokenCategory::NewLine)),
-                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("                ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
             ]
         );
@@ -2059,13 +2059,13 @@ mod tests {
             get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("/*multi inline*/", Some(TokenCategory::Comment)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
             ]
         );
@@ -2107,10 +2107,10 @@ mod tests {
             )),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
                 Token::new_test("\n", Some(TokenCategory::NewLine)),
-                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("                ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test(
                     r#"/*
                     multi line
@@ -2119,9 +2119,9 @@ mod tests {
                     Some(TokenCategory::Comment)
                 ),
                 Token::new_test("\n", Some(TokenCategory::NewLine)),
-                Token::new_test("                ", Some(TokenCategory::Space)),
+                Token::new_test("                ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
             ]
         );
@@ -2133,7 +2133,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT `Column 1`")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("`Column 1`", Some(TokenCategory::Quote)),
             ]
         );
@@ -2145,7 +2145,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT 'Column 1'")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("'Column 1'", Some(TokenCategory::Quote)),
             ]
         );
@@ -2157,7 +2157,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT \"Column 1\"")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("\"Column 1\"", Some(TokenCategory::Quote)),
             ]
         );
@@ -2169,7 +2169,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT [Column 1]")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("[Column 1]", Some(TokenCategory::Quote)),
             ]
         );
@@ -2189,11 +2189,11 @@ mod tests {
             get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("[S]", Some(TokenCategory::Quote)),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
                 Token::new_test("[TBL1]", Some(TokenCategory::Quote)),
@@ -2207,7 +2207,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT TBL1.[C1]")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("TBL1", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
                 Token::new_test("[C1]", Some(TokenCategory::Quote)),
@@ -2256,15 +2256,15 @@ mod tests {
             get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]} AS T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("{tableNames[i]}", Some(TokenCategory::Interpolation)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AS", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
             ]
         );
@@ -2276,15 +2276,15 @@ mod tests {
             get_sql_tokens(String::from("SELECT C1 FROM %v AS T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("%v", Some(TokenCategory::Interpolation)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AS", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
             ]
         );
@@ -2296,17 +2296,17 @@ mod tests {
             get_sql_tokens(String::from("SELECT C1 FROM B{tableNames[i]}E AS T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("B", None),
                 Token::new_test("{tableNames[i]}", Some(TokenCategory::Interpolation)),
                 Token::new_test("E", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AS", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
             ]
         );
@@ -2318,17 +2318,17 @@ mod tests {
             get_sql_tokens(String::from("SELECT C1 FROM B%vE AS T")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("FROM", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("B", None),
                 Token::new_test("%v", Some(TokenCategory::Interpolation)),
                 Token::new_test("E", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AS", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("T", None),
             ]
         );
@@ -2340,7 +2340,7 @@ mod tests {
             get_sql_tokens(String::from("CALL SCH.{procedureName}();")),
             vec![
                 Token::new_test("CALL", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("SCH", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
                 Token::new_test("{procedureName}", Some(TokenCategory::Interpolation)),
@@ -2357,7 +2357,7 @@ mod tests {
             get_sql_tokens(String::from("CALL SCH.%s();")),
             vec![
                 Token::new_test("CALL", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("SCH", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),
                 Token::new_test("%s", Some(TokenCategory::Interpolation)),
@@ -2374,11 +2374,11 @@ mod tests {
             get_sql_tokens(String::from("DECLARE V1 = '';")),
             vec![
                 Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("V1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("=", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("''", Some(TokenCategory::Quote)),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
@@ -2391,11 +2391,11 @@ mod tests {
             get_sql_tokens(String::from("DECLARE V1 = '''';")),
             vec![
                 Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("V1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("=", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("''''", Some(TokenCategory::Quote)),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
@@ -2408,7 +2408,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT N'Column Name'")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("N'Column Name'", Some(TokenCategory::Quote)),
             ]
         );
@@ -2420,7 +2420,7 @@ mod tests {
             get_sql_tokens(String::from("SELECT 'Column''s Name'")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("'Column''s Name'", Some(TokenCategory::Quote)),
             ]
         );
@@ -2435,7 +2435,7 @@ Name'"#
             )),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test(
                     r#"'Column
 Name'"#,
@@ -2451,7 +2451,7 @@ Name'"#,
             get_sql_tokens(String::from("SELECT 'Column")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("'Column", Some(TokenCategory::Quote)),
             ]
         );
@@ -2463,7 +2463,7 @@ Name'"#,
             get_sql_tokens(String::from("SELECT 1;")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
@@ -2476,12 +2476,12 @@ Name'"#,
             get_sql_tokens(String::from("SELECT 1; SELECT 1;")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
@@ -2496,20 +2496,20 @@ Name'"#,
             )),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(";", Some(TokenCategory::Delimiter)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("$$", Some(TokenCategory::Delimiter)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1;", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("\\", Some(TokenCategory::Delimiter)),
             ]
         );
@@ -2521,12 +2521,12 @@ Name'"#,
             get_sql_tokens(String::from("SELECT 1,2, 3")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(",", Some(TokenCategory::Comma)),
                 Token::new_test("2", None),
                 Token::new_test(",", Some(TokenCategory::Comma)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2538,7 +2538,7 @@ Name'"#,
             get_sql_tokens(String::from("SELECT -1")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("-1", None),
             ]
         );
@@ -2550,7 +2550,7 @@ Name'"#,
             get_sql_tokens(String::from("SELECT MIN()")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("MIN", Some(TokenCategory::Method)),
                 Token::new_test("(", Some(TokenCategory::ParenOpen)),
                 Token::new_test(")", Some(TokenCategory::ParenClose)),
@@ -2564,10 +2564,10 @@ Name'"#,
             get_sql_tokens(String::from("SELECT (SELECT 1)")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("(", Some(TokenCategory::ParenOpen)),
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("1", None),
                 Token::new_test(")", Some(TokenCategory::ParenClose)),
             ]
@@ -2582,9 +2582,9 @@ Name'"#,
                 Token::new_test("1", None),
                 Token::new_test("+", Some(TokenCategory::Operator)),
                 Token::new_test("2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("+", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2598,9 +2598,9 @@ Name'"#,
                 Token::new_test("1", None),
                 Token::new_test("-", Some(TokenCategory::Operator)),
                 Token::new_test("2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("-", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2614,9 +2614,9 @@ Name'"#,
                 Token::new_test("1", None),
                 Token::new_test("*", Some(TokenCategory::Operator)),
                 Token::new_test("2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2630,9 +2630,9 @@ Name'"#,
                 Token::new_test("1", None),
                 Token::new_test("/", Some(TokenCategory::Operator)),
                 Token::new_test("2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("/", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2646,9 +2646,9 @@ Name'"#,
                 Token::new_test("1", None),
                 Token::new_test("%", Some(TokenCategory::Operator)),
                 Token::new_test("2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("%", Some(TokenCategory::Operator)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("3", None),
             ]
         );
@@ -2756,17 +2756,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test("<", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("<", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
@@ -2778,17 +2778,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test(">", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test(">", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
@@ -2800,17 +2800,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test("=", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("=", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
@@ -2822,17 +2822,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test("<>", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("<>", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
@@ -2844,17 +2844,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test(">=", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test(">=", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
@@ -2866,17 +2866,17 @@ Name'"#,
             get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2")),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
                 Token::new_test("<=", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("AND", Some(TokenCategory::Keyword)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C1", None),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("<=", Some(TokenCategory::Compare)),
-                Token::new_test(" ", Some(TokenCategory::Space)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("C2", None),
             ]
         );
