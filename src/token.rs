@@ -527,6 +527,19 @@ impl Token {
     }
 
     fn get_category(&self) -> Option<TokenCategory> {
+        if self.category == Some(TokenCategory::Quote) {
+            let mut quote_chars = self.value.chars();
+            if let Some(open_quote) = quote_chars.next()
+                && open_quote == BRACKET_OPEN
+                && let Some(close_quote) = quote_chars.next_back()
+                && close_quote == BRACKET_CLOSE
+            {
+                if get_category_from_value(quote_chars.as_str()) == Some(TokenCategory::DataType) {
+                    return Some(TokenCategory::DataType);
+                }
+            }
+        }
+
         if self.category.is_some() {
             return self.category.clone();
         }
@@ -1956,7 +1969,7 @@ enum CommentCategory {
     MultiLine,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 enum QuoteCategory {
     Backtick,
     QuoteSingle,
@@ -2168,7 +2181,7 @@ mod tests {
     fn test_get_sql_tokens_quote_bracket_datatype() {
         assert_eq!(
             get_sql_tokens(String::from("[NVARCHAR]")),
-            vec![Token::new_test("[NVARCHAR]", Some(TokenCategory::Quote))],
+            vec![Token::new_test("[NVARCHAR]", Some(TokenCategory::DataType))],
         );
     }
 
