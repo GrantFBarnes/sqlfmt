@@ -28,93 +28,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
         state.decrease_paren_stack(input_token);
     }
 
-    let mut result: String = state.get_result(config);
-
-    if config.newlines {
-        result = get_result_with_collapsed_paren(result, config);
-    }
-
-    return result;
-}
-
-fn get_result_with_collapsed_paren(sql: String, config: &Configuration) -> String {
-    let mut current_line_char_count: usize = 0;
-    let sql_chars: Vec<char> = sql.chars().collect();
-    for i in 0..sql_chars.len() {
-        match sql_chars[i] {
-            PAREN_OPEN => {
-                let mut paren_level: usize = 1;
-                for j in i + 1..sql_chars.len() {
-                    let next_ch: char = sql_chars[j];
-
-                    match next_ch {
-                        PAREN_OPEN => paren_level += 1,
-                        PAREN_CLOSE => paren_level -= 1,
-                        _ => continue,
-                    }
-
-                    if paren_level > 0 {
-                        continue;
-                    }
-
-                    let paren: String = sql[i..=j].to_string();
-                    let paren_collapsed: String = get_collapsed_paren(paren.clone());
-                    if paren_collapsed == paren {
-                        // no changes made
-                        break;
-                    }
-
-                    // continue to count until next newline
-                    for k in j + 1..sql_chars.len() {
-                        match char::from(sql_chars[k]) {
-                            NEW_LINE => break,
-                            TAB => current_line_char_count += 4,
-                            _ => current_line_char_count += 1,
-                        }
-                    }
-
-                    if current_line_char_count + paren_collapsed.len() > config.chars.into() {
-                        // too long, keep with line breaks
-                        break;
-                    }
-
-                    return get_result_with_collapsed_paren(
-                        format!(
-                            "{}{}{}",
-                            sql[0..i].to_string(),
-                            paren_collapsed,
-                            sql[j + 1..].to_string(),
-                        ),
-                        config,
-                    );
-                }
-                current_line_char_count += 1;
-            }
-            TAB => current_line_char_count += 4,
-            NEW_LINE => current_line_char_count = 0,
-            _ => current_line_char_count += 1,
-        }
-    }
-
-    return sql;
-}
-
-fn get_collapsed_paren(mut sql: String) -> String {
-    let find_replace_with_space: [&'static str; 3] = ["\n", "\t", "  "];
-    for f in find_replace_with_space {
-        while sql.contains(f) {
-            sql = sql.replace(f, " ")
-        }
-    }
-
-    let find_trim_space: [&'static str; 2] = ["( ", " )"];
-    for f in find_trim_space {
-        while sql.contains(f) {
-            sql = sql.replace(f, f.trim())
-        }
-    }
-
-    return sql;
+    return state.get_result(config);
 }
 
 struct FormatState {
@@ -250,7 +164,7 @@ impl FormatState {
 
         if config.newlines {
             self.add_pre_newline(token);
-            self.remove_extra_newline(token);
+            self.remove_extra_newline(token, config);
         }
 
         let prev_token: &Token = self
@@ -407,7 +321,63 @@ impl FormatState {
         }
     }
 
-    fn remove_extra_newline(&mut self, token: &Token) {
+    fn remove_extra_newline(&mut self, token: &Token, config: &Configuration) {
+        // collapse paren if short enough
+        if token.category == Some(TokenCategory::ParenClose) {
+            let mut collapsed_len: usize = 1;
+            let mut paren_count: isize = 1;
+            let mut positions_to_remove: Vec<usize> = vec![];
+            let mut positions_to_add_space: Vec<usize> = vec![];
+            for i in (0..self.tokens.len()).rev() {
+                let prev_token: &Token = &self.tokens[i];
+                match prev_token.category {
+                    Some(TokenCategory::ParenOpen) => paren_count -= 1,
+                    Some(TokenCategory::ParenClose) => paren_count += 1,
+                    Some(TokenCategory::WhiteSpace) => {
+                        if paren_count > 0 && i > 0 {
+                            match self.tokens[i - 1].category {
+                                Some(TokenCategory::NewLine) | Some(TokenCategory::WhiteSpace) => {
+                                    positions_to_remove.push(i);
+                                    continue;
+                                }
+                                _ => (),
+                            }
+                        }
+                    }
+                    Some(TokenCategory::NewLine) => {
+                        if paren_count > 0 {
+                            positions_to_remove.push(i);
+
+                            if self
+                                .get_prev_nonwhitespace_token(i)
+                                .is_some_and(|t| t.category != Some(TokenCategory::ParenOpen))
+                                && self
+                                    .get_next_nonwhitespace_token(i)
+                                    .is_some_and(|t| t.category != Some(TokenCategory::ParenClose))
+                            {
+                                positions_to_add_space.push(i);
+                                collapsed_len += 1;
+                            }
+                            continue;
+                        }
+                        break;
+                    }
+                    _ => (),
+                }
+                collapsed_len += prev_token.value.replace(TAB, "    ").len();
+            }
+
+            if collapsed_len <= config.chars.into() {
+                for p in positions_to_remove {
+                    self.tokens.remove(p);
+                    if positions_to_add_space.contains(&p) {
+                        self.tokens
+                            .insert(p, Token::new_whitespace(String::from(" ")));
+                    }
+                }
+            }
+        }
+
         // remove double newline
         if token.behavior.contains(&TokenBehavior::NoNewLineBeforeX2) {
             if self.tokens.len() < 2 {
@@ -464,6 +434,30 @@ impl FormatState {
                 return;
             }
         }
+    }
+
+    fn get_prev_nonwhitespace_token(&self, pos: usize) -> Option<&Token> {
+        for i in (0..std::cmp::min(pos, self.tokens.len())).rev() {
+            let prev_token: &Token = &self.tokens[i];
+            match prev_token.category {
+                Some(TokenCategory::WhiteSpace) => continue,
+                Some(TokenCategory::NewLine) => continue,
+                _ => return Some(prev_token),
+            }
+        }
+        None
+    }
+
+    fn get_next_nonwhitespace_token(&self, pos: usize) -> Option<&Token> {
+        for i in pos + 1..self.tokens.len() {
+            let next_token: &Token = &self.tokens[i];
+            match next_token.category {
+                Some(TokenCategory::WhiteSpace) => continue,
+                Some(TokenCategory::NewLine) => continue,
+                _ => return Some(next_token),
+            }
+        }
+        None
     }
 
     fn increase_indent_stack(&mut self, token: &Token) {
