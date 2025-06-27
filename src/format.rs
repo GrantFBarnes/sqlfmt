@@ -325,14 +325,24 @@ impl FormatState {
         // collapse paren if short enough
         if token.category == Some(TokenCategory::ParenClose) {
             let mut collapsed_len: usize = 1;
-            let mut paren_count: isize = 1;
+            let mut paren_count: usize = 1;
             let mut positions_to_remove: Vec<usize> = vec![];
             let mut positions_to_add_space: Vec<usize> = vec![];
             for i in (0..self.tokens.len()).rev() {
                 let prev_token: &Token = &self.tokens[i];
                 match prev_token.category {
-                    Some(TokenCategory::ParenOpen) => paren_count -= 1,
-                    Some(TokenCategory::ParenClose) => paren_count += 1,
+                    Some(TokenCategory::ParenOpen) => {
+                        // if paren_count is zero already out of paren set in question
+                        if paren_count > 0 {
+                            paren_count -= 1;
+                        }
+                    }
+                    Some(TokenCategory::ParenClose) => {
+                        // if paren_count is zero already out of paren set in question
+                        if paren_count > 0 {
+                            paren_count += 1
+                        }
+                    }
                     Some(TokenCategory::WhiteSpace) => {
                         if paren_count > 0 && i > 0 {
                             match self.tokens[i - 1].category {
@@ -1611,6 +1621,44 @@ SET C3 = 3"#
             r#"            SELECT
                 COUNT(DISTINCT YEAR(D1))
             FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_paren_collapse() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            BEGIN
+            SELECT
+            ROUND((LENGTH(LONG_VARIABLE_NAME) - LENGTH(REPLACE(LONG_VARIABLE_NAME, '_____', ''))) / LENGTH('_____')) AS BLANKCOUNT
+            END
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            BEGIN
+                SELECT
+                    ROUND((LENGTH(LONG_VARIABLE_NAME) - LENGTH(REPLACE(LONG_VARIABLE_NAME, '_____', ''))) / LENGTH('_____')) AS BLANKCOUNT
+            END
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            BEGIN
+                SELECT
+                    ROUND(
+                        (
+                            LENGTH(LONG_VARIABLE_NAME) - LENGTH(
+                                REPLACE(LONG_VARIABLE_NAME, '_____', '')
+                            )
+                        ) / LENGTH('_____')
+                    ) AS BLANKCOUNT
+            END"#
         );
     }
 

@@ -1823,6 +1823,10 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "RETURNS" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "RIGHT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
