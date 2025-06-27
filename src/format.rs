@@ -110,9 +110,7 @@ impl FormatState {
 
         if let Some(prev_token) = self.tokens.last() {
             match prev_token.category {
-                Some(TokenCategory::Quote)
-                | Some(TokenCategory::DataType)
-                | Some(TokenCategory::XmlMethod) => {
+                Some(TokenCategory::DataType) | Some(TokenCategory::XmlMethod) => {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
