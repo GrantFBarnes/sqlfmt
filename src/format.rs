@@ -915,6 +915,39 @@ FROM TBL1"#
     }
 
     #[test]
+    fn test_get_formatted_go() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 FROM TBL1 GO
+            SELECT C1 FROM TBL1 GO
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT C1 FROM TBL1 GO
+            SELECT C1 FROM TBL1 GO
+"#,
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                C1
+            FROM TBL1
+            GO
+
+            SELECT
+                C1
+            FROM TBL1
+            GO"#,
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_datatype_quote() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(r#"[NVARCHAR](36)"#);
