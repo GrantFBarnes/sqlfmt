@@ -652,6 +652,7 @@ impl Token {
             "CATCH" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
             }
             "CLOSE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -820,6 +821,7 @@ impl Token {
             "TRY" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
+                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
             }
             "UNION" => {
                 behavior.push(TokenBehavior::NewLineBefore);

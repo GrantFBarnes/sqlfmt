@@ -2838,7 +2838,8 @@ CALL SP1()"#
                 CALL SP1;
             END TRY
             BEGIN CATCH
-                RETURN 1
+                CALL SP2;
+                RETURN 1;
             END CATCH
             RETURN 0
             "#,
@@ -2852,7 +2853,8 @@ CALL SP1()"#
                 CALL SP1;
             END TRY
             BEGIN CATCH
-                RETURN 1
+                CALL SP2;
+                RETURN 1;
             END CATCH
             RETURN 0
 "#
@@ -2867,7 +2869,8 @@ CALL SP1()"#
                 CALL SP1;
             END TRY
             BEGIN CATCH
-                RETURN 1
+                CALL SP2;
+                RETURN 1;
             END CATCH
             RETURN 0"#
         );
