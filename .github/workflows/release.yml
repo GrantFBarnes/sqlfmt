@@ -28,11 +28,19 @@ jobs:
           override: true
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
+      - name: Package Executable
+        shell: bash
+        run: |
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            zip sqlfmt-${{ matrix.target }}.zip target/${{ matrix.target }}/release/sqlfmt.exe
+          else
+            zip sqlfmt-${{ matrix.target }}.zip target/${{ matrix.target }}/release/sqlfmt
+          fi
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sqlfmt-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/sqlfmt*
+          path: sqlfmt-${{ matrix.target }}.zip
 
   build-vsix:
     name: Build VSIX
@@ -71,8 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/sqlfmt-*/sqlfmt
-            ./artifacts/sqlfmt-*/sqlfmt.exe
+            ./artifacts/sqlfmt-*/sqlfmt-*.zip
             ./artifacts/extension-vsix/*.vsix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
