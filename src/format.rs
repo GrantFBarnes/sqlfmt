@@ -1318,12 +1318,16 @@ SELECT
             r#"
             -- COMMENT
             DECLARE C1=1;DECLARE C2=2;
+            -- COMMENT
+            DECLARE C1=1;DECLARE C2=2;
             "#,
         );
 
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
+            -- COMMENT
+            DECLARE C1 = 1; DECLARE C2 = 2;
             -- COMMENT
             DECLARE C1 = 1; DECLARE C2 = 2;
 "#
@@ -1333,6 +1337,10 @@ SELECT
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            -- COMMENT
+            DECLARE C1 = 1;
+            DECLARE C2 = 2;
+
+            -- COMMENT
             DECLARE C1 = 1;
             DECLARE C2 = 2;"#
         );
