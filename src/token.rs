@@ -651,6 +651,7 @@ impl Token {
             }
             "CATCH" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
+                behavior.push(TokenBehavior::NewLineAfterX2IfCombined);
                 behavior.push(TokenBehavior::NewLineAfter);
                 behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
             }
@@ -698,6 +699,7 @@ impl Token {
             "END" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NoNewLineBeforeX2);
+                behavior.push(TokenBehavior::NewLineAfterX2IfCombined);
             }
             "EXEC" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1951,6 +1953,7 @@ pub enum TokenBehavior {
     NewLineAfterIfNotAfterKeyword,
     NewLineAfterSkip,
     NewLineAfterX2,
+    NewLineAfterX2IfCombined,
     NewLineBefore,
     NewLineBeforeIfNotAfterEvent,
     NewLineBeforeIfNotAfterKeyword,

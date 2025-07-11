@@ -242,14 +242,27 @@ impl FormatState {
             .tokens
             .last()
             .expect("should always have a previous token");
+        let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
 
         if token
             .behavior
             .contains(&TokenBehavior::NoNewLineBeforeUnlessMatch)
+            && prev1_token.category != token.category
         {
-            if prev1_token.category != token.category {
-                return;
-            }
+            return;
+        }
+
+        if prev1_token
+            .behavior
+            .contains(&TokenBehavior::NewLineAfterX2IfCombined)
+            && let Some(p3t) = prev3_token
+            && p3t
+                .behavior
+                .contains(&TokenBehavior::NewLineAfterX2IfCombined)
+        {
+            self.push(Token::new_newline());
+            self.push(Token::new_newline());
+            return;
         }
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
@@ -281,36 +294,31 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeyword)
+            && prev1_token.category != Some(TokenCategory::Keyword)
         {
-            if prev1_token.category != Some(TokenCategory::Keyword) {
-                self.push(Token::new_newline());
-                return;
-            }
+            self.push(Token::new_newline());
+            return;
         }
-
-        let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
 
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterEvent)
+            && prev1_token.category != Some(TokenCategory::DataType)
+            && prev1_token.category != Some(TokenCategory::Event)
+            && prev3_token.is_none_or(|t| t.category != Some(TokenCategory::Event))
         {
-            if prev1_token.category != Some(TokenCategory::DataType)
-                && prev1_token.category != Some(TokenCategory::Event)
-                && prev3_token.is_none_or(|t| t.category != Some(TokenCategory::Event))
-            {
-                self.push(Token::new_newline());
-                return;
-            }
+            self.push(Token::new_newline());
+            return;
         }
 
         if prev1_token
             .behavior
             .contains(&TokenBehavior::NewLineAfterIfNotAfterKeyword)
+            && let Some(p3t) = prev3_token
+            && p3t.category != Some(TokenCategory::Keyword)
         {
-            if prev3_token.is_some_and(|t| t.category != Some(TokenCategory::Keyword)) {
-                self.push(Token::new_newline());
-                return;
-            }
+            self.push(Token::new_newline());
+            return;
         }
 
         if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)) {
@@ -2872,6 +2880,7 @@ CALL SP1()"#
                 CALL SP2;
                 RETURN 1;
             END CATCH
+
             RETURN 0"#
         );
     }
@@ -2921,6 +2930,7 @@ CALL SP1()"#
             BEGIN CATCH
                 RETURN 1
             END CATCH
+
             RETURN 0"#
         );
     }
@@ -2946,6 +2956,7 @@ CALL SP1()"#
             get_formatted_sql(&config, sql.clone()),
             r#"            BEGIN CATCH
             END CATCH
+
             UPDATE TBL1
             SET C1 = 1"#
         );
