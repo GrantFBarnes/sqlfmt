@@ -69,7 +69,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/sqlfmt-*/sqlfmt*
+            ./artifacts/sqlfmt-*/sqlfmt
+            ./artifacts/sqlfmt-*/sqlfmt.exe
             ./artifacts/extension-vsix/*.vsix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
