@@ -4,18 +4,7 @@ This is a Visual Studio Code extension that allows you to utilize `sqlfmt` from 
 
 ## Requirements
 
-The extension assumes `sqlfmt` is already an executable program on your system.
-
-## Extension Settings
-
-This extension contributes the following settings:
-
-- `sqlfmt.useConfigFile`: Controls whether to use config file or settings below
-- `sqlfmt.replaceNewlines`: Replace newlines
-- `sqlfmt.changeKeywordCase`: Change case on keywords
-- `sqlfmt.useTabs`: Use tabs instead of spaces for indentation
-- `sqlfmt.setSpaceCount`: Set amount of spaces for each level of indent
-- `sqlfmt.setCharCount`: Set amount of chars to determine line breaks
+This extension assumes `sqlfmt` is an already [installed](../README.md##Installation) executable program on your system.
 
 ## Installation
 
@@ -36,3 +25,30 @@ vsce package
 ```
 
 After you have the `vsix` file (either through download or manual build), you can then manully install the `sqlfmt-X.X.X.vsix` file to VS Code as an extension.
+
+## Operation
+
+This extension is setup as a language formatter extension.
+To set the extension as the default formatter for `sql` files, add the following to your VS Code settings:
+
+```json
+"[sql]": {
+  "editor.defaultFormatter": "GrantFBarnes.sqlfmt"
+}
+```
+
+This gives you all the standard formatting in VS Code, such as formatting entire files or just highlighted sections.
+
+For situations where you want to format SQL inside another file type, such as a string in another programming language, you can use the `sqlfmt - Format SQL` command.
+This will run the program against any highlighted text within any file and replace it with the formated result.
+
+## Extension Settings
+
+This extension contributes the following settings:
+
+- `sqlfmt.useConfigFile`: Controls whether to use config file or settings below
+- `sqlfmt.replaceNewlines`: Replace newlines
+- `sqlfmt.changeKeywordCase`: Change case on keywords
+- `sqlfmt.useTabs`: Use tabs instead of spaces for indentation
+- `sqlfmt.setSpaceCount`: Set amount of spaces for each level of indent
+- `sqlfmt.setCharCount`: Set amount of chars to determine line breaks

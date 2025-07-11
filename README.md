@@ -2,6 +2,18 @@
 
 Command line SQL formatter.
 
+## Installation
+
+The easiest way to get the executable is to download it from the [latest release](https://github.com/grantfbarnes/sqlfmt/releases/latest).
+
+However, if preferred, the executable can be built manually:
+
+```sh
+cargo build --release
+```
+
+After you have the executable (either through download or manual build), simply place it somewhere in your PATH.
+
 ## Usage
 
 ```sh
@@ -33,8 +45,8 @@ Command line SQL formatter.
 
 `.sqlfmt`
 
-Program will look for file in current working directory and up (until root).
-If found, file content sets the default configuration values.
+This program will look for the config file in the current working directory and up (until root).
+If found, the file content sets the default configuration values.
 Any configuration arguments provided will override these defaults.
 
 Format Configuration
@@ -48,14 +60,24 @@ spaces=<INT>
 chars=<INT>
 ```
 
-## Installation
+## Extensions
 
-The easiest way to get the executable is to download it from the [latest release](https://github.com/grantfbarnes/sqlfmt/releases/latest).
+A [VS Code extension](vsce/README.md) is offered to allow for easy use of this program as a VS Code language formatter.
 
-However, if preferred, the executable can be built manually:
+For vim/neovim users, you can add keybindings to help run the program.
 
-```sh
-cargo build --release
+Here are some examples:
+
+```vim
+vnoremap <Leader>sf :!sqlfmt<CR>
+vnoremap <Leader>snf :!sqlfmt -n<CR>
+nnoremap <Leader>sf ggVG:!sqlfmt<CR>
+nnoremap <Leader>snf ggVG:!sqlfmt -n<CR>
 ```
 
-After you have the executable (either through download or manual build), simply place it somewhere in your PATH.
+```lua
+vim.keymap.set("v", "<leader>sf", ":!sqlfmt<CR>")
+vim.keymap.set("v", "<leader>snf", ":!sqlfmt -n<CR>")
+vim.keymap.set("n", "<leader>sf", "ggVG:!sqlfmt<CR>")
+vim.keymap.set("n", "<leader>snf", "ggVG:!sqlfmt -n<CR>")
+```
