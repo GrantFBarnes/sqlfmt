@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.target }}" == *windows* ]]; then
-            zip sqlfmt-${{ matrix.target }}.zip target/${{ matrix.target }}/release/sqlfmt.exe
+            powershell -Command "Compress-Archive -Path target/${{ matrix.target }}/release/sqlfmt.exe -DestinationPath sqlfmt-${{ matrix.target }}.zip"
           else
             zip sqlfmt-${{ matrix.target }}.zip target/${{ matrix.target }}/release/sqlfmt
           fi
