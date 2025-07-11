@@ -19,7 +19,11 @@ This extension contributes the following settings:
 
 ## Installation
 
-To install extension ensure you have the `vsce` tool installed.
+The easiest way to get the extension is to download the `vsix` file from the [latest release](https://github.com/grantfbarnes/sqlfmt/releases/latest).
+
+However, if preferred, the extension can be built manually with the following steps:
+
+Ensure you have the `vsce` tool installed.
 
 ```sh
 npm install -g @vscode/vsce
@@ -31,4 +35,4 @@ Ensure you are in this directory and package the extension.
 vsce package
 ```
 
-You can then manully install the `sqlfmt-X.X.X.vsix` file to VS Code as an extension.
+After you have the `vsix` file (either through download or manual build), you can then manully install the `sqlfmt-X.X.X.vsix` file to VS Code as an extension.
