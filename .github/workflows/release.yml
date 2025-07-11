@@ -2,8 +2,10 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
+    # tags:
+    #   - 'v*.*.*'
 
 jobs:
   build-rust:
@@ -48,12 +50,12 @@ jobs:
         working-directory: ./vsce
       - name: Package VSIX
         run: vsce package
-        working-directory: ./vscode-extension
+        working-directory: ./vsce
       - name: Upload VSIX Artifact
         uses: actions/upload-artifact@v4
         with:
           name: extension-vsix
-          path: ./vscode-extension/*.vsix
+          path: ./vsce/*.vsix
 
   release:
     name: Create Release
