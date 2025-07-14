@@ -334,52 +334,47 @@ impl FormatState {
             let mut paren_count: usize = 1;
             let mut positions_to_remove: Vec<usize> = vec![];
             let mut positions_to_add_space: Vec<usize> = vec![];
+
+            // loop backwards until previous newline outside paren set
             for i in (0..self.tokens.len()).rev() {
                 let prev_token: &Token = &self.tokens[i];
-                match prev_token.category {
-                    Some(TokenCategory::ParenOpen) => {
-                        // if paren_count is zero already out of paren set in question
-                        if paren_count > 0 {
-                            paren_count -= 1;
-                        }
+
+                if paren_count == 0 {
+                    // no longer inside paren set in question
+                    if prev_token.category == Some(TokenCategory::NewLine) {
+                        break;
                     }
-                    Some(TokenCategory::ParenClose) => {
-                        // if paren_count is zero already out of paren set in question
-                        if paren_count > 0 {
-                            paren_count += 1
-                        }
-                    }
-                    Some(TokenCategory::WhiteSpace) => {
-                        if paren_count > 0 && i > 0 {
-                            match self.tokens[i - 1].category {
-                                Some(TokenCategory::NewLine) | Some(TokenCategory::WhiteSpace) => {
-                                    positions_to_remove.push(i);
-                                    continue;
-                                }
-                                _ => (),
+                } else {
+                    // still inside paren set in question
+                    match prev_token.category {
+                        Some(TokenCategory::ParenOpen) => paren_count -= 1,
+                        Some(TokenCategory::ParenClose) => paren_count += 1,
+                        Some(TokenCategory::WhiteSpace) => {
+                            if let Some(pt) = self.tokens.get(i - 1)
+                                && (pt.category == Some(TokenCategory::NewLine)
+                                    || pt.category == Some(TokenCategory::WhiteSpace))
+                            {
+                                positions_to_remove.push(i);
+                                continue;
                             }
                         }
-                    }
-                    Some(TokenCategory::NewLine) => {
-                        if paren_count > 0 {
+                        Some(TokenCategory::NewLine) => {
                             positions_to_remove.push(i);
 
-                            if self
-                                .get_prev_nonwhitespace_token(i)
-                                .is_some_and(|t| t.category != Some(TokenCategory::ParenOpen))
-                                && self
-                                    .get_next_nonwhitespace_token(i)
-                                    .is_some_and(|t| t.category != Some(TokenCategory::ParenClose))
+                            if let Some(pnwt) = self.get_prev_nonwhitespace_token(i)
+                                && pnwt.category != Some(TokenCategory::ParenOpen)
+                                && let Some(nnwt) = self.get_next_nonwhitespace_token(i)
+                                && nnwt.category != Some(TokenCategory::ParenClose)
                             {
                                 positions_to_add_space.push(i);
                                 collapsed_len += 1;
                             }
                             continue;
                         }
-                        break;
+                        _ => (),
                     }
-                    _ => (),
                 }
+
                 collapsed_len += prev_token.value.replace(TAB, "    ").len();
             }
 
