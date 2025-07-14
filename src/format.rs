@@ -330,6 +330,7 @@ impl FormatState {
     fn remove_extra_newline(&mut self, token: &Token, config: &Configuration) {
         // collapse paren if short enough
         if token.category == Some(TokenCategory::ParenClose) {
+            let mut inner_token_count: usize = 0;
             let mut collapsed_len: usize = 1;
             let mut paren_count: usize = 1;
             let mut positions_to_remove: Vec<usize> = vec![];
@@ -371,14 +372,14 @@ impl FormatState {
                             }
                             continue;
                         }
-                        _ => (),
+                        _ => inner_token_count += 1,
                     }
                 }
 
                 collapsed_len += prev_token.value.replace(TAB, "    ").len();
             }
 
-            if collapsed_len <= config.chars.into() {
+            if inner_token_count <= 1 || collapsed_len <= config.chars.into() {
                 for p in positions_to_remove {
                     self.tokens.remove(p);
                     if positions_to_add_space.contains(&p) {
@@ -1673,6 +1674,9 @@ SET C3 = 3"#
             r#"
             BEGIN
             SELECT
+            REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_NO_PARAMETER(),
+            REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_ONE_PARAMETER(P1),
+            REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_TWO_PARAMETER(P1,P2),
             ROUND((LENGTH(LONG_VARIABLE_NAME) - LENGTH(REPLACE(LONG_VARIABLE_NAME, '_____', ''))) / LENGTH('_____')) AS BLANKCOUNT
             END
             "#,
@@ -1683,6 +1687,9 @@ SET C3 = 3"#
             r#"
             BEGIN
                 SELECT
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_NO_PARAMETER(),
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_ONE_PARAMETER(P1),
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_TWO_PARAMETER(P1, P2),
                     ROUND((LENGTH(LONG_VARIABLE_NAME) - LENGTH(REPLACE(LONG_VARIABLE_NAME, '_____', ''))) / LENGTH('_____')) AS BLANKCOUNT
             END
 "#
@@ -1693,6 +1700,12 @@ SET C3 = 3"#
             get_formatted_sql(&config, sql.clone()),
             r#"            BEGIN
                 SELECT
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_NO_PARAMETER(),
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_ONE_PARAMETER(P1),
+                    REALLY_REALLY_REALLY_LONG_STORED_PROCEDURE_NAME_TWO_PARAMETER(
+                        P1,
+                        P2
+                    ),
                     ROUND(
                         (
                             LENGTH(LONG_VARIABLE_NAME) - LENGTH(
