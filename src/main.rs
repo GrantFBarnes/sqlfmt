@@ -65,8 +65,8 @@ fn print_help() {
         "sqlfmt - SQL Format
 
 Usage:
-  sqlfmt -i <INPUT_FILE_PATH>
   <INPUT_STREAM> | sqlfmt
+  sqlfmt -i <INPUT_FILE_PATH>
 
 Arguments:
   Basic
@@ -88,8 +88,8 @@ Arguments:
 Config File:
   .sqlfmt
 
-  Program will look for file in current working directory and up (until root).
-  If found, file content sets the default configuration values.
+  This program will look for the config file in the current working directory and up (until root).
+  If found, the file content sets the default configuration values.
   Any configuration arguments provided will override these defaults.
 
   Format Configuration

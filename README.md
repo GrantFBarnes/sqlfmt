@@ -12,13 +12,39 @@ However, if preferred, the executable can be built manually:
 cargo build --release
 ```
 
-After you have the executable (either through download or manual build), simply place it somewhere in your PATH.
+After you have the executable (either through download or manual build), simply place it somewhere in your `PATH`.
 
 ## Usage
 
 ```sh
-  sqlfmt -i $INPUT_FILE_PATH
-  $INPUT_STREAM | sqlfmt
+  <INPUT_STREAM> | sqlfmt
+  sqlfmt -i <INPUT_FILE_PATH>
+```
+
+## Examples
+
+```sh
+$ cat input.sql
+Select Column1    From Table1    Order By Column1;
+
+$ cat input.sql | sqlfmt
+Select Column1 From Table1 Order By Column1;
+
+$ cat input.sql | sqlfmt --upper
+SELECT Column1 FROM Table1 ORDER BY Column1;
+
+$ cat input.sql | sqlfmt --newlines
+Select
+    Column1
+From Table1
+Order By Column1;
+
+$ sqlfmt --newlines --upper --input input.sql --output output.sql
+$ cat output.sql
+SELECT
+    Column1
+FROM Table1
+ORDER BY Column1;
 ```
 
 ## Arguments
