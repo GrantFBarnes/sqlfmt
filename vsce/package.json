@@ -4,13 +4,13 @@
   "description": "Format SQL",
   "publisher": "GrantFBarnes",
   "license": "GPL-3.0-only",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/GrantFBarnes/sqlfmt.git"
   },
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.100.0"
   },
   "categories": [
     "Formatters"
@@ -97,7 +97,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.99.0",
+    "@types/vscode": "^1.100.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
