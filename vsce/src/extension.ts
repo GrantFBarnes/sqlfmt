@@ -3,7 +3,7 @@ import cp from "child_process";
 import { getBinaryPath } from "./binary";
 
 export function activate(context: vscode.ExtensionContext) {
-  getBinaryPath()
+  getBinaryPath(context.globalStorageUri.fsPath)
     .then((binaryPath) => {
       context.subscriptions.push(getSqlfmtCommand(binaryPath));
       setupLanguageFormatting(binaryPath);
