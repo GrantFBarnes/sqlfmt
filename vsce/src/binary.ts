@@ -4,6 +4,7 @@ import * as tar from "tar";
 import * as vscode from "vscode";
 import * as zlib from "zlib";
 import Stream from "stream";
+import cp from "child_process";
 import { promisify } from "util";
 
 export async function getBinaryPath(rootPath: string): Promise<string> {
@@ -18,6 +19,11 @@ export async function getBinaryPath(rootPath: string): Promise<string> {
         const latestVersion: string = await getLatestVersion();
 
         if (!fs.existsSync(binaryPath)) {
+            await getBinary(rootPath, latestVersion);
+        }
+
+        const installedVersion: string = await getInstalledVersion(binaryPath);
+        if (latestVersion != "" && installedVersion != latestVersion) {
             await getBinary(rootPath, latestVersion);
         }
 
@@ -44,35 +50,67 @@ function getLatestVersion(): Promise<string> {
 
 function getBinary(rootPath: string, latestVersion: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
-        const mkdir = promisify(fs.mkdir);
-        await mkdir(rootPath, { recursive: true });
+        try {
+            const mkdir = promisify(fs.mkdir);
+            await mkdir(rootPath, { recursive: true });
 
-        const assetName: string = getPlatformAssetName();
+            const assetName: string = getPlatformAssetName();
 
-        const response: Response = await fetch(`https://github.com/GrantFBarnes/sqlfmt/releases/download/${latestVersion}/${assetName}`);
-        if (response.status !== 200) {
+            const response: Response = await fetch(`https://github.com/GrantFBarnes/sqlfmt/releases/download/${latestVersion}/${assetName}`);
+            if (response.status !== 200) {
+                return reject();
+            }
+
+            const assetPath: string = path.join(rootPath, assetName);
+            const assetWriteStream: fs.WriteStream = fs.createWriteStream(assetPath);
+            assetWriteStream.write(Buffer.from(await response.arrayBuffer()));
+            assetWriteStream.end();
+            assetWriteStream.on("error", reject);
+            assetWriteStream.on("finish", () => {
+                Stream.pipeline(
+                    fs.createReadStream(assetPath),
+                    zlib.createGunzip(),
+                    tar.extract({ cwd: rootPath }),
+                    (err) => {
+                        if (err) {
+                            reject();
+                        } else {
+                            resolve();
+                        }
+                    },
+                );
+            });
+        }
+        catch {
             return reject();
         }
+    });
+}
 
-        const assetPath: string = path.join(rootPath, assetName);
-        const assetWriteStream: fs.WriteStream = fs.createWriteStream(assetPath);
-        assetWriteStream.write(Buffer.from(await response.arrayBuffer()));
-        assetWriteStream.end();
-        assetWriteStream.on("error", reject);
-        assetWriteStream.on("finish", () => {
-            Stream.pipeline(
-                fs.createReadStream(assetPath),
-                zlib.createGunzip(),
-                tar.extract({ cwd: rootPath }),
-                (err) => {
-                    if (err) {
-                        reject();
-                    } else {
-                        resolve();
-                    }
-                },
-            );
-        });
+function getInstalledVersion(binaryPath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        try {
+            const process = cp.spawn(binaryPath, ["--version"]);
+
+            let output: string = "";
+
+            process.stdout.on("data", (data: any) => {
+                output += data.toString();
+            });
+
+            process.on("close", (code: any) => {
+                if (code === 0) {
+                    resolve(`v${output.trim()}`);
+                } else {
+                    reject();
+                }
+            });
+
+            process.on("error", () => reject());
+        }
+        catch {
+            reject();
+        }
     });
 }
 
