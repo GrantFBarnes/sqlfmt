@@ -32,15 +32,15 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.target }}" == *windows* ]]; then
-            powershell -Command "Compress-Archive -Path target/${{ matrix.target }}/release/sqlfmt.exe -DestinationPath sqlfmt-${{ matrix.target }}.zip"
+            tar -czvf 'sqlfmt-${{ matrix.target }}.tar.gz' --directory='target/${{ matrix.target }}/release' sqlfmt.exe
           else
-            zip sqlfmt-${{ matrix.target }}.zip target/${{ matrix.target }}/release/sqlfmt
+            tar -czvf 'sqlfmt-${{ matrix.target }}.tar.gz' --directory='target/${{ matrix.target }}/release' sqlfmt
           fi
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sqlfmt-${{ matrix.target }}
-          path: sqlfmt-${{ matrix.target }}.zip
+          path: sqlfmt-${{ matrix.target }}.tar.gz
 
   build-vsix:
     name: Build VSIX
@@ -79,7 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/sqlfmt-*/sqlfmt-*.zip
+            ./artifacts/sqlfmt-*/sqlfmt-*.tar.gz
             ./artifacts/extension-vsix/*.vsix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
