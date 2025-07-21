@@ -70,7 +70,7 @@ function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Pr
     let formattedSql = "";
 
     const unformattedSql = document.getText(range);
-    const processArguments = getSqlFmtArguments();
+    const processArguments = getProcessArguments();
     const process = cp.spawn("sqlfmt", processArguments);
     process.stdin.write(unformattedSql);
     process.stdin.end();
@@ -102,44 +102,46 @@ function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Pr
   });
 }
 
-function getSqlFmtArguments(): string[] {
-  let args: string[] = [];
-
+function getProcessArguments(): string[] {
   const config = vscode.workspace.getConfiguration();
 
-  if (!config.get("sqlfmt.useConfigFile")) {
-    if (config.get("sqlfmt.replaceNewlines")) {
-      args.push("-n");
+  if (config.get("sqlfmt.useConfigFile")) {
+    return [];
+  }
+
+  let args: string[] = [];
+
+  if (config.get("sqlfmt.replaceNewlines")) {
+    args.push("-n");
+  }
+
+  switch (config.get("sqlfmt.changeKeywordCase")) {
+    case "uppercase":
+      args.push("-u");
+      break;
+
+    case "lowercase":
+      args.push("-l");
+      break;
+
+    default:
+      break;
+  }
+
+  if (config.get("sqlfmt.useTabs")) {
+    args.push("-t");
+  } else {
+    const spaceCount = config.get("sqlfmt.setSpaceCount");
+    if (typeof spaceCount == "number") {
+      args.push("-s");
+      args.push(spaceCount.toString());
     }
+  }
 
-    switch (config.get("sqlfmt.changeKeywordCase")) {
-      case "uppercase":
-        args.push("-u");
-        break;
-
-      case "lowercase":
-        args.push("-l");
-        break;
-
-      default:
-        break;
-    }
-
-    if (config.get("sqlfmt.useTabs")) {
-      args.push("-t");
-    } else {
-      const spaceCount = config.get("sqlfmt.setSpaceCount");
-      if (typeof spaceCount == "number") {
-        args.push("-s");
-        args.push(spaceCount.toString());
-      }
-    }
-
-    const charCount = config.get("sqlfmt.setCharCount");
-    if (typeof charCount == "number") {
-      args.push("-c");
-      args.push(charCount.toString());
-    }
+  const charCount = config.get("sqlfmt.setCharCount");
+  if (typeof charCount == "number") {
+    args.push("-c");
+    args.push(charCount.toString());
   }
 
   return args;
