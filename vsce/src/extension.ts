@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    getFormattedSql(editor.document, range).then((formattedSql: string) => {
+    getFormattedSql(editor.document.getText(range)).then((formattedSql: string) => {
       vscode.window.showInformationMessage("SQL is formatted.");
       editor.edit((editBuilder) => {
         editBuilder.replace(range, formattedSql);
@@ -31,14 +31,14 @@ export function activate(context: vscode.ExtensionContext) {
       const lastLine = document.lineAt(document.lineCount - 1);
       const range = new vscode.Range(firstLine.range.start, lastLine.range.end);
 
-      const formattedSql: string = await getFormattedSql(document, range);
+      const formattedSql: string = await getFormattedSql(document.getText(range));
       return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
     }
   });
 
   vscode.languages.registerDocumentRangeFormattingEditProvider('sql', {
     async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
-      const formattedSql: string = await getFormattedSql(document, range);
+      const formattedSql: string = await getFormattedSql(document.getText(range));
       return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
     }
   });
@@ -65,40 +65,40 @@ function getRangeToFormat(): vscode.Range | null {
   }
 }
 
-function getFormattedSql(document: vscode.TextDocument, range: vscode.Range): Promise<string> {
+function getFormattedSql(inputSql: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    let formattedSql = "";
+    try {
+      const processArguments: string[] = getProcessArguments();
+      const process = cp.spawn("sqlfmt", processArguments);
 
-    const unformattedSql = document.getText(range);
-    const processArguments = getProcessArguments();
-    const process = cp.spawn("sqlfmt", processArguments);
-    process.stdin.write(unformattedSql);
-    process.stdin.end();
+      process.stdin.write(inputSql);
+      process.stdin.end();
 
-    process.stdout.on("data", (data: any) => {
-      formattedSql += data.toString();
-    });
+      let outputSql: string = "";
 
-    process.stderr.on("data", (data: any) => {
-      vscode.window.showErrorMessage(`stderr: ${data}`);
-    });
+      process.stdout.on("data", (data: any) => {
+        outputSql += data.toString();
+      });
 
-    process.on("close", (code: any) => {
-      if (code === 0) {
-        // remove single extra newline if found
-        if (formattedSql.endsWith("\n")) {
-          formattedSql = formattedSql.replace(/\n$/, "");
+      process.on("close", (code: any) => {
+        if (code === 0) {
+          // remove single extra newline if found
+          if (outputSql.endsWith("\n")) {
+            outputSql = outputSql.replace(/\n$/, "");
+          }
+          resolve(outputSql);
+        } else {
+          reject(`Process exited with code ${code}`);
         }
-        resolve(formattedSql);
-      } else {
-        reject(`Process exited with code ${code}`);
-      }
-    });
+      });
 
-    process.on("error", (error: any) => {
-      vscode.window.showErrorMessage(`error: ${error}`);
-      reject(`Process error: ${error}`);
-    });
+      process.on("error", (error: any) => {
+        reject(`Process error: ${error}`);
+      });
+    }
+    catch (error: any) {
+      reject(`Error: ${error}`);
+    }
   });
 }
 
