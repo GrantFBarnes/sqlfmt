@@ -2,10 +2,6 @@
 
 This extension allows you to utilize [sqlfmt](https://github.com/GrantFBarnes/sqlfmt) from within VS Code.
 
-## Requirements
-
-This extension assumes `sqlfmt` is an already [installed](https://github.com/GrantFBarnes/sqlfmt?tab=readme-ov-file#installation) executable program on your system.
-
 ## Installation
 
 The easiest way to get the extension is to download the `vsix` file from the [latest release](https://github.com/grantfbarnes/sqlfmt/releases/latest).
