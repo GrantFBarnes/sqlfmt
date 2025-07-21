@@ -321,7 +321,15 @@ impl FormatState {
             return;
         }
 
-        if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)) {
+        if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip))
+            || (prev1_token.category == Some(TokenCategory::ParenClose)
+                && prev3_token.is_some_and(|t| t.category == Some(TokenCategory::ParenOpen))
+                && self
+                    .tokens
+                    .iter()
+                    .nth_back(4)
+                    .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)))
+        {
             self.push(Token::new_newline());
             return;
         }
@@ -1073,6 +1081,39 @@ FROM TBL1"#
                 *
             FROM TBL1
             WHERE ((C1 = 0 AND C2 = 0) OR (C1 = 1 AND C2 = 1))"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_top() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT TOP 100 ID FROM TBL1;
+            SELECT TOP (100) ID FROM TBL1;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT TOP 100 ID FROM TBL1;
+            SELECT TOP (100) ID FROM TBL1;
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                TOP 100
+                ID
+            FROM TBL1;
+
+            SELECT
+                TOP (100)
+                ID
+            FROM TBL1;"#
         );
     }
 
