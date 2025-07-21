@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(sqlfmt);
 
-  vscode.languages.registerDocumentFormattingEditProvider('sql', {
+  vscode.languages.registerDocumentFormattingEditProvider("sql", {
     async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
       const firstLine = document.lineAt(0);
       const lastLine = document.lineAt(document.lineCount - 1);
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  vscode.languages.registerDocumentRangeFormattingEditProvider('sql', {
+  vscode.languages.registerDocumentRangeFormattingEditProvider("sql", {
     async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
       try {
         const formattedSql: string = await getFormattedSql(document.getText(range));
