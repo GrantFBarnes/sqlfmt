@@ -1,8 +1,28 @@
 import * as vscode from "vscode";
 import cp from "child_process";
+import { getBinaryPath } from "./binary";
 
 export function activate(context: vscode.ExtensionContext) {
-  const sqlfmt = vscode.commands.registerCommand("sqlfmt.sqlfmt", () => {
+  getBinaryPath()
+    .then((binaryPath) => {
+      context.subscriptions.push(getSqlfmtCommand(binaryPath));
+      setupLanguageFormatting(binaryPath);
+    })
+    .catch(() => {
+      context.subscriptions.push(getSqlfmtCommand(null));
+      vscode.window.showErrorMessage("Failed to find sqlfmt binary.");
+    });
+}
+
+export function deactivate() { }
+
+function getSqlfmtCommand(binaryPath: string | null): vscode.Disposable {
+  return vscode.commands.registerCommand("sqlfmt.sqlfmt", () => {
+    if (binaryPath == null) {
+      vscode.window.showErrorMessage("Could not find sqlfmt binary.");
+      return;
+    }
+
     const editor = vscode.window.activeTextEditor;
     if (editor == null) {
       vscode.window.showErrorMessage("Could not find active editor.");
@@ -15,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    getFormattedSql(editor.document.getText(range))
+    getFormattedSql(binaryPath, editor.document.getText(range))
       .then((formattedSql: string) => {
         editor.edit((tee: vscode.TextEditorEdit) => tee.replace(range, formattedSql));
         vscode.window.showInformationMessage("SQL is formatted.");
@@ -23,9 +43,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage("Failed to format SQL.");
       });
   });
+}
 
-  context.subscriptions.push(sqlfmt);
-
+function setupLanguageFormatting(binaryPath: string) {
   vscode.languages.registerDocumentFormattingEditProvider("sql", {
     async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
       const firstLine = document.lineAt(0);
@@ -33,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
       const range = new vscode.Range(firstLine.range.start, lastLine.range.end);
 
       try {
-        const formattedSql: string = await getFormattedSql(document.getText(range));
+        const formattedSql: string = await getFormattedSql(binaryPath, document.getText(range));
         return [vscode.TextEdit.replace(range, formattedSql)];
       }
       catch {
@@ -46,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.languages.registerDocumentRangeFormattingEditProvider("sql", {
     async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
       try {
-        const formattedSql: string = await getFormattedSql(document.getText(range));
+        const formattedSql: string = await getFormattedSql(binaryPath, document.getText(range));
         return [vscode.TextEdit.replace(range, formattedSql)];
       }
       catch {
@@ -56,8 +76,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 }
-
-export function deactivate() { }
 
 function getRangeToFormat(): vscode.Range | null {
   const editor = vscode.window.activeTextEditor;
@@ -78,11 +96,11 @@ function getRangeToFormat(): vscode.Range | null {
   }
 }
 
-function getFormattedSql(inputSql: string): Promise<string> {
+function getFormattedSql(binaryPath: string, inputSql: string): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       const processArguments: string[] = getProcessArguments();
-      const process = cp.spawn("sqlfmt", processArguments);
+      const process = cp.spawn(binaryPath, processArguments);
 
       process.stdin.write(inputSql);
       process.stdin.end();
