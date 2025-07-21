@@ -15,23 +15,41 @@ export async function getBinaryPath(rootPath: string): Promise<string> {
         const binaryName: string = getPlatformBinaryName();
         const binaryPath: string = path.join(rootPath, binaryName);
 
+        const latestVersion: string = await getLatestVersion();
+
         if (!fs.existsSync(binaryPath)) {
-            await getBinary(rootPath);
+            await getBinary(rootPath, latestVersion);
         }
 
         return binaryPath;
     });
 }
 
-function getBinary(rootPath: string): Promise<void> {
+function getLatestVersion(): Promise<string> {
+    return new Promise(async (resolve) => {
+        try {
+            const response: Response = await fetch("https://api.github.com/repos/GrantFBarnes/sqlfmt/releases/latest");
+            if (response.status !== 200) {
+                return resolve("");
+            }
+
+            const json: any = await response.json();
+            return resolve(json.tag_name);
+        }
+        catch {
+            return resolve("");
+        }
+    });
+}
+
+function getBinary(rootPath: string, latestVersion: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
         const mkdir = promisify(fs.mkdir);
         await mkdir(rootPath, { recursive: true });
 
-        const version: string = await getLatestReleaseTag();
         const assetName: string = getPlatformAssetName();
 
-        const response: Response = await fetch(`https://github.com/GrantFBarnes/sqlfmt/releases/download/${version}/${assetName}`);
+        const response: Response = await fetch(`https://github.com/GrantFBarnes/sqlfmt/releases/download/${latestVersion}/${assetName}`);
         if (response.status !== 200) {
             return reject();
         }
@@ -55,23 +73,6 @@ function getBinary(rootPath: string): Promise<void> {
                 },
             );
         });
-    });
-}
-
-function getLatestReleaseTag(): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const response: Response = await fetch("https://api.github.com/repos/GrantFBarnes/sqlfmt/releases/latest");
-            if (response.status !== 200) {
-                return reject();
-            }
-
-            const json: any = await response.json();
-            return resolve(json.tag_name);
-        }
-        catch {
-            return reject();
-        }
     });
 }
 
