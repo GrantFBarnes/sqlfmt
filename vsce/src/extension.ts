@@ -15,12 +15,13 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    getFormattedSql(editor.document.getText(range)).then((formattedSql: string) => {
-      vscode.window.showInformationMessage("SQL is formatted.");
-      editor.edit((editBuilder) => {
-        editBuilder.replace(range, formattedSql);
+    getFormattedSql(editor.document.getText(range))
+      .then((formattedSql: string) => {
+        editor.edit((tee: vscode.TextEditorEdit) => tee.replace(range, formattedSql));
+        vscode.window.showInformationMessage("SQL is formatted.");
+      }).catch(() => {
+        vscode.window.showErrorMessage("Failed to format SQL.");
       });
-    }).catch(() => { });
   });
 
   context.subscriptions.push(sqlfmt);
@@ -31,15 +32,27 @@ export function activate(context: vscode.ExtensionContext) {
       const lastLine = document.lineAt(document.lineCount - 1);
       const range = new vscode.Range(firstLine.range.start, lastLine.range.end);
 
-      const formattedSql: string = await getFormattedSql(document.getText(range));
-      return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
+      try {
+        const formattedSql: string = await getFormattedSql(document.getText(range));
+        return [vscode.TextEdit.replace(range, formattedSql)];
+      }
+      catch {
+        vscode.window.showErrorMessage("Failed to format SQL.");
+        return [];
+      }
     }
   });
 
   vscode.languages.registerDocumentRangeFormattingEditProvider('sql', {
     async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
-      const formattedSql: string = await getFormattedSql(document.getText(range));
-      return formattedSql ? [vscode.TextEdit.replace(range, formattedSql)] : [];
+      try {
+        const formattedSql: string = await getFormattedSql(document.getText(range));
+        return [vscode.TextEdit.replace(range, formattedSql)];
+      }
+      catch {
+        vscode.window.showErrorMessage("Failed to format SQL.");
+        return [];
+      }
     }
   });
 }
