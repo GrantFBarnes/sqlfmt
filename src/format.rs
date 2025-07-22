@@ -1105,13 +1105,11 @@ FROM TBL1"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"            SELECT
-                TOP 100
+            r#"            SELECT TOP 100
                 ID
             FROM TBL1;
 
-            SELECT
-                TOP (100)
+            SELECT TOP (100)
                 ID
             FROM TBL1;"#
         );
@@ -1910,8 +1908,7 @@ SET C3 = 3"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"            SELECT
-                DISTINCT
+            r#"            SELECT DISTINCT
                 T1.C1 AS C1,
                 T2.C2 AS C2,
                 T3.C3 AS C3

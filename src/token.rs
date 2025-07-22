@@ -678,6 +678,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "DISTINCT" => {
+                behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
             }
             "DO" => {
@@ -814,6 +815,7 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndentIfNotInsideCase);
             }
             "TOP" => {
+                behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfterSkip);
             }
             "TRUNCATE" => {
