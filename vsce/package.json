@@ -5,7 +5,7 @@
   "publisher": "GrantFBarnes",
   "license": "GPL-3.0-only",
   "version": "1.0.1",
-  "icon": "sqlfmt.png",
+  "icon": "images/sqlfmt.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/GrantFBarnes/sqlfmt.git"
