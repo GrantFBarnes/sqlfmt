@@ -2,6 +2,10 @@ name: sqlfmt
 title: sqlfmt
 base: core24
 version: '1.0.2'
+source-code:
+  - https://github.com/GrantFBarnes/sqlfmt
+license: GPL-3.0
+icon: vsce/images/icon.png
 summary: CLI to format SQL
 description: |
   A command line interface tool to format SQL.
