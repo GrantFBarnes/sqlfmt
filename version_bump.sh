@@ -71,6 +71,7 @@ NEW_VERSION="$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
 # update versions
 
 sed -i -E 's/^version = "'$REGEX_VALID_VERSION'"$/version = "'$NEW_VERSION'"/' Cargo.toml
+sed -i -E 's/^version = "'$REGEX_VALID_VERSION'"$/version = "'$NEW_VERSION'"/' snap/snapcraft.yaml
 sed -i -E 's/^  "version": "'$REGEX_VALID_VERSION'",$/  "version": "'$NEW_VERSION'",/' vsce/package.json
 
 ################################################################################
