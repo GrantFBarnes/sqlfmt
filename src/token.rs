@@ -855,7 +855,6 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "WITH" => {
-                behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -1316,6 +1315,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "NOAUDIT" => Some(TokenCategory::Keyword),
         "NOCHECK" => Some(TokenCategory::Keyword),
         "NOCOMPRESS" => Some(TokenCategory::Keyword),
+        "NOLOCK" => Some(TokenCategory::Keyword),
         "NONCLUSTERED" => Some(TokenCategory::Keyword),
         "NONE" => Some(TokenCategory::Keyword),
         "NORMALIZE" => Some(TokenCategory::Keyword),

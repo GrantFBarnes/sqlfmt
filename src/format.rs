@@ -2172,11 +2172,41 @@ FROM TBL1;"#
     }
 
     #[test]
+    fn test_get_formatted_sql_with_nolock() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 FROM TBL1 WITH (NOLOCK)
+            SELECT C1 FROM TBL1 WITH (NOLOCK)
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT C1 FROM TBL1 WITH (NOLOCK)
+            SELECT C1 FROM TBL1 WITH (NOLOCK)
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                C1
+            FROM TBL1 WITH (NOLOCK)
+            SELECT
+                C1
+            FROM TBL1 WITH (NOLOCK)"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_cte_after_select() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
-            SELECT C1 FROM TBL1
+            SELECT C1 FROM TBL1;
             WITH CTE2 AS
             (SELECT C2 FROM TBL2)
             SELECT * FROM CTE2
@@ -2186,7 +2216,7 @@ FROM TBL1;"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
-            SELECT C1 FROM TBL1
+            SELECT C1 FROM TBL1;
             WITH CTE2 AS
                 (SELECT C2 FROM TBL2)
             SELECT * FROM CTE2
@@ -2198,7 +2228,8 @@ FROM TBL1;"#
             get_formatted_sql(&config, sql.clone()),
             r#"            SELECT
                 C1
-            FROM TBL1
+            FROM TBL1;
+
             WITH CTE2 AS (SELECT C2 FROM TBL2)
             SELECT
                 *
