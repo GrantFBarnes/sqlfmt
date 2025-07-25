@@ -110,11 +110,11 @@ impl FormatState {
 
         if let Some(prev_token) = self.tokens.last() {
             match prev_token.category {
-                Some(TokenCategory::DataType) | Some(TokenCategory::XmlMethod) => {
+                Some(TokenCategory::XmlMethod) => {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
-                Some(TokenCategory::Method) | None => {
+                Some(TokenCategory::DataType) | Some(TokenCategory::Method) | None => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
                     return;
                 }
@@ -3209,6 +3209,44 @@ CALL SP1()"#
                 2,
                 ''
             )"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_table_variable() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            DECLARE TBL1 TABLE (
+                C1 UNIQUEIDENTIFIER, C2 UNIQUEIDENTIFIER,
+                C3 UNIQUEIDENTIFIER, C4 UNIQUEIDENTIFIER,
+                C5 UNIQUEIDENTIFIER, C6 UNIQUEIDENTIFIER
+            );
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            DECLARE TBL1 TABLE(
+                    C1 UNIQUEIDENTIFIER, C2 UNIQUEIDENTIFIER,
+                    C3 UNIQUEIDENTIFIER, C4 UNIQUEIDENTIFIER,
+                    C5 UNIQUEIDENTIFIER, C6 UNIQUEIDENTIFIER
+                );
+"#,
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            DECLARE TBL1 TABLE(
+                    C1 UNIQUEIDENTIFIER,
+                    C2 UNIQUEIDENTIFIER,
+                    C3 UNIQUEIDENTIFIER,
+                    C4 UNIQUEIDENTIFIER,
+                    C5 UNIQUEIDENTIFIER,
+                    C6 UNIQUEIDENTIFIER
+                );"#,
         );
     }
 
