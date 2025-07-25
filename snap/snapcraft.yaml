@@ -1,0 +1,21 @@
+name: sqlfmt
+title: sqlfmt
+base: core24
+version: '1.0.2'
+summary: CLI to format SQL
+description: |
+  A command line interface tool to format SQL.
+  Arguments allow for configuration on how to format.
+  Can use stdin/stdout or files for input/output.
+
+grade: stable
+confinement: strict
+
+parts:
+  sqlfmt:
+    plugin: rust
+    source: .
+
+apps:
+  sqlfmt:
+    command: bin/sqlfmt
