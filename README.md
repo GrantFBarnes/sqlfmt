@@ -4,6 +4,8 @@ Command line SQL formatter.
 
 ## Installation
 
+### Manual
+
 The easiest way to get the executable is to download it from the [latest release](https://github.com/grantfbarnes/sqlfmt/releases/latest).
 
 However, if preferred, the executable can be built manually:
@@ -13,6 +15,16 @@ cargo build --release
 ```
 
 After you have the executable (either through download or manual build), simply place it somewhere in your `PATH`.
+
+### Snap
+
+For linux systems that support [snaps](https://snapcraft.io/).
+
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/sqlfmt)
+
+### VS Code
+
+For those who prefer to not use the command line, a [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=GrantFBarnes.sqlfmt) is available.
 
 ## Usage
 
