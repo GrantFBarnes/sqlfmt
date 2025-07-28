@@ -80,8 +80,8 @@ sed -i -E 's/^  "version": "'$REGEX_VALID_VERSION'",$/  "version": "'$NEW_VERSIO
 cargo update --quiet
 
 cd vsce
-rm package-lock.json
-rm -r node_modules
+rm -f package-lock.json
+rm -rf node_modules
 npm install --silent
 
 ################################################################################
