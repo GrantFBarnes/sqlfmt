@@ -9,6 +9,7 @@ const COMMA: char = ',';
 const CURLY_BRACKET_CLOSE: char = '}';
 const CURLY_BRACKET_OPEN: char = '{';
 const EQUAL: char = '=';
+const EXCLAMATION: char = '!';
 pub const FULL_STOP: char = '.';
 const GREATER_THAN: char = '>';
 const HYPHEN: char = '-';
@@ -169,6 +170,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
         }
 
         match curr_ch {
+            // always single character tokens
             NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
@@ -182,31 +184,45 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 curr_token = Token::new();
                 continue;
             }
-            LESS_THAN | ASTERISK | SLASH_FORWARD | PERCENT => {
+            // operators
+            PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
                     curr_token.setup();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
+
+                if curr_ch == PLUS || curr_ch == HYPHEN {
+                    // check if a positive/negative sign
+                    if get_last_nonspace_token(&tokens).is_some_and(|t| t.category.is_some()) {
+                        continue;
+                    }
+                }
+
                 curr_token.setup();
 
-                if next1_ch != Some(&EQUAL) && next1_ch != Some(&GREATER_THAN) {
+                if next1_ch != Some(&EQUAL) {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
 
                 continue;
             }
-            EQUAL | GREATER_THAN => {
+            // comparators
+            EQUAL | LESS_THAN | GREATER_THAN | EXCLAMATION => {
                 if !curr_token.is_empty()
-                    && prev1_ch != Some(&LESS_THAN)
-                    && prev1_ch != Some(&GREATER_THAN)
+                    // operators
                     && prev1_ch != Some(&PLUS)
                     && prev1_ch != Some(&HYPHEN)
                     && prev1_ch != Some(&ASTERISK)
                     && prev1_ch != Some(&SLASH_FORWARD)
                     && prev1_ch != Some(&PERCENT)
+                    // comparators
+                    && prev1_ch != Some(&EQUAL)
+                    && prev1_ch != Some(&LESS_THAN)
+                    && prev1_ch != Some(&GREATER_THAN)
+                    && prev1_ch != Some(&EXCLAMATION)
                 {
                     curr_token.setup();
                     tokens.push(curr_token);
@@ -223,28 +239,10 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 };
                 curr_token.setup();
 
-                if next1_ch != Some(&EQUAL) {
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-
-                continue;
-            }
-            PLUS | HYPHEN => {
-                if !curr_token.is_empty() {
-                    curr_token.setup();
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-                curr_token.value.push(curr_ch);
-
-                if get_last_nonspace_token(&tokens).is_some_and(|t| t.category.is_some()) {
-                    continue;
-                }
-
-                curr_token.setup();
-
-                if next1_ch != Some(&EQUAL) && next1_ch != Some(&GREATER_THAN) {
+                if next1_ch != Some(&EQUAL)
+                    && next1_ch != Some(&LESS_THAN)
+                    && next1_ch != Some(&GREATER_THAN)
+                {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -2853,6 +2851,28 @@ Name'"#,
     }
 
     #[test]
+    fn test_get_sql_tokens_paren_compare_neq_alt() {
+        assert_eq!(
+            get_sql_tokens(String::from("WHERE C1!=C2 AND C1 != C2")),
+            vec![
+                Token::new_test("WHERE", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("!=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("AND", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("!=", Some(TokenCategory::Compare)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C2", None),
+            ]
+        );
+    }
+
+    #[test]
     fn test_get_sql_tokens_paren_compare_gteq() {
         assert_eq!(
             get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2")),
@@ -2891,6 +2911,56 @@ Name'"#,
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("<=", Some(TokenCategory::Compare)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C2", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_paren_compare_all() {
+        assert_eq!(
+            get_sql_tokens(String::from(
+                "C1=C2 C1>C2 C1<C2 C1>=C2 C1<=C2 C1<>C2 C1!=C2 C1!<C2 C1!>C2 C1<=>C2"
+            )),
+            vec![
+                Token::new_test("C1", None),
+                Token::new_test("=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test(">", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("<", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test(">=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("<=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("<>", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("!=", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("!<", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("!>", Some(TokenCategory::Compare)),
+                Token::new_test("C2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("C1", None),
+                Token::new_test("<=>", Some(TokenCategory::Compare)),
                 Token::new_test("C2", None),
             ]
         );
