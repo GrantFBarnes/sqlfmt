@@ -59,8 +59,30 @@ impl FormatState {
         next_input_token: Option<&Token>,
         config: &Configuration,
     ) -> bool {
-        return match input_token.category {
-            Some(TokenCategory::NewLine) => config.newlines,
+        match input_token.category {
+            Some(TokenCategory::NewLine) => {
+                // keep user input newlines as is
+                if !config.newlines {
+                    return false;
+                }
+
+                // keep user input pre-space if after newline
+                if let Some(next_token) = next_input_token
+                    && next_token
+                        .behavior
+                        .contains(&TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine)
+                    && let Some(prev_token) = self.tokens.last()
+                {
+                    if prev_token.behavior.contains(&TokenBehavior::NewLineAfterX2) {
+                        self.push(Token::new_newline());
+                    }
+                    self.push(Token::new_newline());
+                    return true;
+                }
+
+                // ignore all other user input newlines
+                return true;
+            }
             Some(TokenCategory::WhiteSpace) => {
                 // define and keep user input space as prefix if not found
                 if self.prefix.is_none() {
@@ -69,12 +91,12 @@ impl FormatState {
                     return true;
                 }
 
-                // keep user input space before after newline
-                if prev_input_token.is_some_and(|t| t.category == Some(TokenCategory::NewLine))
-                    && next_input_token.is_some_and(|t| {
-                        t.behavior
-                            .contains(&TokenBehavior::InputSpaceBeforeIfAfterNewline)
-                    })
+                // keep user input pre-space if after newline
+                if let Some(next_token) = next_input_token
+                    && next_token
+                        .behavior
+                        .contains(&TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine)
+                    && prev_input_token.is_some_and(|t| t.category == Some(TokenCategory::NewLine))
                 {
                     let prev_token: Option<&Token> = self.tokens.last();
                     if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
@@ -100,7 +122,7 @@ impl FormatState {
                 }
                 return false;
             }
-        };
+        }
     }
 
     fn increase_paren_stack(&mut self, token: &Token) {
@@ -169,6 +191,14 @@ impl FormatState {
             .tokens
             .last()
             .expect("should always have a previous token");
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::NoSpaceBeforeIfStartOfNewLine)
+            && prev_token.category == Some(TokenCategory::NewLine)
+        {
+            return;
+        }
 
         match token.category {
             Some(TokenCategory::Delimiter) => {
@@ -1297,7 +1327,7 @@ SELECT
     }
 
     #[test]
-    fn test_get_formatted_sql_comments() {
+    fn test_get_formatted_sql_comments_only() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
@@ -1343,6 +1373,101 @@ SELECT
 /*COMMENT*/
     /*COMMENT*/
 /*COMMENT*/"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_comments_with_statements() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+    -- COMMENT
+        SELECT 1;
+    -- COMMENT
+    SELECT 1;
+-- COMMENT
+SELECT 1;
+    -- COMMENT
+    SELECT 1;
+        -- COMMENT
+        SELECT 1;
+        -- COMMENT
+        SELECT 1
+    -- COMMENT
+    SELECT 1
+-- COMMENT
+SELECT 1
+    -- COMMENT
+    SELECT 1
+        -- COMMENT
+        SELECT 1
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+    -- COMMENT
+    SELECT 1;
+    -- COMMENT
+    SELECT 1;
+-- COMMENT
+    SELECT 1;
+    -- COMMENT
+    SELECT 1;
+        -- COMMENT
+    SELECT 1;
+        -- COMMENT
+    SELECT 1
+    -- COMMENT
+    SELECT 1
+-- COMMENT
+    SELECT 1
+    -- COMMENT
+    SELECT 1
+        -- COMMENT
+    SELECT 1
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"    -- COMMENT
+    SELECT
+        1;
+
+    -- COMMENT
+    SELECT
+        1;
+
+-- COMMENT
+    SELECT
+        1;
+
+    -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1
+    -- COMMENT
+    SELECT
+        1
+-- COMMENT
+    SELECT
+        1
+    -- COMMENT
+    SELECT
+        1
+        -- COMMENT
+    SELECT
+        1"#
         );
     }
 
