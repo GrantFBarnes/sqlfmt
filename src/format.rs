@@ -75,8 +75,10 @@ impl FormatState {
                 {
                     if prev_token.behavior.contains(&TokenBehavior::NewLineAfterX2) {
                         self.push(Token::new_newline());
+                        self.push(Token::new_newline());
+                    } else {
+                        self.push(Token::new_newline());
                     }
-                    self.push(Token::new_newline());
                     return true;
                 }
 
