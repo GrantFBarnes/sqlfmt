@@ -8,6 +8,7 @@ pub struct Arguments {
     pub output: Option<String>,
 
     pub newlines: bool,
+    pub comment_pre_space: bool,
     pub upper: bool,
     pub lower: bool,
     pub tabs: bool,
@@ -27,6 +28,7 @@ impl Arguments {
             output: None,
 
             newlines: false,
+            comment_pre_space: false,
             upper: false,
             lower: false,
             tabs: false,
@@ -81,6 +83,9 @@ impl Arguments {
                         return Err("Invalid arguments provided.");
                     }
                     arguments.arg_type = Some(ArgType::Chars);
+                }
+                "--comment-pre-space" => {
+                    arguments.comment_pre_space = true;
                 }
                 _ => match arguments.arg_type {
                     Some(ArgType::Input) => {
@@ -144,6 +149,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -161,6 +167,7 @@ mod tests {
             String::from("-o"),
             String::from("out.sql"),
             String::from("-n"),
+            String::from("--comment-pre-space"),
             String::from("-u"),
             String::from("-l"),
             String::from("-t"),
@@ -177,6 +184,7 @@ mod tests {
         assert_eq!(arguments.input, Some(String::from("in.sql")));
         assert_eq!(arguments.output, Some(String::from("out.sql")));
         assert_eq!(arguments.newlines, true);
+        assert_eq!(arguments.comment_pre_space, true);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, true);
@@ -195,6 +203,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -213,6 +222,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -231,6 +241,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -249,6 +260,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -267,6 +279,7 @@ mod tests {
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -285,6 +298,7 @@ mod tests {
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -303,6 +317,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -321,6 +336,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -339,6 +355,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, true);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -357,6 +374,26 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, true);
+        assert_eq!(arguments.comment_pre_space, false);
+        assert_eq!(arguments.upper, false);
+        assert_eq!(arguments.lower, false);
+        assert_eq!(arguments.tabs, false);
+        assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
+    }
+
+    #[test]
+    fn test_get_arguments_comment_pre_space() {
+        let args: Vec<String> = vec![String::from("--comment-pre-space")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+        assert_eq!(arguments.help, false);
+        assert_eq!(arguments.version, false);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, true);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -375,6 +412,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -393,6 +431,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, true);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -411,6 +450,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
@@ -429,6 +469,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, true);
         assert_eq!(arguments.tabs, false);
@@ -447,6 +488,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
@@ -465,6 +507,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, true);
@@ -483,6 +526,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -501,6 +545,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -519,6 +564,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);
@@ -537,6 +583,7 @@ mod tests {
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
         assert_eq!(arguments.newlines, false);
+        assert_eq!(arguments.comment_pre_space, false);
         assert_eq!(arguments.upper, false);
         assert_eq!(arguments.lower, false);
         assert_eq!(arguments.tabs, false);

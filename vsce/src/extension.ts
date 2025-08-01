@@ -146,6 +146,10 @@ function getProcessArguments(): string[] {
     args.push("-n");
   }
 
+  if (config.get("sqlfmt.replaceCommentPreSpace")) {
+    args.push("--comment-pre-space");
+  }
+
   switch (config.get("sqlfmt.changeKeywordCase")) {
     case "uppercase":
       args.push("-u");

@@ -6,7 +6,7 @@ use crate::token::*;
 pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
     let mut state: FormatState = FormatState::new();
 
-    let input_tokens: Vec<Token> = get_sql_tokens(input_sql);
+    let input_tokens: Vec<Token> = get_sql_tokens(config, input_sql);
     for i in 0..input_tokens.len() {
         let input_token: &Token = &input_tokens[i];
         let prev_input_token: Option<&Token> = if i > 0 { input_tokens.get(i - 1) } else { None };
@@ -1376,6 +1376,23 @@ SELECT
     /*COMMENT*/
 /*COMMENT*/"#
         );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"-- COMMENT
+-- COMMENT
+-- COMMENT
+-- COMMENT
+-- COMMENT
+-- COMMENT
+/*COMMENT*//*COMMENT*/
+/*COMMENT*/
+/*COMMENT*/
+/*COMMENT*/
+/*COMMENT*/
+/*COMMENT*/"#
+        );
     }
 
     #[test]
@@ -1471,6 +1488,46 @@ SELECT 1
     SELECT
         1"#
         );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"    -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1;
+
+        -- COMMENT
+    SELECT
+        1
+        -- COMMENT
+    SELECT
+        1
+        -- COMMENT
+    SELECT
+        1
+        -- COMMENT
+    SELECT
+        1
+        -- COMMENT
+    SELECT
+        1"#
+        );
     }
 
     #[test]
@@ -1503,6 +1560,18 @@ SELECT 1
             DECLARE C2 = 2;
 
             -- COMMENT
+            DECLARE C1 = 1;
+            DECLARE C2 = 2;"#
+        );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            -- COMMENT
+            DECLARE C1 = 1;
+            DECLARE C2 = 2;
+
+                -- COMMENT
             DECLARE C1 = 1;
             DECLARE C2 = 2;"#
         );
@@ -2114,6 +2183,20 @@ FROM TBL1;"#
             -- after comment 3
             FROM TBL1"#
         );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            -- top comment
+            SELECT
+                C1,
+                --inline comment
+                -- after comment 1
+                -- after comment 2
+                C2
+                -- after comment 3
+            FROM TBL1"#
+        );
     }
 
     #[test]
@@ -2167,6 +2250,22 @@ FROM TBL1;"#
                 C2
             FROM TBL1;"#
         );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            -- comment
+            SELECT
+                C1,
+                C2
+            FROM TBL1;
+
+                -- comment
+            SELECT
+                C1,
+                C2
+            FROM TBL1;"#
+        );
     }
 
     #[test]
@@ -2203,6 +2302,17 @@ FROM TBL1;"#
             FROM TBL1
             ORDER BY C1
             -- COMMENT
+            SET V1 = 1"#
+        );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                C1
+            FROM TBL1
+            ORDER BY C1
+                -- COMMENT
             SET V1 = 1"#
         );
     }
@@ -2248,6 +2358,24 @@ FROM TBL1;"#
             SELECT
                 C1 /* inline comment */
             /*
+
+            after
+
+            comment
+                indent
+
+            */
+            FROM TBL1"#
+        );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            /* top comment */
+            SELECT
+                C1
+                /* inline comment */
+                /*
 
             after
 

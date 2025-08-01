@@ -1,3 +1,5 @@
+use crate::configuration::Configuration;
+
 const AMPERSAND: char = '&';
 const ASTERISK: char = '*';
 const BACKTICK: char = '`';
@@ -25,7 +27,7 @@ const SLASH_FORWARD: char = '/';
 pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
-pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
+pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
     let mut delimiter: String = String::from(";");
@@ -52,13 +54,13 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
         {
             if curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()) {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(config);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
             } else if !curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()) {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(config);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -76,7 +78,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 if !was_in_delimiter_change {
                     // start of new delimiter change
                     curr_token.category = Some(TokenCategory::Delimiter);
-                    curr_token.setup();
+                    curr_token.setup(config);
                 }
                 curr_token.value.push(curr_ch);
                 continue;
@@ -96,12 +98,12 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 if was_in_interpolation.is_none() {
                     // start of new interpolation, add any current token if any
                     if !curr_token.is_empty() {
-                        curr_token.setup();
+                        curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
                     curr_token.category = Some(TokenCategory::Interpolation);
-                    curr_token.setup();
+                    curr_token.setup(config);
                 }
 
                 curr_token.value.push(curr_ch);
@@ -127,12 +129,12 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 if was_in_comment.is_none() {
                     // start of new comment, add any current token if any
                     if !curr_token.is_empty() {
-                        curr_token.setup();
+                        curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
                     curr_token.category = Some(TokenCategory::Comment);
-                    curr_token.setup();
+                    curr_token.setup(config);
                 }
 
                 curr_token.value.push(curr_ch);
@@ -151,19 +153,19 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                 if was_in_quote.is_none() {
                     // start of new quote, add any current token if any
                     if !curr_token.is_empty() {
-                        curr_token.setup();
+                        curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
                     curr_token.category = Some(TokenCategory::Quote);
-                    curr_token.setup();
+                    curr_token.setup(config);
                 }
 
                 curr_token.value.push(curr_ch);
                 continue;
             } else if was_in_quote.is_some() {
                 // quote just ended, add quote token
-                curr_token.setup();
+                curr_token.setup(config);
                 tokens.push(curr_token);
                 curr_token = Token::new();
             }
@@ -174,12 +176,12 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
             NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(config);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
                 curr_token.value.push(curr_ch);
-                curr_token.setup();
+                curr_token.setup(config);
                 tokens.push(curr_token);
                 curr_token = Token::new();
                 continue;
@@ -187,7 +189,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
             // operators
             PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
                 if !curr_token.is_empty() {
-                    curr_token.setup();
+                    curr_token.setup(config);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -200,7 +202,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                     }
                 }
 
-                curr_token.setup();
+                curr_token.setup(config);
 
                 if next1_ch != Some(&EQUAL) {
                     tokens.push(curr_token);
@@ -224,7 +226,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                     && prev1_ch != Some(&GREATER_THAN)
                     && prev1_ch != Some(&EXCLAMATION)
                 {
-                    curr_token.setup();
+                    curr_token.setup(config);
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -237,7 +239,7 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
                     Some(&PERCENT) => Some(TokenCategory::Operator),
                     _ => Some(TokenCategory::Compare),
                 };
-                curr_token.setup();
+                curr_token.setup(config);
 
                 if next1_ch != Some(&EQUAL)
                     && next1_ch != Some(&LESS_THAN)
@@ -257,20 +259,20 @@ pub fn get_sql_tokens(input_sql: String) -> Vec<Token> {
         if curr_token.value.ends_with(&delimiter) {
             curr_token.value = curr_token.value.replace(&delimiter, "");
             if !curr_token.is_empty() {
-                curr_token.setup();
+                curr_token.setup(config);
                 tokens.push(curr_token);
             }
             curr_token = Token::new();
             curr_token.value = delimiter.clone();
             curr_token.category = Some(TokenCategory::Delimiter);
-            curr_token.setup();
+            curr_token.setup(config);
             tokens.push(curr_token);
             curr_token = Token::new();
         }
     }
 
     if !curr_token.is_empty() {
-        curr_token.setup();
+        curr_token.setup(config);
         tokens.push(curr_token);
     }
 
@@ -519,9 +521,9 @@ impl Token {
         self.value.match_indices(find).count()
     }
 
-    fn setup(&mut self) {
+    fn setup(&mut self, config: &Configuration) {
         self.category = self.get_category();
-        self.set_behavior();
+        self.set_behavior(config);
     }
 
     fn get_category(&self) -> Option<TokenCategory> {
@@ -582,7 +584,7 @@ impl Token {
         return get_category_from_value(self.value.to_uppercase().as_str());
     }
 
-    fn set_behavior(&mut self) {
+    fn set_behavior(&mut self, config: &Configuration) {
         let mut behavior: Vec<TokenBehavior> = vec![];
 
         match self.category {
@@ -612,11 +614,17 @@ impl Token {
                 behavior.push(TokenBehavior::NoSpaceAroundIfNotProvidedInput);
             }
             Some(TokenCategory::Comment) => {
-                behavior.push(TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine);
-                behavior.push(TokenBehavior::NoSpaceBeforeIfStartOfNewLine);
-                behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
-                behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
-                behavior.push(TokenBehavior::NewLineAfter);
+                if config.comment_pre_space {
+                    behavior.push(TokenBehavior::NewLineBefore);
+                    behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
+                    behavior.push(TokenBehavior::NewLineAfter);
+                } else {
+                    behavior.push(TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine);
+                    behavior.push(TokenBehavior::NoSpaceBeforeIfStartOfNewLine);
+                    behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
+                    behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
+                    behavior.push(TokenBehavior::NewLineAfter);
+                }
             }
             _ => (),
         }
@@ -1996,7 +2004,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_basic() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT * FROM TBL1")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT * FROM TBL1")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2012,7 +2020,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_alias() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT T.* FROM TBL1 T")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT T.* FROM TBL1 T")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2032,7 +2043,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_single_inline() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 1 --comment inline")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT 1 --comment inline")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2046,11 +2060,14 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_single_newline() {
         assert_eq!(
-            get_sql_tokens(String::from(
-                r#"SELECT *
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(
+                    r#"SELECT *
                 -- comment newline
                 FROM TBL1"#
-            )),
+                )
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2070,7 +2087,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_multi_inline() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT * /*multi inline*/ FROM TBL1")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT * /*multi inline*/ FROM TBL1")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2088,7 +2108,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_multi_odd() {
         assert_eq!(
-            get_sql_tokens(String::from("*/*multi odd*/*")),
+            get_sql_tokens(&Configuration::new(), String::from("*/*multi odd*/*")),
             vec![
                 Token::new_test("*", Some(TokenCategory::Operator)),
                 Token::new_test("/*multi odd*/", Some(TokenCategory::Comment)),
@@ -2100,7 +2120,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_multi_double() {
         assert_eq!(
-            get_sql_tokens(String::from("/*multi double*//*multi double*/")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("/*multi double*//*multi double*/")
+            ),
             vec![Token::new_test(
                 "/*multi double*//*multi double*/",
                 Some(TokenCategory::Comment)
@@ -2111,14 +2134,17 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_comment_multi_newline() {
         assert_eq!(
-            get_sql_tokens(String::from(
-                r#"SELECT *
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(
+                    r#"SELECT *
                 /*
                     multi line
                     comment
                 */
                 FROM TBL1"#
-            )),
+                )
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2144,7 +2170,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_backtick() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT `Column 1`")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT `Column 1`")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2156,7 +2182,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_single() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 'Column 1'")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT 'Column 1'")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2168,7 +2194,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_double() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT \"Column 1\"")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT \"Column 1\"")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2180,7 +2206,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_bracket() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT [Column 1]")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT [Column 1]")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2192,7 +2218,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_bracket_datatype() {
         assert_eq!(
-            get_sql_tokens(String::from("[NVARCHAR]")),
+            get_sql_tokens(&Configuration::new(), String::from("[NVARCHAR]")),
             vec![Token::new_test("[NVARCHAR]", Some(TokenCategory::DataType))],
         );
     }
@@ -2200,7 +2226,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_bracket_schema() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT * FROM [S].[TBL1]")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT * FROM [S].[TBL1]")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2218,7 +2247,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_bracket_column() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT TBL1.[C1]")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT TBL1.[C1]")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2232,7 +2261,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_bracket() {
         assert_eq!(
-            get_sql_tokens(String::from("{value}")),
+            get_sql_tokens(&Configuration::new(), String::from("{value}")),
             vec![Token::new_test(
                 "{value}",
                 Some(TokenCategory::Interpolation)
@@ -2243,7 +2272,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_percent() {
         assert_eq!(
-            get_sql_tokens(String::from("%T")),
+            get_sql_tokens(&Configuration::new(), String::from("%T")),
             vec![Token::new_test("%T", Some(TokenCategory::Interpolation))],
         );
     }
@@ -2251,7 +2280,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_bracket_in_quote() {
         assert_eq!(
-            get_sql_tokens(String::from("'{value}'")),
+            get_sql_tokens(&Configuration::new(), String::from("'{value}'")),
             vec![Token::new_test("'{value}'", Some(TokenCategory::Quote))],
         );
     }
@@ -2259,7 +2288,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_percent_in_quote() {
         assert_eq!(
-            get_sql_tokens(String::from("'%%'")),
+            get_sql_tokens(&Configuration::new(), String::from("'%%'")),
             vec![Token::new_test("'%%'", Some(TokenCategory::Quote))],
         );
     }
@@ -2267,7 +2296,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_table_name_bracket() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT C1 FROM {tableNames[i]} AS T")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT C1 FROM {tableNames[i]} AS T")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2287,7 +2319,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_table_name_percent() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT C1 FROM %v AS T")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT C1 FROM %v AS T")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2307,7 +2342,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_table_name_part_bracket() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT C1 FROM B{tableNames[i]}E AS T")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT C1 FROM B{tableNames[i]}E AS T")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2329,7 +2367,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_table_name_part_percent() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT C1 FROM B%vE AS T")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT C1 FROM B%vE AS T")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2351,7 +2392,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_procedure_name_bracket() {
         assert_eq!(
-            get_sql_tokens(String::from("CALL SCH.{procedureName}();")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("CALL SCH.{procedureName}();")
+            ),
             vec![
                 Token::new_test("CALL", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2368,7 +2412,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_interpolation_procedure_name_percent() {
         assert_eq!(
-            get_sql_tokens(String::from("CALL SCH.%s();")),
+            get_sql_tokens(&Configuration::new(), String::from("CALL SCH.%s();")),
             vec![
                 Token::new_test("CALL", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2385,7 +2429,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_empty() {
         assert_eq!(
-            get_sql_tokens(String::from("DECLARE V1 = '';")),
+            get_sql_tokens(&Configuration::new(), String::from("DECLARE V1 = '';")),
             vec![
                 Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2402,7 +2446,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_of_empty() {
         assert_eq!(
-            get_sql_tokens(String::from("DECLARE V1 = '''';")),
+            get_sql_tokens(&Configuration::new(), String::from("DECLARE V1 = '''';")),
             vec![
                 Token::new_test("DECLARE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2419,7 +2463,7 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_single_n() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT N'Column Name'")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT N'Column Name'")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2431,7 +2475,10 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_single_escape() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 'Column''s Name'")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT 'Column''s Name'")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2443,10 +2490,13 @@ mod tests {
     #[test]
     fn test_get_sql_tokens_quote_single_multiline() {
         assert_eq!(
-            get_sql_tokens(String::from(
-                r#"SELECT 'Column
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(
+                    r#"SELECT 'Column
 Name'"#
-            )),
+                )
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2462,7 +2512,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_quote_single_abrupt_end() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 'Column")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT 'Column")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2474,7 +2524,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_delimiter_basic() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 1;")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT 1;")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2487,7 +2537,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_delimiter_two() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 1; SELECT 1;")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT 1; SELECT 1;")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2505,9 +2555,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_delimiter_change() {
         assert_eq!(
-            get_sql_tokens(String::from(
-                "SELECT 1; DELIMITER $$ SELECT 1; DELIMITER \\"
-            )),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT 1; DELIMITER $$ SELECT 1; DELIMITER \\")
+            ),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2532,7 +2583,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_comma() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT 1,2, 3")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT 1,2, 3")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2549,7 +2600,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_negative_number() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT -1")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT -1")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2561,7 +2612,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_empty() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT MIN()")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT MIN()")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2575,7 +2626,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_content() {
         assert_eq!(
-            get_sql_tokens(String::from("SELECT (SELECT 1)")),
+            get_sql_tokens(&Configuration::new(), String::from("SELECT (SELECT 1)")),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2591,7 +2642,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_add() {
         assert_eq!(
-            get_sql_tokens(String::from("1+2 + 3")),
+            get_sql_tokens(&Configuration::new(), String::from("1+2 + 3")),
             vec![
                 Token::new_test("1", None),
                 Token::new_test("+", Some(TokenCategory::Operator)),
@@ -2607,7 +2658,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_subtract() {
         assert_eq!(
-            get_sql_tokens(String::from("1-2 - 3")),
+            get_sql_tokens(&Configuration::new(), String::from("1-2 - 3")),
             vec![
                 Token::new_test("1", None),
                 Token::new_test("-", Some(TokenCategory::Operator)),
@@ -2623,7 +2674,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_multiply() {
         assert_eq!(
-            get_sql_tokens(String::from("1*2 * 3")),
+            get_sql_tokens(&Configuration::new(), String::from("1*2 * 3")),
             vec![
                 Token::new_test("1", None),
                 Token::new_test("*", Some(TokenCategory::Operator)),
@@ -2639,7 +2690,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_divide() {
         assert_eq!(
-            get_sql_tokens(String::from("1/2 / 3")),
+            get_sql_tokens(&Configuration::new(), String::from("1/2 / 3")),
             vec![
                 Token::new_test("1", None),
                 Token::new_test("/", Some(TokenCategory::Operator)),
@@ -2655,7 +2706,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_modulo() {
         assert_eq!(
-            get_sql_tokens(String::from("1%2 % 3")),
+            get_sql_tokens(&Configuration::new(), String::from("1%2 % 3")),
             vec![
                 Token::new_test("1", None),
                 Token::new_test("%", Some(TokenCategory::Operator)),
@@ -2671,7 +2722,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_add_equal() {
         assert_eq!(
-            get_sql_tokens(String::from("V+=1")),
+            get_sql_tokens(&Configuration::new(), String::from("V+=1")),
             vec![
                 Token::new_test("V", None),
                 Token::new_test("+=", Some(TokenCategory::Operator)),
@@ -2683,7 +2734,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_minus_equal() {
         assert_eq!(
-            get_sql_tokens(String::from("V-=1")),
+            get_sql_tokens(&Configuration::new(), String::from("V-=1")),
             vec![
                 Token::new_test("V", None),
                 Token::new_test("-=", Some(TokenCategory::Operator)),
@@ -2695,7 +2746,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_multiply_equal() {
         assert_eq!(
-            get_sql_tokens(String::from("V*=1")),
+            get_sql_tokens(&Configuration::new(), String::from("V*=1")),
             vec![
                 Token::new_test("V", None),
                 Token::new_test("*=", Some(TokenCategory::Operator)),
@@ -2707,7 +2758,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_divide_equal() {
         assert_eq!(
-            get_sql_tokens(String::from("V/=1")),
+            get_sql_tokens(&Configuration::new(), String::from("V/=1")),
             vec![
                 Token::new_test("V", None),
                 Token::new_test("/=", Some(TokenCategory::Operator)),
@@ -2719,7 +2770,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_operator_modulo_equal() {
         assert_eq!(
-            get_sql_tokens(String::from("V%=1")),
+            get_sql_tokens(&Configuration::new(), String::from("V%=1")),
             vec![
                 Token::new_test("V", None),
                 Token::new_test("%=", Some(TokenCategory::Operator)),
@@ -2731,7 +2782,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_bitwise_and() {
         assert_eq!(
-            get_sql_tokens(String::from("V1&V2")),
+            get_sql_tokens(&Configuration::new(), String::from("V1&V2")),
             vec![
                 Token::new_test("V1", None),
                 Token::new_test("&", Some(TokenCategory::Bitwise)),
@@ -2743,7 +2794,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_bitwise_or() {
         assert_eq!(
-            get_sql_tokens(String::from("V1|V2")),
+            get_sql_tokens(&Configuration::new(), String::from("V1|V2")),
             vec![
                 Token::new_test("V1", None),
                 Token::new_test("|", Some(TokenCategory::Bitwise)),
@@ -2755,7 +2806,7 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_bitwise_exclusive_or() {
         assert_eq!(
-            get_sql_tokens(String::from("V1^V2")),
+            get_sql_tokens(&Configuration::new(), String::from("V1^V2")),
             vec![
                 Token::new_test("V1", None),
                 Token::new_test("^", Some(TokenCategory::Bitwise)),
@@ -2767,7 +2818,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_lt() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1<C2 AND C1 < C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1<C2 AND C1 < C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2789,7 +2843,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_gt() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1>C2 AND C1 > C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1>C2 AND C1 > C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2811,7 +2868,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_eq() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1=C2 AND C1 = C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1=C2 AND C1 = C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2833,7 +2893,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_neq() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1<>C2 AND C1 <> C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1<>C2 AND C1 <> C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2855,7 +2918,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_neq_alt() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1!=C2 AND C1 != C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1!=C2 AND C1 != C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2877,7 +2943,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_gteq() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1>=C2 AND C1 >= C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1>=C2 AND C1 >= C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2899,7 +2968,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_lteq() {
         assert_eq!(
-            get_sql_tokens(String::from("WHERE C1<=C2 AND C1 <= C2")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHERE C1<=C2 AND C1 <= C2")
+            ),
             vec![
                 Token::new_test("WHERE", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2921,9 +2993,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_paren_compare_all() {
         assert_eq!(
-            get_sql_tokens(String::from(
-                "C1=C2 C1>C2 C1<C2 C1>=C2 C1<=C2 C1<>C2 C1!=C2 C1!<C2 C1!>C2 C1<=>C2"
-            )),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("C1=C2 C1>C2 C1<C2 C1>=C2 C1<=C2 C1<>C2 C1!=C2 C1!<C2 C1!>C2 C1<=>C2")
+            ),
             vec![
                 Token::new_test("C1", None),
                 Token::new_test("=", Some(TokenCategory::Compare)),
@@ -2971,7 +3044,10 @@ Name'"#,
     #[test]
     fn test_get_sql_tokens_xml_method() {
         assert_eq!(
-            get_sql_tokens(String::from("Instructions.nodes('/root/Location')")),
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("Instructions.nodes('/root/Location')")
+            ),
             vec![
                 Token::new_test("Instructions", None),
                 Token::new_test(".", Some(TokenCategory::FullStop)),

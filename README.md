@@ -71,12 +71,13 @@ ORDER BY Column1;
     -o, --output <FILE_PATH> Define path to output SQL file
 
   Format Configuration
-    -n, --newlines     Replace newlines
-    -u, --upper        Uppercase keywords
-    -l, --lower        Lowercase keywords
-    -t, --tabs         Use tabs for indents
-    -s, --spaces <INT> Define amount of spaces per indent (default 4)
-    -c, --chars  <INT> Define amount of max chars per line before break (default 80)
+    -n, --newlines      Replace newlines
+    --comment-pre-space Replace comment pre-space with indent level
+    -u, --upper         Uppercase keywords
+    -l, --lower         Lowercase keywords
+    -t, --tabs          Use tabs for indents
+    -s, --spaces <INT>  Define amount of spaces per indent (default 4)
+    -c, --chars  <INT>  Define amount of max chars per line before break (default 80)
 ```
 
 ## Config File
@@ -91,6 +92,7 @@ Format Configuration
 
 ```
 newlines
+comment_pre_space
 upper
 lower
 tabs

@@ -10,6 +10,7 @@ const CONFIG_FILE_NAME: &str = ".sqlfmt";
 
 pub struct Configuration {
     pub newlines: bool,
+    pub comment_pre_space: bool,
     pub case: ConfigCase,
     pub tabs: ConfigTab,
     pub chars: u8,
@@ -19,6 +20,7 @@ impl Configuration {
     pub fn new() -> Configuration {
         Configuration {
             newlines: false,
+            comment_pre_space: false,
             case: ConfigCase::Unchanged,
             tabs: ConfigTab::Space(4),
             chars: 80,
@@ -36,6 +38,10 @@ impl Configuration {
 
         if args.newlines {
             config.newlines = true;
+        }
+
+        if args.comment_pre_space {
+            config.comment_pre_space = true;
         }
 
         if args.upper {
@@ -100,6 +106,8 @@ fn get_file_config(file: PathBuf) -> Option<Configuration> {
     for line in content.lines() {
         if line.contains("newlines") {
             config.newlines = true;
+        } else if line.contains("comment_pre_space") {
+            config.comment_pre_space = true;
         } else if line.contains("upper") {
             config.case = ConfigCase::Uppercase
         } else if line.contains("lower") {
@@ -150,6 +158,22 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
+        assert_eq!(config.case, ConfigCase::Unchanged);
+        assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
+    }
+
+    #[test]
+    fn test_get_configuration_comment_pre_space() {
+        let args: Vec<String> = vec![String::from("--comment-pre-space")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert_eq!(arguments.is_ok(), true);
+        let arguments: Arguments = arguments.unwrap();
+
+        let config: Configuration = Configuration::from(&arguments);
+        assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, true);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -164,6 +188,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, true);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -178,6 +203,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Uppercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -192,6 +218,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Lowercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -206,6 +233,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Tab);
         assert_eq!(config.chars, 80);
@@ -220,6 +248,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(2));
         assert_eq!(config.chars, 80);
@@ -234,6 +263,7 @@ mod tests {
 
         let config: Configuration = Configuration::from(&arguments);
         assert_eq!(config.newlines, false);
+        assert_eq!(config.comment_pre_space, false);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 120);
