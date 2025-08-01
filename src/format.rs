@@ -23,7 +23,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
         state.increase_paren_stack(input_token);
         state.decrease_indent_stack(input_token);
         state.add_pre_space(input_token, prev_input_token, config);
-        state.decrease_previous_comment_pre_space(config);
+        state.set_previous_comment_pre_space(config);
         state.push(input_token.clone());
         state.increase_indent_stack(input_token);
         state.decrease_paren_stack(input_token);
@@ -611,54 +611,28 @@ impl FormatState {
         }
     }
 
-    fn decrease_previous_comment_pre_space(&mut self, config: &Configuration) {
+    fn set_previous_comment_pre_space(&mut self, config: &Configuration) {
         if !config.comment_pre_space {
             return;
         }
 
-        if self.tokens.is_empty() {
+        let token_count: usize = self.tokens.len();
+        if token_count <= 6 {
             return;
         }
 
-        let mut newline_pos: Option<usize> = None;
-        let mut whitespace_values: Vec<String> = vec![];
-        for i in (0..self.tokens.len()).rev() {
-            let prev_token: &Token = &self.tokens[i];
-            match prev_token.category {
-                Some(TokenCategory::NewLine) => {
-                    newline_pos = Some(i);
-                    break;
-                }
-                Some(TokenCategory::WhiteSpace) => {
-                    whitespace_values.push(prev_token.value.clone());
-                    continue;
-                }
-                _ => break,
-            }
-        }
-
-        if newline_pos.is_none() {
-            return;
-        }
-
-        if whitespace_values.len() != 2 {
-            return;
-        }
-
-        let newline_pos: usize = newline_pos.unwrap();
-        if newline_pos <= 4 {
-            return;
-        }
-
-        if self.tokens[newline_pos - 1].category != Some(TokenCategory::Comment)
-            || self.tokens[newline_pos - 2].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[newline_pos - 3].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[newline_pos - 4].category != Some(TokenCategory::NewLine)
+        if self.tokens[token_count - 1].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[token_count - 2].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[token_count - 3].category != Some(TokenCategory::NewLine)
+            || self.tokens[token_count - 4].category != Some(TokenCategory::Comment)
+            || self.tokens[token_count - 5].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[token_count - 6].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[token_count - 7].category != Some(TokenCategory::NewLine)
         {
             return;
         }
 
-        self.tokens[newline_pos - 2].value = whitespace_values[0].clone();
+        self.tokens[token_count - 5].value = self.tokens[token_count - 1].value.clone();
     }
 
     fn get_result(&self, config: &Configuration) -> String {
