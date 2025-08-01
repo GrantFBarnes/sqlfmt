@@ -236,17 +236,15 @@ impl FormatState {
         }
 
         if prev_token.category == Some(TokenCategory::NewLine) {
-            if let Some(prefix) = &self.prefix {
-                if !prefix.is_empty() {
-                    self.push(Token::new_whitespace(prefix.clone()));
-                }
-            }
-            if !self.indent_stack.is_empty() {
-                self.push(Token::new_whitespace(match config.tabs {
-                    ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                    ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-                }));
-            }
+            self.push(Token::new_whitespace(if let Some(prefix) = &self.prefix {
+                prefix.clone()
+            } else {
+                String::new()
+            }));
+            self.push(Token::new_whitespace(match config.tabs {
+                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+            }));
             return;
         }
 
