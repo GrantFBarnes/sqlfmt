@@ -70,7 +70,7 @@ impl FormatState {
                 if let Some(next_token) = next_input_token
                     && next_token
                         .behavior
-                        .contains(&TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine)
+                        .contains(&TokenBehavior::PreSpaceKeepInput)
                     && let Some(prev_token) = self.tokens.last()
                 {
                     if prev_token.behavior.contains(&TokenBehavior::NewLineAfterX2) {
@@ -97,7 +97,7 @@ impl FormatState {
                 if let Some(next_token) = next_input_token
                     && next_token
                         .behavior
-                        .contains(&TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine)
+                        .contains(&TokenBehavior::PreSpaceKeepInput)
                     && prev_input_token.is_some_and(|t| t.category == Some(TokenCategory::NewLine))
                 {
                     let prev_token: Option<&Token> = self.tokens.last();

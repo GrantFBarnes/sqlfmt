@@ -619,7 +619,7 @@ impl Token {
                     behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
                     behavior.push(TokenBehavior::NewLineAfter);
                 } else {
-                    behavior.push(TokenBehavior::KeepPreSpaceBeforeIfAfterNewLine);
+                    behavior.push(TokenBehavior::PreSpaceKeepInput);
                     behavior.push(TokenBehavior::NoSpaceBeforeIfStartOfNewLine);
                     behavior.push(TokenBehavior::NoNewLineBeforeUnlessMatch);
                     behavior.push(TokenBehavior::NoNewLineAfterX2Skip);
@@ -1957,7 +1957,6 @@ pub enum TokenBehavior {
     IncreaseIndent,
     IncreaseIndentIfNotAfterKeyword,
     IncreaseIndentIfNotInsideCase,
-    KeepPreSpaceBeforeIfAfterNewLine,
     NewLineAfter,
     NewLineAfterIfNotAfterKeyword,
     NewLineAfterSkip,
@@ -1975,6 +1974,7 @@ pub enum TokenBehavior {
     NoSpaceBefore,
     NoSpaceBeforeIfStartOfNewLine,
     NoWhiteSpaceBefore,
+    PreSpaceKeepInput,
 }
 
 #[derive(Clone)]
