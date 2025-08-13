@@ -2655,7 +2655,7 @@ FROM TBL1;"#
         let sql: String = String::from(
             r#"
             SELECT * FROM T1
-            LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
+            RIGHT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
             "#,
         );
 
@@ -2663,7 +2663,7 @@ FROM TBL1;"#
             get_formatted_sql(&config, sql.clone()),
             r#"
             SELECT * FROM T1
-                LEFT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
+                RIGHT JOIN T2 ON T2.C1 = T1.C1 OR T2.C2 = T1.C2
 "#
         );
 
@@ -2673,7 +2673,7 @@ FROM TBL1;"#
             r#"            SELECT
                 *
             FROM T1
-                LEFT JOIN T2 ON T2.C1 = T1.C1
+                RIGHT JOIN T2 ON T2.C1 = T1.C1
                 OR T2.C2 = T1.C2"#
         );
     }
@@ -2684,7 +2684,7 @@ FROM TBL1;"#
         let sql: String = String::from(
             r#"
             SELECT * FROM T1
-            LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+            FULL OUTER JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
             AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
             "#,
         );
@@ -2693,7 +2693,7 @@ FROM TBL1;"#
             get_formatted_sql(&config, sql.clone()),
             r#"
             SELECT * FROM T1
-                LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+                FULL OUTER JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
                 AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)
 "#
         );
@@ -2704,7 +2704,7 @@ FROM TBL1;"#
             r#"            SELECT
                 *
             FROM T1
-                LEFT JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
+                FULL OUTER JOIN T2 ON (T2.C1 = T1.C1 OR T2.C2 = T1.C2)
                 AND (T2.C3 = T1.C3 OR T2.C4 = T1.C4)"#
         );
     }

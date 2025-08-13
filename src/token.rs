@@ -733,6 +733,9 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "FULL" => {
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+            }
             "GO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfterX2);
@@ -753,7 +756,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "INNER" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
             }
             "INSERT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
@@ -767,7 +770,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "LEFT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
             }
             "LIMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -787,7 +790,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "OUTER" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
             }
             "PIVOT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -806,7 +809,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "RIGHT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
             }
             "SELECT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
