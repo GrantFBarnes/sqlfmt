@@ -667,6 +667,7 @@ impl Token {
             }
             "CREATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
             }
             "CROSS" => {
                 behavior.push(TokenBehavior::NewLineBefore);

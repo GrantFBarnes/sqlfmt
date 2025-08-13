@@ -3667,6 +3667,38 @@ CALL SP1()"#
     }
 
     #[test]
+    fn test_get_formatted_sql_create_table_after_select() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT 1;
+            CREATE TABLE TBL1 (
+                ID UUID NOT NULL DEFAULT UUID()
+            );
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT 1;
+            CREATE TABLE TBL1(
+                ID UUID NOT NULL DEFAULT UUID()
+            );
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                1;
+
+            CREATE TABLE TBL1(ID UUID NOT NULL DEFAULT UUID());"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_trigger() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
