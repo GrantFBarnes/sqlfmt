@@ -33,10 +33,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     let mut delimiter: String = String::from(";");
 
     let mut curr_token: Token = Token::new();
-    let mut in_delimiter_change: bool = false;
-    let mut in_interpolation: Option<InterpolationCategory> = None;
-    let mut in_comment: Option<CommentCategory> = None;
-    let mut in_quote: Option<QuoteCategory> = None;
+    let mut in_special: Option<TokenSpecial> = None;
 
     let mut sql_chars: Vec<char> = input_sql.chars().collect();
     sql_chars.retain(|c: &char| c != &CARRIAGE_RETURN);
@@ -47,127 +44,118 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
         let curr_ch: char = sql_chars[i];
         let next1_ch: Option<&char> = sql_chars.get(i + 1);
 
-        if !in_delimiter_change
-            && in_interpolation.is_none()
-            && in_comment.is_none()
-            && in_quote.is_none()
-        {
-            if curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()) {
-                if !curr_token.is_empty() {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
+        match in_special {
+            None => {
+                if curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()) {
+                    if !curr_token.is_empty() {
+                        curr_token.setup(config);
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
+                } else if !curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()) {
+                    if !curr_token.is_empty() {
+                        curr_token.setup(config);
+                        tokens.push(curr_token);
+                        curr_token = Token::new();
+                    }
                 }
-            } else if !curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()) {
-                if !curr_token.is_empty() {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
-            }
-        }
 
-        if in_interpolation.is_none() && in_comment.is_none() && in_quote.is_none() {
-            let was_in_delimiter_change: bool = in_delimiter_change;
-            in_delimiter_change = get_in_delimiter_change(
-                in_delimiter_change,
-                get_last_nonspace_token(&tokens),
-                curr_ch,
-            );
-            if in_delimiter_change {
-                if !was_in_delimiter_change {
-                    // start of new delimiter change
+                if get_in_delimiter_change(false, get_last_nonspace_token(&tokens), curr_ch) {
+                    in_special = Some(TokenSpecial::DelimiterChange);
                     curr_token.category = Some(TokenCategory::Delimiter);
-                    curr_token.setup(config);
-                }
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_delimiter_change {
-                // delimiter change just ended, add delimiter token
-                delimiter = curr_token.value.clone();
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_comment.is_none() && in_quote.is_none() {
-            let was_in_interpolation: Option<InterpolationCategory> = in_interpolation.clone();
-            in_interpolation =
-                get_in_interpolation(in_interpolation, prev2_ch, prev1_ch, curr_ch, next1_ch);
-            if in_interpolation.is_some() {
-                if was_in_interpolation.is_none() {
-                    // start of new interpolation, add any current token if any
+                } else if let Some(ic) =
+                    get_in_interpolation(None, prev2_ch, prev1_ch, curr_ch, next1_ch)
+                {
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
+                    in_special = Some(TokenSpecial::Interpolation(ic));
                     curr_token.category = Some(TokenCategory::Interpolation);
-                    curr_token.setup(config);
-                }
-
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_interpolation.is_some() {
-                // interpolation just ended, add token
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_interpolation.is_none() && in_quote.is_none() {
-            let was_in_comment: Option<CommentCategory> = in_comment.clone();
-            in_comment = get_in_comment(
-                &in_comment,
-                prev2_ch,
-                prev1_ch,
-                curr_ch,
-                next1_ch,
-                curr_token.len(),
-            );
-            if in_comment.is_some() {
-                if was_in_comment.is_none() {
-                    // start of new comment, add any current token if any
+                } else if let Some(cc) = get_in_comment(
+                    &None,
+                    prev2_ch,
+                    prev1_ch,
+                    curr_ch,
+                    next1_ch,
+                    curr_token.len(),
+                ) {
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
+                    in_special = Some(TokenSpecial::Comment(cc));
                     curr_token.category = Some(TokenCategory::Comment);
-                    curr_token.setup(config);
-                }
-
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_comment.is_some() {
-                // comment just ended, add comment token
-                tokens.push(curr_token);
-                curr_token = Token::new();
-            }
-        }
-
-        if !in_delimiter_change && in_interpolation.is_none() && in_comment.is_none() {
-            let was_in_quote: Option<QuoteCategory> = in_quote.clone();
-            in_quote = get_in_quote(&in_quote, prev1_ch, curr_ch, next1_ch, &curr_token);
-            if in_quote.is_some() {
-                if was_in_quote.is_none() {
-                    // start of new quote, add any current token if any
+                } else if let Some(qc) =
+                    get_in_quote(&None, prev1_ch, curr_ch, next1_ch, &curr_token)
+                {
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
                         tokens.push(curr_token);
                         curr_token = Token::new();
                     }
+                    in_special = Some(TokenSpecial::Quote(qc));
                     curr_token.category = Some(TokenCategory::Quote);
-                    curr_token.setup(config);
                 }
 
-                curr_token.value.push(curr_ch);
-                continue;
-            } else if was_in_quote.is_some() {
-                // quote just ended, add quote token
-                curr_token.setup(config);
-                tokens.push(curr_token);
-                curr_token = Token::new();
+                if in_special.is_some() {
+                    curr_token.setup(config);
+                    curr_token.value.push(curr_ch);
+                    continue;
+                }
+            }
+            Some(TokenSpecial::DelimiterChange) => {
+                if get_in_delimiter_change(true, get_last_nonspace_token(&tokens), curr_ch) {
+                    curr_token.value.push(curr_ch);
+                    continue;
+                } else {
+                    in_special = None;
+                    delimiter = curr_token.value.clone();
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            }
+            Some(TokenSpecial::Interpolation(ic)) => {
+                if get_in_interpolation(Some(ic), prev2_ch, prev1_ch, curr_ch, next1_ch).is_some() {
+                    curr_token.value.push(curr_ch);
+                    continue;
+                } else {
+                    in_special = None;
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            }
+            Some(TokenSpecial::Comment(cc)) => {
+                if get_in_comment(
+                    &Some(cc),
+                    prev2_ch,
+                    prev1_ch,
+                    curr_ch,
+                    next1_ch,
+                    curr_token.len(),
+                )
+                .is_some()
+                {
+                    curr_token.value.push(curr_ch);
+                    continue;
+                } else {
+                    in_special = None;
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
+            }
+            Some(TokenSpecial::Quote(qc)) => {
+                if get_in_quote(&Some(qc), prev1_ch, curr_ch, next1_ch, &curr_token).is_some() {
+                    curr_token.value.push(curr_ch);
+                    continue;
+                } else {
+                    in_special = None;
+                    curr_token.setup(config);
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
+                }
             }
         }
 
@@ -1981,19 +1969,26 @@ pub enum TokenBehavior {
     PreSpaceKeepInput,
 }
 
-#[derive(Clone)]
+enum TokenSpecial {
+    DelimiterChange,
+    Interpolation(InterpolationCategory),
+    Comment(CommentCategory),
+    Quote(QuoteCategory),
+}
+
+#[derive(Clone, Copy)]
 enum InterpolationCategory {
     Bracket,
     Percent,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum CommentCategory {
     SingleLine,
     MultiLine,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum QuoteCategory {
     Backtick,
     QuoteSingle,
