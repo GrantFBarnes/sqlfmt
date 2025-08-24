@@ -1988,7 +1988,7 @@ enum CommentCategory {
     MultiLine,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy)]
 enum QuoteCategory {
     Backtick,
     QuoteSingle,
@@ -2289,6 +2289,22 @@ mod tests {
         assert_eq!(
             get_sql_tokens(&Configuration::new(), String::from("'%%'")),
             vec![Token::new_test("'%%'", Some(TokenCategory::Quote))],
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_interpolation_complex_in_quote() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"'{string.Join("', '", value)}'"#)
+            ),
+            vec![
+                Token::new_test(r#"'{string.Join("'"#, Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"'", value)}'"#, Some(TokenCategory::Quote))
+            ],
         );
     }
 
