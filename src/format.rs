@@ -253,7 +253,7 @@ impl FormatState {
 
     fn insert_newline(&mut self, token: &Token, config: &Configuration) {
         if self.get_current_line_length(token) > config.chars.into() {
-            self.insert_newline_after_last_operator(config);
+            self.insert_newline_after_last_operator(self.tokens.len(), config);
         }
     }
 
@@ -267,53 +267,6 @@ impl FormatState {
             }
         }
         return line_length;
-    }
-
-    fn insert_newline_after_last_operator(&mut self, config: &Configuration) {
-        for i in (0..self.tokens.len()).rev() {
-            match self.tokens[i].category {
-                Some(TokenCategory::NewLine) => return,
-                Some(TokenCategory::Operator) => {
-                    if i == self.tokens.len() - 1 {
-                        self.tokens.push(Token::new_newline());
-                        return;
-                    }
-
-                    if self.tokens[i + 1].category == Some(TokenCategory::WhiteSpace) {
-                        self.tokens.remove(i + 1);
-                    }
-
-                    self.tokens.insert(i + 1, Token::new_newline());
-
-                    let mut newline_pre_space_tokens: Vec<Token> =
-                        self.get_newline_pre_space_tokens(config);
-                    newline_pre_space_tokens.reverse();
-                    for t in newline_pre_space_tokens {
-                        self.tokens.insert(i + 2, t);
-                    }
-
-                    return;
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    fn get_newline_pre_space_tokens(&self, config: &Configuration) -> Vec<Token> {
-        let mut result: Vec<Token> = vec![];
-
-        result.push(Token::new_whitespace(if let Some(prefix) = &self.prefix {
-            prefix.clone()
-        } else {
-            String::new()
-        }));
-
-        result.push(Token::new_whitespace(match config.tabs {
-            ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-            ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-        }));
-
-        return result;
     }
 
     fn add_pre_newline(&mut self, token: &Token) {
@@ -429,9 +382,12 @@ impl FormatState {
     fn remove_extra_newline(&mut self, token: &Token, config: &Configuration) {
         // collapse paren if short enough
         if token.category == Some(TokenCategory::ParenClose) {
-            let mut inner_token_count: usize = 0;
-            let mut collapsed_len: usize = 1;
             let mut paren_count: usize = 1;
+            let mut inner_token_count: usize = 0;
+            let mut collapsed_line_len: usize = 1;
+            let mut collapsed_inner_len: usize = 1;
+            let mut last_operator_len_after: Option<usize> = None;
+            let mut last_operator_position: Option<usize> = None;
             let mut positions_to_remove: Vec<usize> = vec![];
             let mut positions_to_add_space: Vec<usize> = vec![];
 
@@ -441,8 +397,15 @@ impl FormatState {
 
                 if paren_count == 0 {
                     // no longer inside paren set in question
-                    if prev_token.category == Some(TokenCategory::NewLine) {
-                        break;
+                    match prev_token.category {
+                        Some(TokenCategory::NewLine) => break,
+                        Some(TokenCategory::Operator) => {
+                            if last_operator_len_after.is_none() {
+                                last_operator_len_after = Some(collapsed_line_len);
+                                last_operator_position = Some(i);
+                            }
+                        }
+                        _ => (),
                     }
                 } else {
                     // still inside paren set in question
@@ -467,24 +430,50 @@ impl FormatState {
                                 && nnwt.category != Some(TokenCategory::ParenClose)
                             {
                                 positions_to_add_space.push(i);
-                                collapsed_len += 1;
+
+                                // increase length for space that would replace the newline if collapsed
+                                collapsed_line_len += 1;
+                                collapsed_inner_len += 1;
                             }
                             continue;
                         }
                         _ => inner_token_count += 1,
                     }
+                    collapsed_inner_len += prev_token.len();
                 }
 
-                collapsed_len += prev_token.len();
+                collapsed_line_len += prev_token.len();
             }
 
-            if inner_token_count <= 1 || collapsed_len <= config.chars.into() {
+            // determine to collapse paren
+            if inner_token_count <= 1
+                || collapsed_line_len <= config.chars.into()
+                || last_operator_len_after.is_some_and(|len_after| {
+                    collapsed_line_len - len_after <= config.chars.into()
+                        && collapsed_inner_len + self.get_newline_pre_space_len(config)
+                            <= config.chars.into()
+                })
+            {
                 for p in positions_to_remove {
                     self.tokens.remove(p);
                     if positions_to_add_space.contains(&p) {
                         self.tokens
                             .insert(p, Token::new_whitespace(String::from(" ")));
                     }
+                }
+
+                if inner_token_count > 1
+                    && collapsed_line_len > config.chars.into()
+                    && last_operator_len_after.is_some_and(|len_after| {
+                        collapsed_line_len - len_after <= config.chars.into()
+                            && collapsed_inner_len + self.get_newline_pre_space_len(config)
+                                <= config.chars.into()
+                    })
+                {
+                    self.insert_newline_after_last_operator(
+                        last_operator_position.unwrap() + 1,
+                        config,
+                    );
                 }
             }
         }
@@ -569,6 +558,61 @@ impl FormatState {
             }
         }
         None
+    }
+
+    fn insert_newline_after_last_operator(&mut self, pos: usize, config: &Configuration) {
+        for i in (0..std::cmp::min(pos, self.tokens.len())).rev() {
+            match self.tokens[i].category {
+                Some(TokenCategory::NewLine) => return,
+                Some(TokenCategory::Operator) => {
+                    if i == self.tokens.len() - 1 {
+                        self.tokens.push(Token::new_newline());
+                        return;
+                    }
+
+                    if self.tokens[i + 1].category == Some(TokenCategory::WhiteSpace) {
+                        self.tokens.remove(i + 1);
+                    }
+
+                    self.tokens.insert(i + 1, Token::new_newline());
+
+                    let mut newline_pre_space_tokens: Vec<Token> =
+                        self.get_newline_pre_space_tokens(config);
+                    newline_pre_space_tokens.reverse();
+                    for t in newline_pre_space_tokens {
+                        self.tokens.insert(i + 2, t);
+                    }
+
+                    return;
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    fn get_newline_pre_space_len(&self, config: &Configuration) -> usize {
+        let mut size: usize = 0;
+        for t in self.get_newline_pre_space_tokens(config) {
+            size += t.len();
+        }
+        return size;
+    }
+
+    fn get_newline_pre_space_tokens(&self, config: &Configuration) -> Vec<Token> {
+        let mut result: Vec<Token> = vec![];
+
+        result.push(Token::new_whitespace(if let Some(prefix) = &self.prefix {
+            prefix.clone()
+        } else {
+            String::new()
+        }));
+
+        result.push(Token::new_whitespace(match config.tabs {
+            ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+            ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+        }));
+
+        return result;
     }
 
     fn increase_indent_stack(&mut self, token: &Token) {
@@ -1014,6 +1058,43 @@ FROM TBL1"#
                 COLUMN5 + COLUMN6 +
                 COLUMN7
             FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_chars_paren_operators() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            (SELECT COLUMN1, COLUMN2 FROM TBL1) + (SELECT COLUMN1, COLUMN2 FROM TBL1)
+            "#,
+        );
+
+        config.newlines = true;
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                (SELECT COLUMN1, COLUMN2 FROM TBL1) +
+                (SELECT COLUMN1, COLUMN2 FROM TBL1)"#
+        );
+
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                (
+                    SELECT
+                        COLUMN1,
+                        COLUMN2
+                    FROM TBL1
+                ) + (
+                    SELECT
+                        COLUMN1,
+                        COLUMN2
+                    FROM TBL1
+                )"#
         );
     }
 
@@ -2059,9 +2140,8 @@ SET C3 = 3"#
                     ),
                     ROUND(
                         (
-                            LENGTH(LONG_VARIABLE_NAME) - LENGTH(
-                                REPLACE(LONG_VARIABLE_NAME, '_____', '')
-                            )
+                            LENGTH(LONG_VARIABLE_NAME) -
+                            LENGTH(REPLACE(LONG_VARIABLE_NAME, '_____', ''))
                         ) / LENGTH('_____')
                     ) AS BLANKCOUNT
             END"#
