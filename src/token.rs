@@ -497,8 +497,11 @@ impl Token {
         }
     }
 
-    fn len(&self) -> usize {
-        self.value.len()
+    pub fn len(&self) -> usize {
+        if self.category == Some(TokenCategory::WhiteSpace) {
+            return self.value.replace(TAB, "    ").len();
+        }
+        return self.value.len();
     }
 
     fn is_empty(&self) -> bool {

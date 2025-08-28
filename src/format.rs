@@ -186,6 +186,7 @@ impl FormatState {
         }
 
         if config.newlines {
+            self.insert_newline(token, config);
             self.add_pre_newline(token);
             self.remove_extra_newline(token, config);
         }
@@ -237,15 +238,9 @@ impl FormatState {
         }
 
         if prev_token.category == Some(TokenCategory::NewLine) {
-            self.push(Token::new_whitespace(if let Some(prefix) = &self.prefix {
-                prefix.clone()
-            } else {
-                String::new()
-            }));
-            self.push(Token::new_whitespace(match config.tabs {
-                ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
-                ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
-            }));
+            for t in self.get_newline_pre_space_tokens(config) {
+                self.push(t);
+            }
             return;
         }
 
@@ -254,6 +249,71 @@ impl FormatState {
         }
 
         self.push(Token::new_whitespace(String::from(" ")));
+    }
+
+    fn insert_newline(&mut self, token: &Token, config: &Configuration) {
+        if self.get_current_line_length(token) > config.chars.into() {
+            self.insert_newline_after_last_operator(config);
+        }
+    }
+
+    fn get_current_line_length(&self, token: &Token) -> usize {
+        let mut line_length: usize = token.len();
+        for i in (0..self.tokens.len()).rev() {
+            let prev_token: &Token = &self.tokens[i];
+            match prev_token.category {
+                Some(TokenCategory::NewLine) => break,
+                _ => line_length += prev_token.len(),
+            }
+        }
+        return line_length;
+    }
+
+    fn insert_newline_after_last_operator(&mut self, config: &Configuration) {
+        for i in (0..self.tokens.len()).rev() {
+            match self.tokens[i].category {
+                Some(TokenCategory::NewLine) => return,
+                Some(TokenCategory::Operator) => {
+                    if i == self.tokens.len() - 1 {
+                        self.tokens.push(Token::new_newline());
+                        return;
+                    }
+
+                    if self.tokens[i + 1].category == Some(TokenCategory::WhiteSpace) {
+                        self.tokens.remove(i + 1);
+                    }
+
+                    self.tokens.insert(i + 1, Token::new_newline());
+
+                    let mut newline_pre_space_tokens: Vec<Token> =
+                        self.get_newline_pre_space_tokens(config);
+                    newline_pre_space_tokens.reverse();
+                    for t in newline_pre_space_tokens {
+                        self.tokens.insert(i + 2, t);
+                    }
+
+                    return;
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    fn get_newline_pre_space_tokens(&self, config: &Configuration) -> Vec<Token> {
+        let mut result: Vec<Token> = vec![];
+
+        result.push(Token::new_whitespace(if let Some(prefix) = &self.prefix {
+            prefix.clone()
+        } else {
+            String::new()
+        }));
+
+        result.push(Token::new_whitespace(match config.tabs {
+            ConfigTab::Tab => "\t".repeat(self.indent_stack.len()),
+            ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
+        }));
+
+        return result;
     }
 
     fn add_pre_newline(&mut self, token: &Token) {
@@ -415,7 +475,7 @@ impl FormatState {
                     }
                 }
 
-                collapsed_len += prev_token.value.replace(TAB, "    ").len();
+                collapsed_len += prev_token.len();
             }
 
             if inner_token_count <= 1 || collapsed_len <= config.chars.into() {
@@ -921,6 +981,39 @@ FROM TBL1"#
 						C2
 					FROM TBL1
 				)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_config_chars_operators() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT
+            COLUMN1 + COLUMN2 + COLUMN3 + COLUMN4 + COLUMN5 + COLUMN6 + COLUMN7
+            FROM TBL1
+            "#,
+        );
+
+        config.newlines = true;
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                COLUMN1 + COLUMN2 + COLUMN3 + COLUMN4 + COLUMN5 + COLUMN6 +
+                COLUMN7
+            FROM TBL1"#
+        );
+
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                COLUMN1 + COLUMN2 +
+                COLUMN3 + COLUMN4 +
+                COLUMN5 + COLUMN6 +
+                COLUMN7
+            FROM TBL1"#
         );
     }
 
