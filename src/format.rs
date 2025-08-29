@@ -445,12 +445,12 @@ impl FormatState {
                 collapsed_line_len += prev_token.len();
             }
 
-            // determine to collapse paren
-            if inner_token_count <= 1
-                || collapsed_line_len <= config.chars.into()
+            // determine whether to collapse paren
+            if inner_token_count <= 1 // paren is empty or just one inner token
+                || collapsed_line_len <= config.chars.into() // collapsed line is short enough
                 || last_operator_len_after.is_some_and(|len_after| {
-                    collapsed_line_len - len_after <= config.chars.into()
-                        && collapsed_inner_len + self.get_newline_pre_space_len(config)
+                    collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
+                        && collapsed_inner_len + self.get_newline_pre_space_len(config) // collapsed paren plus indent is short enough
                             <= config.chars.into()
                 })
             {
@@ -461,20 +461,19 @@ impl FormatState {
                             .insert(p, Token::new_whitespace(String::from(" ")));
                     }
                 }
+            }
 
-                if inner_token_count > 1
-                    && collapsed_line_len > config.chars.into()
-                    && last_operator_len_after.is_some_and(|len_after| {
-                        collapsed_line_len - len_after <= config.chars.into()
-                            && collapsed_inner_len + self.get_newline_pre_space_len(config)
-                                <= config.chars.into()
-                    })
-                {
-                    self.insert_newline_after_last_operator(
-                        last_operator_position.unwrap() + 1,
-                        config,
-                    );
-                }
+            // determine whether to insert newline after last operator
+            if collapsed_line_len > config.chars.into() // collapsed line was too long
+                && last_operator_len_after
+                    .is_some_and(|len_after| {
+                        collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
+                })
+            {
+                self.insert_newline_after_last_operator(
+                    last_operator_position.unwrap() + 1,
+                    config,
+                );
             }
         }
 
@@ -1089,7 +1088,8 @@ FROM TBL1"#
                         COLUMN1,
                         COLUMN2
                     FROM TBL1
-                ) + (
+                ) +
+                (
                     SELECT
                         COLUMN1,
                         COLUMN2
