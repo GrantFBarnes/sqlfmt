@@ -1,6 +1,6 @@
 name: sqlfmt
 title: sqlfmt
-version: "1.2.0"
+version: "1.2.1"
 source-code: https://github.com/GrantFBarnes/sqlfmt
 license: GPL-3.0-only
 icon: snap/icon.png
