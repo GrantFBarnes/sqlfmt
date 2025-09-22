@@ -106,6 +106,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "tar": "^7.4.3"
+    "tar": "7.4.3"
+  },
+  "overrides": {
+    "minizlib": "3.0.2"
   }
 }
