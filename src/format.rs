@@ -720,22 +720,39 @@ impl FormatState {
         }
 
         let token_count: usize = self.tokens.len();
-        if token_count <= 6 {
+        if token_count <= 2 {
             return;
         }
 
         if self.tokens[token_count - 1].category != Some(TokenCategory::WhiteSpace)
             || self.tokens[token_count - 2].category != Some(TokenCategory::WhiteSpace)
             || self.tokens[token_count - 3].category != Some(TokenCategory::NewLine)
-            || self.tokens[token_count - 4].category != Some(TokenCategory::Comment)
-            || self.tokens[token_count - 5].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[token_count - 6].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[token_count - 7].category != Some(TokenCategory::NewLine)
         {
             return;
         }
 
-        self.tokens[token_count - 5].value = self.tokens[token_count - 1].value.clone();
+        self.set_previous_line_comment_pre_space(
+            token_count - 3,
+            self.tokens[token_count - 1].value.clone(),
+        );
+    }
+
+    fn set_previous_line_comment_pre_space(&mut self, newline_index: usize, pre_space: String) {
+        if newline_index <= 3 {
+            return;
+        }
+
+        if self.tokens[newline_index - 1].category != Some(TokenCategory::Comment)
+            || self.tokens[newline_index - 2].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[newline_index - 3].category != Some(TokenCategory::WhiteSpace)
+            || self.tokens[newline_index - 4].category != Some(TokenCategory::NewLine)
+        {
+            return;
+        }
+
+        self.tokens[newline_index - 2].value = pre_space.clone();
+
+        self.set_previous_line_comment_pre_space(newline_index - 4, pre_space);
     }
 
     fn get_result(&self, config: &Configuration) -> String {
@@ -1604,6 +1621,7 @@ SELECT
 -- COMMENT
 SELECT 1;
     -- COMMENT
+    -- COMMENT
     SELECT 1;
         -- COMMENT
         SELECT 1;
@@ -1629,6 +1647,7 @@ SELECT 1
     SELECT 1;
 -- COMMENT
     SELECT 1;
+    -- COMMENT
     -- COMMENT
     SELECT 1;
         -- COMMENT
@@ -1661,6 +1680,7 @@ SELECT 1
     SELECT
         1;
 
+    -- COMMENT
     -- COMMENT
     SELECT
         1;
@@ -1701,6 +1721,7 @@ SELECT 1
     SELECT
         1;
 
+    -- COMMENT
     -- COMMENT
     SELECT
         1;
@@ -2570,7 +2591,7 @@ FROM TBL1;"#
             r#"            /* top comment */
             SELECT
                 C1
-                /* inline comment */
+            /* inline comment */
             /*
 
             after
