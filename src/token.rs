@@ -2020,6 +2020,28 @@ mod tests {
     }
 
     #[test]
+    fn test_get_sql_tokens_count() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("SELECT COUNT(*) FROM TBL1")
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("COUNT", Some(TokenCategory::Method)),
+                Token::new_test("(", Some(TokenCategory::ParenOpen)),
+                Token::new_test("*", Some(TokenCategory::Operator)),
+                Token::new_test(")", Some(TokenCategory::ParenClose)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("TBL1", None),
+            ]
+        );
+    }
+
+    #[test]
     fn test_get_sql_tokens_alias() {
         assert_eq!(
             get_sql_tokens(

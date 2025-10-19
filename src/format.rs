@@ -569,6 +569,12 @@ impl FormatState {
                         return;
                     }
 
+                    if self.tokens[i].value == "*"
+                        && self.tokens[i + 1].category == Some(TokenCategory::ParenClose)
+                    {
+                        return;
+                    }
+
                     if self.tokens[i + 1].category == Some(TokenCategory::WhiteSpace) {
                         self.tokens.remove(i + 1);
                     }
@@ -2117,6 +2123,34 @@ SET C3 = 3"#
             r#"            SELECT
                 COUNT(DISTINCT YEAR(D1))
             FROM TBL1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_paren_count() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            (SELECT COUNT(*) FROM TBL1)
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            (SELECT COUNT(*) FROM TBL1)
+"#
+        );
+
+        config.newlines = true;
+        config.chars = 10;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            (
+                SELECT
+                    COUNT(*)
+                FROM TBL1
+            )"#
         );
     }
 
