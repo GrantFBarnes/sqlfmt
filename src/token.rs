@@ -767,6 +767,11 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "MERGE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "OPEN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);

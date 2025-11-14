@@ -4179,6 +4179,7 @@ CALL SP1()"#
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
             r#"
+            select 1;
             merge tbl1 as TargetTable using tbl2 as SourceTable on TargetTable.id = @id and TargetTable.c1 = SourceTable.c1
             when not matched by TargetTable then insert (c1) values (SourceTable.c1)
             when not matched by SourceTable and TargetTable.id = @id then delete;
@@ -4188,6 +4189,7 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"
+            select 1;
             merge tbl1 as TargetTable using tbl2 as SourceTable on TargetTable.id = @id and TargetTable.c1 = SourceTable.c1
             when not matched by TargetTable then insert (c1) values (SourceTable.c1)
             when not matched by SourceTable and TargetTable.id = @id then delete;
@@ -4198,7 +4200,10 @@ CALL SP1()"#
         config.newlines = true;
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
-            r#"            MERGE tbl1 AS TargetTable
+            r#"            SELECT
+                1;
+
+            MERGE tbl1 AS TargetTable
             USING tbl2 AS SourceTable ON TargetTable.id = @id
                 AND TargetTable.c1 = SourceTable.c1
             WHEN NOT MATCHED BY TargetTable THEN
