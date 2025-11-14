@@ -645,7 +645,7 @@ impl Token {
             "CASE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
-                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
             }
             "CATCH" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
@@ -814,7 +814,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "THEN" => {
-                behavior.push(TokenBehavior::IncreaseIndentIfNotInsideCase);
+                behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
             }
             "TOP" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
@@ -839,12 +839,19 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "USING" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "VALUES" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "WHEN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
+                behavior.push(TokenBehavior::DecreaseIndent);
             }
             "WHERE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1269,6 +1276,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "MASTER_BIND" => Some(TokenCategory::Keyword),
         "MASTER_SSL_VERIFY_SERVER_CERT" => Some(TokenCategory::Keyword),
         "MATCH" => Some(TokenCategory::Keyword),
+        "MATCHED" => Some(TokenCategory::Keyword),
         "MATCHES" => Some(TokenCategory::Keyword),
         "MATCH_NUMBER" => Some(TokenCategory::Keyword),
         "MATCH_RECOGNIZE" => Some(TokenCategory::Keyword),
@@ -1951,7 +1959,7 @@ pub enum TokenBehavior {
     DecreaseIndent,
     IncreaseIndent,
     IncreaseIndentIfNotAfterKeyword,
-    IncreaseIndentIfNotInsideCase,
+    IncreaseIndentIfStandAlone,
     NewLineAfter,
     NewLineAfterIfNotAfterKeyword,
     NewLineAfterSkip,

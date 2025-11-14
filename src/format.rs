@@ -643,13 +643,12 @@ impl FormatState {
 
         if token
             .behavior
-            .contains(&TokenBehavior::IncreaseIndentIfNotInsideCase)
+            .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
         {
-            if self
-                .indent_stack
-                .last()
-                .is_none_or(|t| t.value.to_uppercase() != "CASE")
-            {
+            if self.indent_stack.last().is_none_or(|t| {
+                !t.behavior
+                    .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
+            }) {
                 self.indent_stack.push(token.clone());
                 return;
             }
@@ -4172,6 +4171,42 @@ CALL SP1()"#
             CLOSE SAMPLE_CURSOR;
 
             DEALLOCATE SAMPLE_CURSOR;"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_merge() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            merge tbl1 as TargetTable using tbl2 as SourceTable on TargetTable.id = @id and TargetTable.c1 = SourceTable.c1
+            when not matched by TargetTable then insert (c1) values (SourceTable.c1)
+            when not matched by SourceTable and TargetTable.id = @id then delete;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            merge tbl1 as TargetTable using tbl2 as SourceTable on TargetTable.id = @id and TargetTable.c1 = SourceTable.c1
+            when not matched by TargetTable then insert (c1) values (SourceTable.c1)
+            when not matched by SourceTable and TargetTable.id = @id then delete;
+"#
+        );
+
+        config.case = ConfigCase::Uppercase;
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            MERGE tbl1 AS TargetTable
+            USING tbl2 AS SourceTable ON TargetTable.id = @id
+                AND TargetTable.c1 = SourceTable.c1
+            WHEN NOT MATCHED BY TargetTable THEN
+            INSERT (c1)
+            VALUES (SourceTable.c1)
+            WHEN NOT MATCHED BY SourceTable
+                AND TargetTable.id = @id THEN
+            DELETE;"#
         );
     }
 }
