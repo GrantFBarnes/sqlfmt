@@ -624,6 +624,10 @@ impl Token {
             "AFTER" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
+            "ALTER" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "AND" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }

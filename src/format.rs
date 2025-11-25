@@ -3926,6 +3926,35 @@ CALL SP1()"#
     }
 
     #[test]
+    fn test_get_formatted_sql_alter_table() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            ALTER TABLE TBL1 ALTER COLUMN C1 NVARCHAR (20) NOT NULL;
+            ALTER TABLE TBL1 DROP COLUMN C1;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            ALTER TABLE TBL1 ALTER COLUMN C1 NVARCHAR(20) NOT NULL;
+            ALTER TABLE TBL1 DROP COLUMN C1;
+"#,
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            ALTER TABLE TBL1
+            ALTER COLUMN C1 NVARCHAR(20) NOT NULL;
+
+            ALTER TABLE TBL1
+            DROP COLUMN C1;"#,
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_trigger() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
