@@ -1,18 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as tar from "tar";
-import * as vscode from "vscode";
 import * as zlib from "zlib";
 import Stream from "stream";
 import cp from "child_process";
 import { promisify } from "util";
 
 export async function getBinaryPath(rootPath: string): Promise<string> {
-    return await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: "Setting up sqlfmt binary...",
-        cancellable: false,
-    }, async () => {
+    return new Promise(async () => {
         const binaryName: string = getPlatformBinaryName();
         const binaryPath: string = path.join(rootPath, binaryName);
 
