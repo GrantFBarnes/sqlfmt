@@ -7,23 +7,21 @@ import cp from "child_process";
 import { promisify } from "util";
 
 export async function getBinaryPath(rootPath: string): Promise<string> {
-    return new Promise(async () => {
-        const binaryName: string = getPlatformBinaryName();
-        const binaryPath: string = path.join(rootPath, binaryName);
+    const binaryName: string = getPlatformBinaryName();
+    const binaryPath: string = path.join(rootPath, binaryName);
 
-        const latestVersion: string = await getLatestVersion();
+    const latestVersion: string = await getLatestVersion();
 
-        if (!fs.existsSync(binaryPath)) {
-            await getBinary(rootPath, latestVersion);
-        }
+    if (!fs.existsSync(binaryPath)) {
+        await getBinary(rootPath, latestVersion);
+    }
 
-        const installedVersion: string = await getInstalledVersion(binaryPath);
-        if (latestVersion != "" && installedVersion != latestVersion) {
-            await getBinary(rootPath, latestVersion);
-        }
+    const installedVersion: string = await getInstalledVersion(binaryPath);
+    if (latestVersion != "" && installedVersion != latestVersion) {
+        await getBinary(rootPath, latestVersion);
+    }
 
-        return binaryPath;
-    });
+    return binaryPath;
 }
 
 function getLatestVersion(): Promise<string> {
