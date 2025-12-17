@@ -73,6 +73,7 @@ ORDER BY Column1;
   Format Configuration
     -n, --newlines      Replace newlines
     --comment-pre-space Replace comment pre-space with indent level
+    --align-text-groups Align text by groups inside parentheses
     -u, --upper         Uppercase keywords
     -l, --lower         Lowercase keywords
     -t, --tabs          Use tabs for indents
@@ -93,6 +94,7 @@ Format Configuration
 ```
 newlines
 comment_pre_space
+align_text_groups
 upper
 lower
 tabs

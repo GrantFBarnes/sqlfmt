@@ -146,8 +146,12 @@ function getProcessArguments(): string[] {
     args.push("-n");
   }
 
-  if (config.get("sqlfmt.replaceCommentPreSpace")) {
+  if (config.get("sqlfmt.commentPreSpace")) {
     args.push("--comment-pre-space");
+  }
+
+  if (config.get("sqlfmt.alignTextGroups")) {
+    args.push("--align-text-groups");
   }
 
   switch (config.get("sqlfmt.changeKeywordCase")) {

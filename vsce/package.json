@@ -43,14 +43,20 @@
           "default": false,
           "description": "Replace newlines when formatting."
         },
-        "sqlfmt.replaceCommentPreSpace": {
+        "sqlfmt.commentPreSpace": {
           "order": 2,
           "type": "boolean",
           "default": false,
           "description": "Replace comment pre-space when formatting."
         },
-        "sqlfmt.changeKeywordCase": {
+        "sqlfmt.alignTextGroups": {
           "order": 3,
+          "type": "boolean",
+          "default": false,
+          "description": "Align text by groups inside parentheses."
+        },
+        "sqlfmt.changeKeywordCase": {
+          "order": 4,
           "type": "string",
           "enum": [
             "none",
@@ -71,13 +77,13 @@
           "description": "Change case on keywords when formatting."
         },
         "sqlfmt.useTabs": {
-          "order": 4,
+          "order": 5,
           "type": "boolean",
           "default": false,
           "description": "Use tabs instead of spaces for indentation."
         },
         "sqlfmt.setSpaceCount": {
-          "order": 5,
+          "order": 6,
           "type": "number",
           "default": 4,
           "minimum": 0,
@@ -85,7 +91,7 @@
           "description": "Set amount of spaces for each level of indent."
         },
         "sqlfmt.setCharCount": {
-          "order": 6,
+          "order": 7,
           "type": "number",
           "default": 80,
           "minimum": 0,
