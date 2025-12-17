@@ -3995,6 +3995,39 @@ CALL SP1()"#
     }
 
     #[test]
+    fn test_get_formatted_sql_function() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            CREATE FUNCTION FUNC1 ( @P1 NVARCHAR(10) )
+            RETURNS NVARCHAR(10)
+            WITH EXECUTE AS CALLER AS
+            BEGIN RETURN ''; END
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            CREATE FUNCTION FUNC1(@P1 NVARCHAR(10))
+            RETURNS NVARCHAR(10)
+            WITH EXECUTE AS CALLER AS
+            BEGIN RETURN ''; END
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            CREATE FUNCTION FUNC1(@P1 NVARCHAR(10))
+            RETURNS NVARCHAR(10) WITH EXECUTE AS CALLER AS
+            BEGIN
+                RETURN '';
+            END"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_while_loop() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
