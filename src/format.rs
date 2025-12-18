@@ -27,6 +27,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
         state.push(input_token.clone());
         state.increase_indent_stack(input_token);
         state.decrease_paren_stack(input_token);
+        state.align_text_groups(config, input_token);
     }
 
     return state.get_result(config);
@@ -153,6 +154,118 @@ impl FormatState {
     fn decrease_paren_stack(&mut self, token: &Token) {
         if token.category == Some(TokenCategory::ParenClose) {
             self.paren_stack.pop();
+        }
+    }
+
+    fn align_text_groups(&mut self, config: &Configuration, token: &Token) {
+        if !config.align_text_groups {
+            return;
+        }
+
+        if token.category != Some(TokenCategory::ParenClose) {
+            return;
+        }
+
+        struct TextGroup {
+            len: usize,
+            post_whitespace_position: Option<usize>,
+        }
+
+        let mut paren_count: usize = 1;
+        let mut indent_len: Option<usize> = None;
+        let mut last_whitespace_position: Option<usize> = None;
+        let mut current_group: Option<TextGroup> = None;
+        let mut current_line: Vec<TextGroup> = vec![];
+        let mut lines: Vec<Vec<TextGroup>> = vec![];
+        let mut max_groups_per_line: usize = 0;
+
+        // loop backwards until previous newline outside paren set
+        for i in (0..self.tokens.len() - 1).rev() {
+            let prev_token: &Token = &self.tokens[i];
+
+            if paren_count == 0 {
+                break;
+            }
+
+            match prev_token.category {
+                Some(TokenCategory::WhiteSpace) => {
+                    if current_group.is_some() {
+                        current_line.push(current_group.unwrap());
+                        if current_line.len() > max_groups_per_line {
+                            max_groups_per_line = current_line.len();
+                        }
+                        current_group = None;
+                    }
+                    last_whitespace_position = Some(i);
+                }
+                Some(TokenCategory::NewLine) => {
+                    // check if indented formatting inside paren
+                    if self.tokens.get(i + 2).is_some() {
+                        let current_indent_len: usize = self.tokens[i + 2].len();
+                        if current_indent_len > 0 {
+                            if indent_len.is_none() {
+                                indent_len = Some(current_indent_len);
+                            }
+                            if current_indent_len > indent_len.unwrap() {
+                                // inner paren contains indented formatting
+                                // do not align groups
+                                return;
+                            }
+                        }
+                    }
+
+                    if !current_line.is_empty() {
+                        current_line.reverse();
+                        lines.push(current_line);
+                    }
+                    last_whitespace_position = None;
+                    current_group = None;
+                    current_line = vec![];
+                }
+                _ => {
+                    match prev_token.category {
+                        Some(TokenCategory::ParenOpen) => paren_count -= 1,
+                        Some(TokenCategory::ParenClose) => paren_count += 1,
+                        _ => (),
+                    }
+                    if current_group.is_none() {
+                        current_group = Some(TextGroup {
+                            len: 0,
+                            post_whitespace_position: last_whitespace_position,
+                        });
+                    }
+                    let mut new_current_group: TextGroup = current_group.unwrap();
+                    new_current_group.len += prev_token.len();
+                    current_group = Some(new_current_group);
+                }
+            }
+        }
+
+        // find max len in each group
+        let mut max_len_in_each_group: Vec<usize> = vec![];
+        for _ in 0..max_groups_per_line {
+            max_len_in_each_group.push(0);
+        }
+        for line in &lines {
+            for group_idx in 0..line.len() {
+                if line[group_idx].len > max_len_in_each_group[group_idx] {
+                    max_len_in_each_group[group_idx] = line[group_idx].len;
+                }
+            }
+        }
+
+        // adjust post whitespace len to align each group
+        for line in &lines {
+            for group_idx in 0..line.len() {
+                if line[group_idx].post_whitespace_position.is_some() {
+                    let post_whitespace_position: usize =
+                        line[group_idx].post_whitespace_position.unwrap();
+                    let max_len: usize = max_len_in_each_group[group_idx];
+                    let len: usize = line[group_idx].len;
+                    let whitespace_len: usize = 1 + max_len - len;
+                    self.tokens[post_whitespace_position].value = " ".repeat(whitespace_len);
+                }
+            }
         }
     }
 
@@ -2151,6 +2264,16 @@ SET C3 = 3"#
                 FROM TBL1
             )"#
         );
+
+        config.align_text_groups = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            (
+                SELECT
+                    COUNT(*)
+                FROM TBL1
+            )"#
+        );
     }
 
     #[test]
@@ -3889,6 +4012,21 @@ CALL SP1()"#
                 PRIMARY KEY(ID),
                 FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
                 FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
+            )"#
+        );
+
+        config.align_text_groups = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            CREATE TABLE IF NOT EXISTS TBL1(
+                ID      UUID        NOT        NULL     DEFAULT UUID(),
+                C1      VARCHAR(10) NOT        NULL,
+                D1      DATETIME    NULL,
+                I1      INT,
+                I2      INT,
+                PRIMARY KEY(ID),
+                FOREIGN KEY(I1)     REFERENCES TBL2(ID) ON      DELETE  CASCADE,
+                FOREIGN KEY(I2)     REFERENCES TBL3(ID) ON      DELETE  SET      NULL
             )"#
         );
     }
