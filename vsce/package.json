@@ -43,7 +43,7 @@
           "default": false,
           "description": "Replace newlines when formatting."
         },
-        "sqlfmt.commentPreSpace": {
+        "sqlfmt.replaceCommentPreSpace": {
           "order": 2,
           "type": "boolean",
           "default": false,
