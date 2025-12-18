@@ -167,6 +167,7 @@ impl FormatState {
         }
 
         struct TextGroup {
+            value: String,
             len: usize,
             post_whitespace_position: Option<usize>,
         }
@@ -178,6 +179,15 @@ impl FormatState {
         let mut current_line: Vec<TextGroup> = vec![];
         let mut lines: Vec<Vec<TextGroup>> = vec![];
         let mut max_groups_per_line: usize = 0;
+
+        let groupings: Vec<Vec<&str>> = vec![
+            vec!["NOT", "NULL"],
+            vec!["SET", "NULL"],
+            vec!["SET", "DEFAULT"],
+            vec!["NO", "ACTION"],
+            vec!["ON", "DELETE"],
+            vec!["ON", "UPDATE"],
+        ];
 
         // loop backwards until previous newline outside paren set
         for i in (0..self.tokens.len() - 1).rev() {
@@ -191,6 +201,40 @@ impl FormatState {
                 Some(TokenCategory::WhiteSpace) => {
                     if current_group.is_some() {
                         current_line.push(current_group.unwrap());
+
+                        // check for groupings to be merged
+                        for grouping in &groupings {
+                            let mut group_found: bool = true;
+                            for g in 0..grouping.len() {
+                                if g > current_line.len() - 1 {
+                                    group_found = false;
+                                    break;
+                                }
+                                if grouping[g]
+                                    != current_line[current_line.len() - g - 1]
+                                        .value
+                                        .to_uppercase()
+                                {
+                                    group_found = false;
+                                    break;
+                                }
+                            }
+
+                            if group_found {
+                                let mut merge_group: TextGroup = current_line.pop().unwrap();
+                                for _ in 0..grouping.len() - 1 {
+                                    let last_group: TextGroup = current_line.pop().unwrap();
+                                    merge_group.value =
+                                        format!("{} {}", last_group.value, merge_group.value);
+                                    merge_group.len += last_group.len + 1;
+                                    merge_group.post_whitespace_position =
+                                        last_group.post_whitespace_position;
+                                }
+                                current_line.push(merge_group);
+                                break;
+                            }
+                        }
+
                         if current_line.len() > max_groups_per_line {
                             max_groups_per_line = current_line.len();
                         }
@@ -222,6 +266,17 @@ impl FormatState {
                     current_group = None;
                     current_line = vec![];
                 }
+                Some(TokenCategory::Comma) => {
+                    if current_group.is_some() {
+                        current_line.push(current_group.unwrap());
+                    }
+                    current_line.push(TextGroup {
+                        value: prev_token.value.clone(),
+                        len: prev_token.len(),
+                        post_whitespace_position: last_whitespace_position,
+                    });
+                    current_group = None;
+                }
                 _ => {
                     match prev_token.category {
                         Some(TokenCategory::ParenOpen) => paren_count -= 1,
@@ -230,11 +285,14 @@ impl FormatState {
                     }
                     if current_group.is_none() {
                         current_group = Some(TextGroup {
+                            value: String::new(),
                             len: 0,
                             post_whitespace_position: last_whitespace_position,
                         });
                     }
                     let mut new_current_group: TextGroup = current_group.unwrap();
+                    new_current_group.value =
+                        format!("{}{}", prev_token.value, new_current_group.value);
                     new_current_group.len += prev_token.len();
                     current_group = Some(new_current_group);
                 }
@@ -4019,14 +4077,14 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            CREATE TABLE IF NOT EXISTS TBL1(
-                ID      UUID        NOT        NULL     DEFAULT UUID(),
-                C1      VARCHAR(10) NOT        NULL,
+                ID      UUID        NOT NULL   DEFAULT  UUID(),
+                C1      VARCHAR(10) NOT NULL,
                 D1      DATETIME    NULL,
                 I1      INT,
                 I2      INT,
                 PRIMARY KEY(ID),
-                FOREIGN KEY(I1)     REFERENCES TBL2(ID) ON      DELETE  CASCADE,
-                FOREIGN KEY(I2)     REFERENCES TBL3(ID) ON      DELETE  SET      NULL
+                FOREIGN KEY(I1)     REFERENCES TBL2(ID) ON DELETE CASCADE,
+                FOREIGN KEY(I2)     REFERENCES TBL3(ID) ON DELETE SET NULL
             )"#
         );
     }
