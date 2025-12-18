@@ -642,7 +642,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "CALL" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -706,12 +706,12 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfterX2IfCombined);
             }
             "EXEC" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "EXECUTE" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }

@@ -4216,7 +4216,8 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            CREATE FUNCTION FUNC1(@P1 NVARCHAR(10))
-            RETURNS NVARCHAR(10) WITH EXECUTE AS CALLER AS
+            RETURNS NVARCHAR(10) WITH
+            EXECUTE AS CALLER AS
             BEGIN
                 RETURN '';
             END"#
