@@ -197,105 +197,112 @@ impl FormatState {
                 break;
             }
 
-            match prev_token.category {
-                Some(TokenCategory::WhiteSpace) => {
-                    if current_group.is_some() {
-                        current_line.push(current_group.unwrap());
-
-                        // check for groupings to be merged
-                        for grouping in &groupings {
-                            let mut group_found: bool = true;
-                            for g in 0..grouping.len() {
-                                if g > current_line.len() - 1 {
-                                    group_found = false;
-                                    break;
-                                }
-                                if grouping[g]
-                                    != current_line[current_line.len() - g - 1]
-                                        .value
-                                        .to_uppercase()
-                                {
-                                    group_found = false;
-                                    break;
-                                }
-                            }
-
-                            if group_found {
-                                let mut merge_group: TextGroup = current_line.pop().unwrap();
-                                for _ in 0..grouping.len() - 1 {
-                                    let last_group: TextGroup = current_line.pop().unwrap();
-                                    merge_group.value =
-                                        format!("{} {}", last_group.value, merge_group.value);
-                                    merge_group.len += last_group.len + 1;
-                                    merge_group.post_whitespace_position =
-                                        last_group.post_whitespace_position;
-                                }
-                                current_line.push(merge_group);
-                                break;
-                            }
+            if prev_token.category == Some(TokenCategory::NewLine) {
+                // check if indented formatting inside paren
+                if self.tokens.get(i + 2).is_some() {
+                    let current_indent_len: usize = self.tokens[i + 2].len();
+                    if current_indent_len > 0 {
+                        if indent_len.is_none() {
+                            indent_len = Some(current_indent_len);
                         }
-
-                        if current_line.len() > max_groups_per_line {
-                            max_groups_per_line = current_line.len();
+                        if current_indent_len > indent_len.unwrap() {
+                            // inner paren contains indented formatting
+                            // do not align groups
+                            return;
                         }
-                        current_group = None;
                     }
-                    last_whitespace_position = Some(i);
                 }
-                Some(TokenCategory::NewLine) => {
-                    // check if indented formatting inside paren
-                    if self.tokens.get(i + 2).is_some() {
-                        let current_indent_len: usize = self.tokens[i + 2].len();
-                        if current_indent_len > 0 {
-                            if indent_len.is_none() {
-                                indent_len = Some(current_indent_len);
+
+                if !current_line.is_empty() {
+                    current_line.reverse();
+                    lines.push(current_line);
+                }
+                last_whitespace_position = None;
+                current_group = None;
+                current_line = vec![];
+            } else {
+                match prev_token.category {
+                    Some(TokenCategory::ParenOpen) => paren_count -= 1,
+                    Some(TokenCategory::ParenClose) => paren_count += 1,
+                    Some(TokenCategory::Comma) => {
+                        if paren_count == 1 {
+                            if current_group.is_some() {
+                                current_line.push(current_group.unwrap());
                             }
-                            if current_indent_len > indent_len.unwrap() {
-                                // inner paren contains indented formatting
-                                // do not align groups
-                                return;
-                            }
+                            current_line.push(TextGroup {
+                                value: prev_token.value.clone(),
+                                len: prev_token.len(),
+                                post_whitespace_position: last_whitespace_position,
+                            });
+                            current_group = None;
+                            continue;
                         }
                     }
+                    Some(TokenCategory::WhiteSpace) => {
+                        if paren_count == 1 {
+                            if current_group.is_some() {
+                                current_line.push(current_group.unwrap());
 
-                    if !current_line.is_empty() {
-                        current_line.reverse();
-                        lines.push(current_line);
+                                // check for groupings to be merged
+                                for grouping in &groupings {
+                                    let mut group_found: bool = true;
+                                    for g in 0..grouping.len() {
+                                        if g > current_line.len() - 1 {
+                                            group_found = false;
+                                            break;
+                                        }
+                                        if grouping[g]
+                                            != current_line[current_line.len() - g - 1]
+                                                .value
+                                                .to_uppercase()
+                                        {
+                                            group_found = false;
+                                            break;
+                                        }
+                                    }
+
+                                    if group_found {
+                                        let mut merge_group: TextGroup =
+                                            current_line.pop().unwrap();
+                                        for _ in 0..grouping.len() - 1 {
+                                            let last_group: TextGroup = current_line.pop().unwrap();
+                                            merge_group.value = format!(
+                                                "{} {}",
+                                                last_group.value, merge_group.value
+                                            );
+                                            merge_group.len += last_group.len + 1;
+                                            merge_group.post_whitespace_position =
+                                                last_group.post_whitespace_position;
+                                        }
+                                        current_line.push(merge_group);
+                                        break;
+                                    }
+                                }
+
+                                if current_line.len() > max_groups_per_line {
+                                    max_groups_per_line = current_line.len();
+                                }
+                                current_group = None;
+                            }
+                            last_whitespace_position = Some(i);
+                            continue;
+                        }
                     }
-                    last_whitespace_position = None;
-                    current_group = None;
-                    current_line = vec![];
+                    _ => (),
                 }
-                Some(TokenCategory::Comma) => {
-                    if current_group.is_some() {
-                        current_line.push(current_group.unwrap());
-                    }
-                    current_line.push(TextGroup {
-                        value: prev_token.value.clone(),
-                        len: prev_token.len(),
+
+                if current_group.is_none() {
+                    current_group = Some(TextGroup {
+                        value: String::new(),
+                        len: 0,
                         post_whitespace_position: last_whitespace_position,
                     });
-                    current_group = None;
                 }
-                _ => {
-                    match prev_token.category {
-                        Some(TokenCategory::ParenOpen) => paren_count -= 1,
-                        Some(TokenCategory::ParenClose) => paren_count += 1,
-                        _ => (),
-                    }
-                    if current_group.is_none() {
-                        current_group = Some(TextGroup {
-                            value: String::new(),
-                            len: 0,
-                            post_whitespace_position: last_whitespace_position,
-                        });
-                    }
-                    let mut new_current_group: TextGroup = current_group.unwrap();
-                    new_current_group.value =
-                        format!("{}{}", prev_token.value, new_current_group.value);
-                    new_current_group.len += prev_token.len();
-                    current_group = Some(new_current_group);
-                }
+                let mut new_current_group: TextGroup = current_group.unwrap();
+                new_current_group.value =
+                    format!("{}{}", prev_token.value, new_current_group.value);
+                new_current_group.len += prev_token.len();
+                current_group = Some(new_current_group);
             }
         }
 
@@ -4037,6 +4044,7 @@ CALL SP1()"#
                 ID UUID NOT NULL DEFAULT UUID(),
                 C1 VARCHAR(10) NOT NULL,
                 D1 DATETIME NULL,
+                E1 ENUM('VAL1', 'VAL2') NOT NULL DEFAULT 'VAL1',
                 I1 INT,
                 I2 INT, PRIMARY KEY (ID), FOREIGN KEY (I1) REFERENCES TBL2 (ID) ON DELETE CASCADE,
                 FOREIGN KEY (I2) REFERENCES TBL3 (ID) ON DELETE SET NULL
@@ -4051,6 +4059,7 @@ CALL SP1()"#
                 ID UUID NOT NULL DEFAULT UUID(),
                 C1 VARCHAR(10) NOT NULL,
                 D1 DATETIME NULL,
+                E1 ENUM('VAL1', 'VAL2') NOT NULL DEFAULT 'VAL1',
                 I1 INT,
                 I2 INT, PRIMARY KEY(ID), FOREIGN KEY(I1) REFERENCES TBL2(ID) ON DELETE CASCADE,
                 FOREIGN KEY(I2) REFERENCES TBL3(ID) ON DELETE SET NULL
@@ -4065,6 +4074,7 @@ CALL SP1()"#
                 ID UUID NOT NULL DEFAULT UUID(),
                 C1 VARCHAR(10) NOT NULL,
                 D1 DATETIME NULL,
+                E1 ENUM('VAL1', 'VAL2') NOT NULL DEFAULT 'VAL1',
                 I1 INT,
                 I2 INT,
                 PRIMARY KEY(ID),
@@ -4077,14 +4087,15 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            CREATE TABLE IF NOT EXISTS TBL1(
-                ID      UUID        NOT NULL   DEFAULT  UUID(),
-                C1      VARCHAR(10) NOT NULL,
-                D1      DATETIME    NULL,
+                ID      UUID                 NOT NULL   DEFAULT  UUID(),
+                C1      VARCHAR(10)          NOT NULL,
+                D1      DATETIME             NULL,
+                E1      ENUM('VAL1', 'VAL2') NOT NULL   DEFAULT  'VAL1',
                 I1      INT,
                 I2      INT,
                 PRIMARY KEY(ID),
-                FOREIGN KEY(I1)     REFERENCES TBL2(ID) ON DELETE CASCADE,
-                FOREIGN KEY(I2)     REFERENCES TBL3(ID) ON DELETE SET NULL
+                FOREIGN KEY(I1)              REFERENCES TBL2(ID) ON DELETE CASCADE,
+                FOREIGN KEY(I2)              REFERENCES TBL3(ID) ON DELETE SET NULL
             )"#
         );
     }
