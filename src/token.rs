@@ -797,9 +797,6 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
-            "PRIMARY" => {
-                behavior.push(TokenBehavior::NewLineBefore);
-            }
             "RETURN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
