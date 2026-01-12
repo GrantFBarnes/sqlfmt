@@ -112,14 +112,18 @@ Here are some examples:
 
 ```vim
 vnoremap <Leader>sf :!sqlfmt<CR>
-vnoremap <Leader>snf :!sqlfmt -n<CR>
-nnoremap <Leader>sf ggVG:!sqlfmt<CR>
-nnoremap <Leader>snf ggVG:!sqlfmt -n<CR>
+vnoremap <Leader>sfn :!sqlfmt -n --comment-pre-space<CR>
+vnoremap <Leader>sft :!sqlfmt -n -t --comment-pre-space<CR>
+nnoremap <Leader>sf :%!sqlfmt<CR>
+nnoremap <Leader>sfn :%!sqlfmt -n --comment-pre-space<CR>
+nnoremap <Leader>sft :%!sqlfmt -n -t --comment-pre-space<CR>
 ```
 
 ```lua
 vim.keymap.set("v", "<leader>sf", ":!sqlfmt<CR>")
-vim.keymap.set("v", "<leader>snf", ":!sqlfmt -n<CR>")
-vim.keymap.set("n", "<leader>sf", "ggVG:!sqlfmt<CR>")
-vim.keymap.set("n", "<leader>snf", "ggVG:!sqlfmt -n<CR>")
+vim.keymap.set("v", "<leader>sfn", ":!sqlfmt -n --comment-pre-space<CR>")
+vim.keymap.set("v", "<leader>sft", ":!sqlfmt -n -t --comment-pre-space<CR>")
+vim.keymap.set("n", "<leader>sf", ":%!sqlfmt<CR>")
+vim.keymap.set("n", "<leader>sfn", ":%!sqlfmt -n --comment-pre-space<CR>")
+vim.keymap.set("n", "<leader>sft", ":%!sqlfmt -n -t --comment-pre-space<CR>")
 ```
