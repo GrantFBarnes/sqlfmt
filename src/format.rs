@@ -515,8 +515,9 @@ impl FormatState {
 
         if token
             .behavior
-            .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeyword)
+            .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod)
             && prev1_token.category != Some(TokenCategory::Keyword)
+            && prev1_token.category != Some(TokenCategory::Method)
         {
             self.push(Token::new_newline());
             return;
@@ -1413,6 +1414,60 @@ FROM TBL1"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"CONVERT(NVARCHAR(36), ID)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_select_joins() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT *
+            FROM TBL1 AS T1
+            INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+            LEFT JOIN TBL3 AS T3 ON T3.C1 = T1.C1
+            RIGHT JOIN TBL4 AS T4 ON T4.C1 = T1.C1
+            OUTER JOIN TBL5 AS T5 ON T5.C1 = T1.C1
+            LEFT OUTER JOIN TBL6 AS T6 ON T6.C1 = T1.C1
+            RIGHT OUTER JOIN TBL7 AS T7 ON T7.C1 = T1.C1
+            FULL OUTER JOIN TBL8 AS T8 ON T8.C1 = T1.C1
+            INNER JOIN TBL9 AS T9 ON T9.C1 = T1.C1
+            WHERE T1.C2 = 1
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT *
+            FROM TBL1 AS T1
+                INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                LEFT JOIN TBL3 AS T3 ON T3.C1 = T1.C1
+                RIGHT JOIN TBL4 AS T4 ON T4.C1 = T1.C1
+                OUTER JOIN TBL5 AS T5 ON T5.C1 = T1.C1
+                LEFT OUTER JOIN TBL6 AS T6 ON T6.C1 = T1.C1
+                RIGHT OUTER JOIN TBL7 AS T7 ON T7.C1 = T1.C1
+                FULL OUTER JOIN TBL8 AS T8 ON T8.C1 = T1.C1
+                INNER JOIN TBL9 AS T9 ON T9.C1 = T1.C1
+            WHERE T1.C2 = 1
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                *
+            FROM TBL1 AS T1
+                INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+                LEFT JOIN TBL3 AS T3 ON T3.C1 = T1.C1
+                RIGHT JOIN TBL4 AS T4 ON T4.C1 = T1.C1
+                OUTER JOIN TBL5 AS T5 ON T5.C1 = T1.C1
+                LEFT OUTER JOIN TBL6 AS T6 ON T6.C1 = T1.C1
+                RIGHT OUTER JOIN TBL7 AS T7 ON T7.C1 = T1.C1
+                FULL OUTER JOIN TBL8 AS T8 ON T8.C1 = T1.C1
+                INNER JOIN TBL9 AS T9 ON T9.C1 = T1.C1
+            WHERE T1.C2 = 1"#
         );
     }
 

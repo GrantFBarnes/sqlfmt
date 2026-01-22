@@ -729,7 +729,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "FULL" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "GO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -751,7 +751,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "INNER" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "INSERT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
@@ -759,13 +759,13 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "INTO" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
                 behavior.push(TokenBehavior::NewLineAfterIfNotAfterKeyword);
                 behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "LEFT" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "LIMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -790,7 +790,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "OUTER" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "PIVOT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -806,7 +806,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "RIGHT" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeyword);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "SELECT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1973,7 +1973,7 @@ pub enum TokenBehavior {
     NewLineAfterX2IfCombined,
     NewLineBefore,
     NewLineBeforeIfNotAfterEvent,
-    NewLineBeforeIfNotAfterKeyword,
+    NewLineBeforeIfNotAfterKeywordOrMethod,
     NoNewLineAfterX2Skip,
     NoNewLineBefore,
     NoNewLineBeforeUnlessMatch,
