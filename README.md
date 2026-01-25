@@ -4,8 +4,8 @@
 
 Command line SQL formatter.
 
-[![GitHub Release](https://img.shields.io/github/v/release/grantfbarnes/sqlfmt)](https://github.com/GrantFBarnes/sqlfmt/releases)
-![GitHub Downloads](https://img.shields.io/github/downloads/grantfbarnes/sqlfmt/total)
+[![GitHub Release](https://img.shields.io/github/v/release/grantfbarnes/sqlfmt)](https://github.com/GrantFBarnes/sqlfmt/releases/latest)
+[![GitHub Downloads](https://img.shields.io/github/downloads/grantfbarnes/sqlfmt/total)](https://github.com/GrantFBarnes/sqlfmt/releases)
 [![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/GrantFBarnes.sqlfmt?label=vs%20code%20installs)](https://marketplace.visualstudio.com/items?itemName=GrantFBarnes.sqlfmt)
 
 ## Installation
