@@ -1361,6 +1361,51 @@ FROM TBL1"#
     }
 
     #[test]
+    fn test_get_formatted_sql_alias_keyword() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT DO.C1,DO.C2,DO.C3 FROM TBL1 AS DO"#);
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT DO.C1, DO.C2, DO.C3 FROM TBL1 AS DO"#
+        );
+
+        // formatted result is bad because alias is a keyword with strong behaviors
+        // alias should be quoted like in the test case after this one to fix
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+DO.C1,
+    DO.C2,
+        DO.C3
+            FROM TBL1 AS
+            DO"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_alias_keyword_quoted() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT [DO].C1,[DO].C2,[DO].C3 FROM TBL1 AS [DO]"#);
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT [DO].C1, [DO].C2, [DO].C3 FROM TBL1 AS [DO]"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+    [DO].C1,
+    [DO].C2,
+    [DO].C3
+FROM TBL1 AS [DO]"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_go() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
