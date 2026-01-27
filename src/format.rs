@@ -456,6 +456,10 @@ impl FormatState {
             return;
         }
 
+        if token.behavior.contains(&TokenBehavior::NoWhiteSpaceBefore) {
+            return;
+        }
+
         if token.behavior.contains(&TokenBehavior::NoNewLineBefore) {
             return;
         }

@@ -598,7 +598,7 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfter);
             }
             Some(TokenCategory::FullStop) => {
-                behavior.push(TokenBehavior::NoSpaceBefore);
+                behavior.push(TokenBehavior::NoWhiteSpaceBefore);
                 behavior.push(TokenBehavior::NoSpaceAfter);
             }
             Some(TokenCategory::Interpolation) => {
