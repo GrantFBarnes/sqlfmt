@@ -822,6 +822,9 @@ impl Token {
             "THEN" => {
                 behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
             }
+            "THROW" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "TOP" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfterSkip);
