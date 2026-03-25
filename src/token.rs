@@ -660,6 +660,9 @@ impl Token {
             "CLOSE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
+            "COMMIT" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "CREATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::DecreaseIndent);
@@ -808,6 +811,9 @@ impl Token {
             "RIGHT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
+            "ROLLBACK" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "SELECT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
@@ -828,6 +834,9 @@ impl Token {
             "TOP" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfterSkip);
+            }
+            "TRAN" | "TRANSACTION" => {
+                behavior.push(TokenBehavior::NoNewLineBefore);
             }
             "TRUNCATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);

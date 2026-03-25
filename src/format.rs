@@ -845,19 +845,21 @@ impl FormatState {
             return;
         }
 
-        let required_to_decrease: HashMap<&str, &str> = HashMap::from([
-            ("(", ")"),
-            ("OPEN", "CLOSE"),
-            ("BEGIN", "END"),
-            ("DO", "END"),
-            ("CASE", "END"),
-            ("THEN", "END"),
+        let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
+            ("(", vec![")"]),
+            ("OPEN", vec!["CLOSE"]),
+            ("BEGIN", vec!["END", "COMMIT", "ROLLBACK"]),
+            ("DO", vec!["END"]),
+            ("CASE", vec!["END"]),
+            ("THEN", vec!["END"]),
         ]);
 
         let mut decrease_until: Vec<&str> = vec![];
         for kv in &required_to_decrease {
-            if kv.1 == &token.value.to_uppercase() {
-                decrease_until.push(kv.0);
+            for v in kv.1 {
+                if v == &token.value.to_uppercase() {
+                    decrease_until.push(kv.0);
+                }
             }
         }
 
@@ -1723,6 +1725,98 @@ SELECT
             SELECT
                 C3
             FROM TBL3"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_transaction() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            BEGIN TRY
+            BEGIN TRANSACTION;
+            CALL SP1();
+            COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION;
+            END CATCH
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            BEGIN TRY
+                BEGIN TRANSACTION;
+                    CALL SP1();
+                COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION;
+            END CATCH
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            BEGIN TRY
+                BEGIN TRANSACTION;
+                    CALL SP1();
+                COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION;
+            END CATCH"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_transaction2() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            BEGIN TRY
+            BEGIN TRANSACTION
+            SELECT 1
+            COMMIT TRANSACTION
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION
+            THROW
+            END CATCH
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            BEGIN TRY
+                BEGIN TRANSACTION
+                    SELECT 1
+                COMMIT TRANSACTION
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION
+            THROW
+            END CATCH
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            BEGIN TRY
+                BEGIN TRANSACTION
+                    SELECT
+                        1
+                COMMIT TRANSACTION
+            END TRY
+            BEGIN CATCH
+            ROLLBACK TRANSACTION
+            THROW
+            END CATCH"#
         );
     }
 
