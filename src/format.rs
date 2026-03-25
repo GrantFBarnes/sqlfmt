@@ -492,8 +492,10 @@ impl FormatState {
         }
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            self.push(Token::new_newline());
-            return;
+            if token.category != Some(TokenCategory::Delimiter) {
+                self.push(Token::new_newline());
+                return;
+            }
         }
 
         if prev1_token
