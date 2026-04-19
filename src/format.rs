@@ -1697,7 +1697,7 @@ SELECT
         let sql: String = String::from(
             r#"
             SELECT C1 FROM TBL1
-            UNION SELECT C2 FROM TBL2
+            UNION ALL SELECT C2 FROM TBL2
             UNION SELECT C3 FROM TBL3
             "#,
         );
@@ -1706,7 +1706,7 @@ SELECT
             get_formatted_sql(&config, sql.clone()),
             r#"
             SELECT C1 FROM TBL1
-            UNION SELECT C2 FROM TBL2
+            UNION ALL SELECT C2 FROM TBL2
             UNION SELECT C3 FROM TBL3
 "#
         );
@@ -1717,7 +1717,7 @@ SELECT
             r#"            SELECT
                 C1
             FROM TBL1
-            UNION
+            UNION ALL
             SELECT
                 C2
             FROM TBL2
