@@ -4684,4 +4684,47 @@ CALL SP1()"#
             DELETE;"#
         );
     }
+
+    #[test]
+    fn test_get_formatted_merge_output() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            MERGE INTO TargetTable AS t USING SourceTable AS s ON t.ID = s.ID
+            WHEN MATCHED THEN UPDATE SET t.Value = s.Value
+            WHEN NOT MATCHED BY TARGET THEN INSERT (ID, Value) VALUES (s.ID, s.Value)
+            OUTPUT $action AS ActionType, INSERTED.ID AS NewID, DELETED.Value AS OldValue, INSERTED.Value AS NewValue INTO @LogTable;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            MERGE INTO TargetTable AS t USING SourceTable AS s ON t.ID = s.ID
+            WHEN MATCHED THEN UPDATE SET t.Value = s.Value
+            WHEN NOT MATCHED BY TARGET THEN INSERT (ID, Value) VALUES (s.ID, s.Value)
+            OUTPUT $action AS ActionType, INSERTED.ID AS NewID, DELETED.Value AS OldValue, INSERTED.Value AS NewValue INTO @LogTable;
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            MERGE INTO TargetTable AS t
+            USING SourceTable AS s ON t.ID = s.ID
+            WHEN MATCHED THEN
+            UPDATE
+            SET t.Value = s.Value
+            WHEN NOT MATCHED BY TARGET THEN
+            INSERT (ID, Value)
+            VALUES (s.ID, s.Value)
+            OUTPUT
+                $action AS ActionType,
+                INSERTED.ID AS NewID,
+                DELETED.Value AS OldValue,
+                INSERTED.Value AS NewValue
+            INTO
+                @LogTable;"#
+        );
+    }
 }
