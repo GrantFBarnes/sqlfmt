@@ -798,12 +798,6 @@ impl Token {
             "OUTER" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
-            "OUTPUT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
-                behavior.push(TokenBehavior::NewLineAfter);
-                behavior.push(TokenBehavior::IncreaseIndent);
-                behavior.push(TokenBehavior::DecreaseIndent);
-            }
             "PIVOT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);

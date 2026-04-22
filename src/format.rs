@@ -4436,6 +4436,52 @@ CALL SP1()"#
     }
 
     #[test]
+    fn test_get_formatted_sql_procedure() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            CREATE PROCEDURE SP1 ( @P1 NVARCHAR(10) = NULL OUTPUT, @P2 INT NOT NULL )
+            AS
+            BEGIN
+            IF @P2 > 5 BEGIN SET @P1 = 'BIG' END
+            ELSE BEGIN SET @P1 = 'SMALL' END
+            END
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            CREATE PROCEDURE SP1(@P1 NVARCHAR(10) = NULL OUTPUT, @P2 INT NOT NULL)
+            AS
+            BEGIN
+                IF @P2 > 5 BEGIN SET @P1 = 'BIG' END
+                ELSE BEGIN SET @P1 = 'SMALL' END
+            END
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            CREATE PROCEDURE SP1(
+                @P1 NVARCHAR(10) = NULL OUTPUT,
+                @P2 INT NOT NULL
+            ) AS
+            BEGIN
+                IF @P2 > 5
+                BEGIN
+                    SET @P1 = 'BIG'
+                END
+                ELSE
+                BEGIN
+                    SET @P1 = 'SMALL'
+                END
+            END"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_while_loop() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
@@ -4717,12 +4763,10 @@ CALL SP1()"#
             SET t.Value = s.Value
             WHEN NOT MATCHED BY TARGET THEN
             INSERT (ID, Value)
-            VALUES (s.ID, s.Value)
-            OUTPUT
-                $action AS ActionType,
-                INSERTED.ID AS NewID,
-                DELETED.Value AS OldValue,
-                INSERTED.Value AS NewValue
+            VALUES (s.ID, s.Value) OUTPUT $action AS ActionType,
+            INSERTED.ID AS NewID,
+            DELETED.Value AS OldValue,
+            INSERTED.Value AS NewValue
             INTO
                 @LogTable;"#
         );
