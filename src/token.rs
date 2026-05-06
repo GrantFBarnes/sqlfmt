@@ -743,7 +743,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "GROUP" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }

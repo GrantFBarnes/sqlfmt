@@ -2591,6 +2591,35 @@ SET C3 = 3"#
     }
 
     #[test]
+    fn test_get_formatted_sql_select_agg() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT STRING_AGG(C1,', ')
+            WITHIN GROUP (ORDER BY C2 DESC) AS A1
+            FROM TBL1
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT STRING_AGG(C1, ', ')
+                WITHIN GROUP (ORDER BY C2 DESC) AS A1
+            FROM TBL1
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                STRING_AGG(C1, ', ') WITHIN GROUP (ORDER BY C2 DESC) AS A1
+            FROM TBL1"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_select_group_by() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
