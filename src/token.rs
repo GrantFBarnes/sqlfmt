@@ -1913,6 +1913,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "SPACE" => Some(TokenCategory::Method),
         "SQRT" => Some(TokenCategory::Method),
         "STRCMP" => Some(TokenCategory::Method),
+        "STRING_AGG" => Some(TokenCategory::Method),
         "STR_TO_DATE" => Some(TokenCategory::Method),
         "STUFF" => Some(TokenCategory::Method),
         "SUBDATE" => Some(TokenCategory::Method),
