@@ -4472,6 +4472,7 @@ CALL SP1()"#
             CREATE PROCEDURE SP1 ( @P1 NVARCHAR(10) = NULL OUTPUT, @P2 INT NOT NULL )
             AS
             BEGIN
+            IF @P2 < 0 BEGIN LEAVE; END
             IF @P2 > 5 BEGIN SET @P1 = 'BIG' END
             ELSE BEGIN SET @P1 = 'SMALL' END
             END
@@ -4484,6 +4485,7 @@ CALL SP1()"#
             CREATE PROCEDURE SP1(@P1 NVARCHAR(10) = NULL OUTPUT, @P2 INT NOT NULL)
             AS
             BEGIN
+                IF @P2 < 0 BEGIN LEAVE; END
                 IF @P2 > 5 BEGIN SET @P1 = 'BIG' END
                 ELSE BEGIN SET @P1 = 'SMALL' END
             END
@@ -4498,6 +4500,10 @@ CALL SP1()"#
                 @P2 INT NOT NULL
             ) AS
             BEGIN
+                IF @P2 < 0
+                BEGIN
+                    LEAVE;
+                END
                 IF @P2 > 5
                 BEGIN
                     SET @P1 = 'BIG'

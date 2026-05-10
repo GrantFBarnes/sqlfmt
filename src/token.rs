@@ -770,6 +770,10 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "LEAVE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "LEFT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
