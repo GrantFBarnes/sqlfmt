@@ -791,6 +791,11 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "OPTION" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::IncreaseIndent);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "OR" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
@@ -1464,6 +1469,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "READS" => Some(TokenCategory::Keyword),
         "READTEXT" => Some(TokenCategory::Keyword),
         "READ_WRITE" => Some(TokenCategory::Keyword),
+        "RECOMPILE" => Some(TokenCategory::Keyword),
         "RECONFIGURE" => Some(TokenCategory::Keyword),
         "RECURSIVE" => Some(TokenCategory::Keyword),
         "REF" => Some(TokenCategory::Keyword),

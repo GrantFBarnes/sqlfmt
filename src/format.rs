@@ -2504,6 +2504,32 @@ SET C3 = 3"#
     }
 
     #[test]
+    fn test_get_formatted_sql_option() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            SELECT C1 FROM TBL1 OPTION (RECOMPILE)
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            SELECT C1 FROM TBL1 OPTION (RECOMPILE)
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            SELECT
+                C1
+            FROM TBL1
+            OPTION (RECOMPILE)"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_paren_count() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
