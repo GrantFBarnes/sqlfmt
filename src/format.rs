@@ -718,6 +718,34 @@ impl FormatState {
                 return;
             }
         }
+
+        // remove newline for 'IS [NOT] DISTINCT FROM'
+        if token.value.to_uppercase() == "FROM" {
+            if self.tokens.len() < 4 {
+                return;
+            }
+
+            if self.tokens[self.tokens.len() - 1].category != Some(TokenCategory::NewLine) {
+                return;
+            }
+
+            if self.tokens[self.tokens.len() - 2].value.to_uppercase() != "DISTINCT" {
+                return;
+            }
+
+            if self.tokens[self.tokens.len() - 3].category != Some(TokenCategory::WhiteSpace) {
+                return;
+            }
+
+            if self.tokens[self.tokens.len() - 4].value.to_uppercase() != "IS"
+                && self.tokens[self.tokens.len() - 4].value.to_uppercase() != "NOT"
+            {
+                return;
+            }
+
+            self.tokens.pop();
+            return;
+        }
     }
 
     fn get_prev_nonwhitespace_token(&self, pos: usize) -> Option<&Token> {
@@ -2473,6 +2501,41 @@ SET C3 = 3"#
                     'VALUE 5',
                     'VALUE 6'
                 );"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_distinct_from() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            UPDATE T1
+            FROM TBL1 AS T1
+            INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+            WHERE T1.C2 IS DISTINCT FROM T2.C2
+            OR T1.C3 IS DISTINCT FROM T2.C3
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            UPDATE T1
+            FROM TBL1 AS T1
+                INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+            WHERE T1.C2 IS DISTINCT FROM T2.C2
+                OR T1.C3 IS DISTINCT FROM T2.C3
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            UPDATE T1
+            FROM TBL1 AS T1
+                INNER JOIN TBL2 AS T2 ON T2.C1 = T1.C1
+            WHERE T1.C2 IS DISTINCT FROM T2.C2
+                OR T1.C3 IS DISTINCT FROM T2.C3"#
         );
     }
 
