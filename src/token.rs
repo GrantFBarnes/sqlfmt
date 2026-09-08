@@ -735,7 +735,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "FULL" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
+                behavior.push(TokenBehavior::NewLineBefore);
             }
             "GO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -757,7 +757,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "INNER" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
+                behavior.push(TokenBehavior::NewLineBefore);
             }
             "INSERT" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterEvent);
@@ -775,7 +775,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "LEFT" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
+                behavior.push(TokenBehavior::NewLineBefore);
             }
             "LIMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -821,7 +821,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "RIGHT" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
+                behavior.push(TokenBehavior::NewLineBefore);
             }
             "ROLLBACK" => {
                 behavior.push(TokenBehavior::NewLineBefore);
