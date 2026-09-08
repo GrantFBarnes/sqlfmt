@@ -4201,8 +4201,8 @@ CALL SP1()"#
         let sql: String = String::from(
             r#"
             SELECT
-            T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
-            t.days as days, t.[days] as [days], 'days' as 'days'
+            T.VALUE VALUE, T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+            t.days days, t.days as days, t.[days] as [days], 'days' as 'days'
             FROM TBL1 AS T
             "#,
         );
@@ -4211,8 +4211,8 @@ CALL SP1()"#
             get_formatted_sql(&config, sql.clone()),
             r#"
             SELECT
-                T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
-                t.days as days, t.[days] as [days], 'days' as 'days'
+                T.VALUE VALUE, T.VALUE AS VALUE, T.[VALUE] AS [VALUE], 'VALUE' AS 'VALUE',
+                t.days days, t.days as days, t.[days] as [days], 'days' as 'days'
             FROM TBL1 AS T
 "#
         );
@@ -4222,9 +4222,11 @@ CALL SP1()"#
         assert_eq!(
             get_formatted_sql(&config, sql.clone()),
             r#"            SELECT
+                T.VALUE VALUE,
                 T.VALUE AS VALUE,
                 T.[VALUE] AS [VALUE],
                 'VALUE' AS 'VALUE',
+                t.DAYS DAYS,
                 t.DAYS AS DAYS,
                 t.[days] AS [days],
                 'days' AS 'days'
