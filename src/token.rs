@@ -743,7 +743,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "GROUP" => {
-                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterWithin);
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
@@ -2000,6 +2000,7 @@ pub enum TokenBehavior {
     NewLineBefore,
     NewLineBeforeIfNotAfterEvent,
     NewLineBeforeIfNotAfterKeywordOrMethod,
+    NewLineBeforeIfNotAfterWithin,
     NoNewLineAfterX2Skip,
     NoNewLineBefore,
     NoNewLineBeforeUnlessMatch,

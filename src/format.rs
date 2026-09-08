@@ -531,6 +531,15 @@ impl FormatState {
 
         if token
             .behavior
+            .contains(&TokenBehavior::NewLineBeforeIfNotAfterWithin)
+            && prev1_token.value.to_uppercase() != "WITHIN"
+        {
+            self.push(Token::new_newline());
+            return;
+        }
+
+        if token
+            .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterEvent)
             && prev1_token.category != Some(TokenCategory::DataType)
             && prev1_token.category != Some(TokenCategory::Event)
@@ -2716,6 +2725,7 @@ SET C3 = 3"#
             SELECT C1,
             COUNT(*) AS CNT
             FROM TBL1
+            WHERE C2 IS NULL
             GROUP BY C1
             HAVING COUNT(*) > 1
             "#,
@@ -2727,6 +2737,7 @@ SET C3 = 3"#
             SELECT C1,
                 COUNT(*) AS CNT
             FROM TBL1
+            WHERE C2 IS NULL
             GROUP BY C1
             HAVING COUNT(*) > 1
 "#
@@ -2739,6 +2750,7 @@ SET C3 = 3"#
                 C1,
                 COUNT(*) AS CNT
             FROM TBL1
+            WHERE C2 IS NULL
             GROUP BY C1
             HAVING COUNT(*) > 1"#
         );
