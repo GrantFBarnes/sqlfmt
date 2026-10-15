@@ -3994,6 +3994,57 @@ CALL SP1()"#
     }
 
     #[test]
+    fn test_get_formatted_sql_try_catch_raiserror() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            BEGIN TRY
+                IF @V1<5
+                RAISERROR('Error message: %s',13,1,@ERRORMESSAGE);
+            END TRY
+            BEGIN CATCH
+                RETURN 1
+            END CATCH
+            RETURN 0
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            BEGIN TRY
+                IF @V1 < 5
+                RAISERROR('Error message: %s', 13, 1, @ERRORMESSAGE);
+            END TRY
+            BEGIN CATCH
+                RETURN 1
+            END CATCH
+            RETURN 0
+"#
+        );
+
+        config.newlines = true;
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            BEGIN TRY
+                IF @V1 < 5
+                RAISERROR(
+                    'Error message: %s',
+                    13,
+                    1,
+                    @ERRORMESSAGE
+                );
+            END TRY
+            BEGIN CATCH
+                RETURN 1
+            END CATCH
+
+            RETURN 0"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_try_catch_insert() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
