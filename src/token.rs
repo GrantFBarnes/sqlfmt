@@ -38,18 +38,33 @@ fn is_raw_byte(c: char) -> bool {
     (RAW_BYTE_BASE + 0x80..=RAW_BYTE_BASE + 0xFF).contains(&(c as u32))
 }
 
+fn push_valid_utf8(result: &mut String, valid: &str) {
+    let mut buf: [u8; 4] = [0; 4];
+    for character in valid.chars() {
+        if is_raw_byte(character) {
+            for byte in character.encode_utf8(&mut buf).bytes() {
+                result.push(raw_byte_char(byte));
+            }
+        } else {
+            result.push(character);
+        }
+    }
+}
+
 pub fn decode_input(bytes: &[u8]) -> String {
     let mut result: String = String::with_capacity(bytes.len());
     let mut rest: &[u8] = bytes;
     loop {
         match std::str::from_utf8(rest) {
             Ok(valid) => {
-                result.push_str(valid);
+                push_valid_utf8(&mut result, valid);
                 return result;
             }
             Err(err) => {
                 let valid_len: usize = err.valid_up_to();
-                result.push_str(&String::from_utf8_lossy(&rest[..valid_len]));
+                let valid: &str =
+                    std::str::from_utf8(&rest[..valid_len]).expect("prefix is valid UTF-8");
+                push_valid_utf8(&mut result, valid);
                 let invalid_len: usize = err.error_len().unwrap_or(rest.len() - valid_len);
                 for byte in &rest[valid_len..valid_len + invalid_len] {
                     result.push(raw_byte_char(*byte));
@@ -81,8 +96,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     let mut curr_token: Token = Token::new();
     let mut in_special: Option<TokenSpecial> = None;
 
-    let mut sql_chars: Vec<char> = input_sql.chars().collect();
-    sql_chars.retain(|c: &char| c != &CARRIAGE_RETURN);
+    let sql_chars: Vec<char> = input_sql.chars().collect();
 
     for i in 0..sql_chars.len() {
         let prev2_ch: Option<&char> = if i >= 2 { sql_chars.get(i - 2) } else { None };
@@ -160,7 +174,9 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
             }
             Some(TokenSpecial::Interpolation(ic)) => {
                 if get_in_interpolation(Some(ic), prev2_ch, prev1_ch, curr_ch, next1_ch).is_some() {
-                    curr_token.value.push(curr_ch);
+                    if curr_ch != CARRIAGE_RETURN {
+                        curr_token.value.push(curr_ch);
+                    }
                     continue;
                 } else {
                     in_special = None;
@@ -179,7 +195,9 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                 )
                 .is_some()
                 {
-                    curr_token.value.push(curr_ch);
+                    if curr_ch != CARRIAGE_RETURN {
+                        curr_token.value.push(curr_ch);
+                    }
                     continue;
                 } else {
                     in_special = None;
@@ -201,6 +219,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
         }
 
         match curr_ch {
+            CARRIAGE_RETURN => continue,
             // always single character tokens
             NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
@@ -427,20 +446,12 @@ fn get_in_quote(
     curr_token: &Token,
 ) -> Option<QuoteCategory> {
     match in_quote {
-        Some(QuoteCategory::RawBytes) => {
-            if is_raw_byte(curr_ch) {
-                *in_quote
-            } else {
-                None
-            }
-        }
         Some(qc) => {
             if curr_token.len() <= 1 {
                 return *in_quote;
             }
 
             match qc {
-                QuoteCategory::RawBytes => unreachable!(),
                 QuoteCategory::Backtick => {
                     if prev1_ch == Some(&BACKTICK) {
                         return None;
@@ -481,7 +492,6 @@ fn get_in_quote(
                 }
                 None
             }
-            c if is_raw_byte(c) => Some(QuoteCategory::RawBytes),
             _ => None,
         },
     }
@@ -2097,7 +2107,6 @@ enum QuoteCategory {
     QuoteSingle,
     QuoteDouble,
     Bracket,
-    RawBytes,
 }
 
 #[cfg(test)]
@@ -2113,6 +2122,23 @@ mod tests {
     }
 
     #[test]
+    fn test_decode_encode_raw_bytes_and_private_use_unicode() {
+        let unicode: String = (RAW_BYTE_BASE..=RAW_BYTE_BASE + 0xFF)
+            .map(|code_point| char::from_u32(code_point).unwrap())
+            .collect();
+        assert_eq!(
+            encode_output(&decode_input(unicode.as_bytes())),
+            unicode.as_bytes()
+        );
+
+        let mut bytes: Vec<u8> = unicode.as_bytes().to_vec();
+        bytes.extend(0..=u8::MAX);
+        bytes.extend_from_slice(unicode.as_bytes());
+        bytes.extend_from_slice(b"\xf0\x9f");
+        assert_eq!(encode_output(&decode_input(&bytes)), bytes);
+    }
+
+    #[test]
     fn test_decode_valid_utf8_unchanged() {
         let sql: &str = "SELECT 'héllo' FROM TBL1";
         assert_eq!(decode_input(sql.as_bytes()), sql);
@@ -2121,11 +2147,14 @@ mod tests {
 
     #[test]
     fn test_get_sql_tokens_raw_bytes_in_quote() {
-        let sql: String = decode_input(b"SELECT '\x89PNG\xff'");
+        let sql: String = decode_input(b"SELECT '\r\x89PNG\r\n\xff\x00\r'");
         let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql.clone());
         assert_eq!(tokens.len(), 3);
         assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
-        assert_eq!(encode_output(&tokens[2].value), b"'\x89PNG\xff'");
+        assert_eq!(
+            encode_output(&tokens[2].value),
+            b"'\r\x89PNG\r\n\xff\x00\r'"
+        );
     }
 
     #[test]
@@ -2133,10 +2162,55 @@ mod tests {
         let sql: String = decode_input(b"SELECT \xff\xfe,1");
         let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql.clone());
         assert_eq!(tokens.len(), 5);
-        assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
+        assert_eq!(tokens[2].category, None);
         assert_eq!(encode_output(&tokens[2].value), b"\xff\xfe");
         assert_eq!(tokens[3], Token::new_test(",", Some(TokenCategory::Comma)));
         assert_eq!(tokens[4], Token::new_test("1", None));
+    }
+
+    #[test]
+    fn test_get_sql_tokens_carriage_returns_in_quotes() {
+        for quoted in [
+            "'\rfirst\r\nlast\r'",
+            "N'\rfirst\r\nlast\r'",
+            "'first''\rlast'",
+            "\"\rfirst\r\nlast\r\"",
+            "`\rfirst\r\nlast\r`",
+            "[\rfirst\r\nlast\r]",
+        ] {
+            let sql: String = format!("SELECT\r\n{quoted}\r\nFROM\r\nt;");
+            assert_eq!(
+                get_sql_tokens(&Configuration::new(), sql),
+                vec![
+                    Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                    Token::new_test("\n", Some(TokenCategory::NewLine)),
+                    Token::new_test(quoted, Some(TokenCategory::Quote)),
+                    Token::new_test("\n", Some(TokenCategory::NewLine)),
+                    Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                    Token::new_test("\n", Some(TokenCategory::NewLine)),
+                    Token::new_test("t", None),
+                    Token::new_test(";", Some(TokenCategory::Delimiter)),
+                ],
+                "{quoted:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_get_sql_tokens_crlf_outside_quotes() {
+        let config: Configuration = Configuration::new();
+        for sql in [
+            "SELECT -- comment\r\nvalue FROM t;\r\n",
+            "SELECT /* first\r\nlast */\r\nvalue FROM t;\r\n",
+            "SELECT %s, {column}\r\nFROM t;\r\n",
+            "DELIMITER $$\r\nSELECT 1$$\r\n",
+        ] {
+            assert_eq!(
+                get_sql_tokens(&config, sql.to_string()),
+                get_sql_tokens(&config, sql.replace("\r\n", "\n")),
+                "{sql:?}"
+            );
+        }
     }
 
     #[test]

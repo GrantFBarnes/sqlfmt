@@ -3636,13 +3636,38 @@ VALUES (
         config.case = ConfigCase::Uppercase;
         assert_eq!(
             encode_output(&get_formatted_sql(&config, sql.clone())),
-            b"INSERT INTO tbl1(id, img) VALUES (1, '\x89PNG\n\x1a\n\xff\xfe\x00')"
+            b"INSERT INTO tbl1(id, img) VALUES (1, '\x89PNG\r\n\x1a\n\xff\xfe\x00')"
         );
 
         config.newlines = true;
         assert_eq!(
             encode_output(&get_formatted_sql(&config, sql.clone())),
-            b"INSERT INTO tbl1(id, img)\nVALUES (1, '\x89PNG\n\x1a\n\xff\xfe\x00')"
+            b"INSERT INTO tbl1(id, img)\nVALUES (1, '\x89PNG\r\n\x1a\n\xff\xfe\x00')"
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_raw_bytes_in_identifiers() {
+        let mut config: Configuration = Configuration::new();
+        config.case = ConfigCase::Uppercase;
+        let sql: String = decode_input(b"select caf\xe9, \xe9tat, na\xefve from tabl\xe9;");
+
+        assert_eq!(
+            encode_output(&get_formatted_sql(&config, sql)),
+            b"SELECT caf\xe9, \xe9tat, na\xefve FROM tabl\xe9;"
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_raw_bytes_placeholder_collision() {
+        let sql: &str = "SELECT '\u{10ff00}\u{10ff80}\u{10fffe}\u{10ffff}', \u{10ff80}id FROM t;";
+
+        assert_eq!(
+            encode_output(&get_formatted_sql(
+                &Configuration::new(),
+                decode_input(sql.as_bytes())
+            )),
+            sql.as_bytes()
         );
     }
 
