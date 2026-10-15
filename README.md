@@ -107,6 +107,12 @@ spaces=<INT>
 chars=<INT>
 ```
 
+## Encoding
+
+Input is treated as raw bytes rather than requiring valid UTF-8.
+Any non-UTF-8 bytes (for example, binary data stored in string literals) are preserved unchanged in the output.
+Carriage returns (`\r`) are stripped outside of string literals, but preserved inside them.
+
 ## Extensions
 
 A [VS Code extension](vsce/README.md) is offered to allow for easy use of this program as a VS Code language formatter.
