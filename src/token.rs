@@ -39,6 +39,12 @@ fn is_raw_byte(c: char) -> bool {
 }
 
 fn push_valid_utf8(result: &mut String, valid: &str) {
+    // placeholder-range chars all start with the 0xF4 lead byte
+    if !valid.bytes().any(|b: u8| b == 0xF4) {
+        result.push_str(valid);
+        return;
+    }
+
     let mut buf: [u8; 4] = [0; 4];
     for character in valid.chars() {
         if is_raw_byte(character) {
