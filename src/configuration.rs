@@ -161,13 +161,13 @@ mod tests {
     fn test_get_configuration_empty() {
         let args: Vec<String> = vec![];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -177,13 +177,13 @@ mod tests {
     fn test_get_configuration_comment_pre_space() {
         let args: Vec<String> = vec![String::from("--comment-pre-space")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, true);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -193,13 +193,13 @@ mod tests {
     fn test_get_configuration_align_text_groups() {
         let args: Vec<String> = vec![String::from("--align-text-groups")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, true);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -209,13 +209,13 @@ mod tests {
     fn test_get_configuration_newlines() {
         let args: Vec<String> = vec![String::from("-n")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, true);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -225,13 +225,13 @@ mod tests {
     fn test_get_configuration_upper() {
         let args: Vec<String> = vec![String::from("-u")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Uppercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -241,13 +241,13 @@ mod tests {
     fn test_get_configuration_lower() {
         let args: Vec<String> = vec![String::from("-l")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Lowercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -257,13 +257,13 @@ mod tests {
     fn test_get_configuration_tabs() {
         let args: Vec<String> = vec![String::from("-t")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Tab);
         assert_eq!(config.chars, 80);
@@ -273,13 +273,13 @@ mod tests {
     fn test_get_configuration_spaces() {
         let args: Vec<String> = vec![String::from("-s"), String::from("2")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(2));
         assert_eq!(config.chars, 80);
@@ -289,13 +289,13 @@ mod tests {
     fn test_get_configuration_chars() {
         let args: Vec<String> = vec![String::from("-c"), String::from("120")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
         let config: Configuration = Configuration::from(&arguments);
-        assert_eq!(config.newlines, false);
-        assert_eq!(config.comment_pre_space, false);
-        assert_eq!(config.align_text_groups, false);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 120);
