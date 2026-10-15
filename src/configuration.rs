@@ -109,30 +109,29 @@ fn get_file_config(file: PathBuf) -> Option<Configuration> {
     let mut config: Configuration = Configuration::new();
 
     for line in content.lines() {
-        if line.contains("newlines") {
-            config.newlines = true;
-        } else if line.contains("comment_pre_space") {
-            config.comment_pre_space = true;
-        } else if line.contains("align_text_groups") {
-            config.align_text_groups = true;
-        } else if line.contains("upper") {
-            config.case = ConfigCase::Uppercase
-        } else if line.contains("lower") {
-            config.case = ConfigCase::Lowercase
-        } else if line.contains("tabs") {
-            config.tabs = ConfigTab::Tab;
-        } else if line.starts_with("spaces") {
-            if let Some(n) = line.split("=").last() {
-                if let Ok(spaces) = n.parse::<u8>() {
+        let (key, value): (&str, Option<&str>) = match line.split_once('=') {
+            Some((k, v)) => (k.trim(), Some(v.trim())),
+            None => (line.trim(), None),
+        };
+
+        match key {
+            "newlines" => config.newlines = true,
+            "comment_pre_space" => config.comment_pre_space = true,
+            "align_text_groups" => config.align_text_groups = true,
+            "upper" => config.case = ConfigCase::Uppercase,
+            "lower" => config.case = ConfigCase::Lowercase,
+            "tabs" => config.tabs = ConfigTab::Tab,
+            "spaces" => {
+                if let Some(spaces) = value.and_then(|v| v.parse::<u8>().ok()) {
                     config.tabs = ConfigTab::Space(spaces);
                 }
             }
-        } else if line.starts_with("chars") {
-            if let Some(n) = line.split("=").last() {
-                if let Ok(chars) = n.parse::<u8>() {
+            "chars" => {
+                if let Some(chars) = value.and_then(|v| v.parse::<u8>().ok()) {
                     config.chars = chars;
                 }
             }
+            _ => (),
         }
     }
 
