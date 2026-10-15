@@ -557,7 +557,6 @@ impl FormatState {
                     .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip)))
         {
             self.push(Token::new_newline());
-            return;
         }
     }
 
@@ -739,7 +738,6 @@ impl FormatState {
             }
 
             self.tokens.pop();
-            return;
         }
     }
 
@@ -837,29 +835,25 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::IncreaseIndentIfNotAfterKeyword)
-        {
-            if self
+            && self
                 .tokens
                 .iter()
                 .nth_back(2)
                 .is_none_or(|t| t.category != Some(TokenCategory::Keyword))
-            {
-                self.indent_stack.push(token.clone());
-                return;
-            }
+        {
+            self.indent_stack.push(token.clone());
+            return;
         }
 
         if token
             .behavior
             .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
-        {
-            if self.indent_stack.last().is_none_or(|t| {
+            && self.indent_stack.last().is_none_or(|t| {
                 !t.behavior
                     .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
-            }) {
-                self.indent_stack.push(token.clone());
-                return;
-            }
+            })
+        {
+            self.indent_stack.push(token.clone());
         }
     }
 
