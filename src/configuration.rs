@@ -32,10 +32,10 @@ impl Configuration {
     pub fn from(args: &Arguments) -> Configuration {
         let mut config: Configuration = Configuration::new();
 
-        if let Ok(cwd) = env::current_dir() {
-            if let Some(file_config) = find_config(cwd.as_path()) {
-                config = file_config;
-            }
+        if let Ok(cwd) = env::current_dir()
+            && let Some(file_config) = find_config(cwd.as_path())
+        {
+            config = file_config;
         }
 
         if args.newlines {
@@ -60,12 +60,12 @@ impl Configuration {
             config.tabs = ConfigTab::Tab;
         }
 
-        if args.spaces.is_some() {
-            config.tabs = ConfigTab::Space(args.spaces.unwrap());
+        if let Some(spaces) = args.spaces {
+            config.tabs = ConfigTab::Space(spaces);
         }
 
-        if args.chars.is_some() {
-            config.chars = args.chars.unwrap();
+        if let Some(chars) = args.chars {
+            config.chars = chars;
         }
 
         config
@@ -92,12 +92,11 @@ fn find_config(path: &Path) -> Option<Configuration> {
         }
     }
 
-    let parent: Option<&Path> = path.parent();
-    if parent.is_none() {
-        return None;
+    if let Some(parent) = path.parent() {
+        find_config(parent)
+    } else {
+        None
     }
-
-    find_config(parent.unwrap())
 }
 
 fn get_file_config(file: PathBuf) -> Option<Configuration> {

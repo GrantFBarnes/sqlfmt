@@ -224,69 +224,62 @@ impl FormatState {
                 match prev_token.category {
                     Some(TokenCategory::ParenOpen) => paren_count -= 1,
                     Some(TokenCategory::ParenClose) => paren_count += 1,
-                    Some(TokenCategory::Comma) => {
-                        if paren_count == 1 {
-                            if current_group.is_some() {
-                                current_line.push(current_group.unwrap());
-                            }
-                            current_line.push(TextGroup {
-                                value: prev_token.value.clone(),
-                                len: prev_token.len(),
-                                post_whitespace_position: last_whitespace_position,
-                            });
-                            current_group = None;
-                            continue;
+                    Some(TokenCategory::Comma) if paren_count == 1 => {
+                        if let Some(cg) = current_group {
+                            current_line.push(cg);
                         }
+                        current_line.push(TextGroup {
+                            value: prev_token.value.clone(),
+                            len: prev_token.len(),
+                            post_whitespace_position: last_whitespace_position,
+                        });
+                        current_group = None;
+                        continue;
                     }
-                    Some(TokenCategory::WhiteSpace) => {
-                        if paren_count == 1 {
-                            if current_group.is_some() {
-                                current_line.push(current_group.unwrap());
+                    Some(TokenCategory::WhiteSpace) if paren_count == 1 => {
+                        if let Some(cg) = current_group {
+                            current_line.push(cg);
 
-                                // check for groupings to be merged
-                                for grouping in &groupings {
-                                    let mut group_found: bool = true;
-                                    for g in 0..grouping.len() {
-                                        if g > current_line.len() - 1 {
-                                            group_found = false;
-                                            break;
-                                        }
-                                        if grouping[g]
-                                            != current_line[current_line.len() - g - 1]
-                                                .value
-                                                .to_uppercase()
-                                        {
-                                            group_found = false;
-                                            break;
-                                        }
+                            // check for groupings to be merged
+                            for grouping in &groupings {
+                                let mut group_found: bool = true;
+                                for g in 0..grouping.len() {
+                                    if g > current_line.len() - 1 {
+                                        group_found = false;
+                                        break;
                                     }
-
-                                    if group_found {
-                                        let mut merge_group: TextGroup =
-                                            current_line.pop().unwrap();
-                                        for _ in 0..grouping.len() - 1 {
-                                            let last_group: TextGroup = current_line.pop().unwrap();
-                                            merge_group.value = format!(
-                                                "{} {}",
-                                                last_group.value, merge_group.value
-                                            );
-                                            merge_group.len += last_group.len + 1;
-                                            merge_group.post_whitespace_position =
-                                                last_group.post_whitespace_position;
-                                        }
-                                        current_line.push(merge_group);
+                                    if grouping[g]
+                                        != current_line[current_line.len() - g - 1]
+                                            .value
+                                            .to_uppercase()
+                                    {
+                                        group_found = false;
                                         break;
                                     }
                                 }
 
-                                if current_line.len() > max_groups_per_line {
-                                    max_groups_per_line = current_line.len();
+                                if group_found {
+                                    let mut merge_group: TextGroup = current_line.pop().unwrap();
+                                    for _ in 0..grouping.len() - 1 {
+                                        let last_group: TextGroup = current_line.pop().unwrap();
+                                        merge_group.value =
+                                            format!("{} {}", last_group.value, merge_group.value);
+                                        merge_group.len += last_group.len + 1;
+                                        merge_group.post_whitespace_position =
+                                            last_group.post_whitespace_position;
+                                    }
+                                    current_line.push(merge_group);
+                                    break;
                                 }
-                                current_group = None;
                             }
-                            last_whitespace_position = Some(i);
-                            continue;
+
+                            if current_line.len() > max_groups_per_line {
+                                max_groups_per_line = current_line.len();
+                            }
+                            current_group = None;
                         }
+                        last_whitespace_position = Some(i);
+                        continue;
                     }
                     _ => (),
                 }
@@ -307,10 +300,7 @@ impl FormatState {
         }
 
         // find max len in each group
-        let mut max_len_in_each_group: Vec<usize> = vec![];
-        for _ in 0..max_groups_per_line {
-            max_len_in_each_group.push(0);
-        }
+        let mut max_len_in_each_group: Vec<usize> = vec![0; max_groups_per_line];
         for line in &lines {
             for group_idx in 0..line.len() {
                 if line[group_idx].len > max_len_in_each_group[group_idx] {
@@ -388,14 +378,12 @@ impl FormatState {
                     return;
                 }
             }
-            Some(TokenCategory::ParenOpen) => {
-                if let Some(paren) = self.paren_stack.last() {
-                    if paren == &ParenCategory::Space0Newline0
-                        || paren == &ParenCategory::Space0Newline1
-                    {
-                        return;
-                    }
-                }
+            Some(TokenCategory::ParenOpen)
+                if let Some(paren) = self.paren_stack.last()
+                    && (paren == &ParenCategory::Space0Newline0
+                        || paren == &ParenCategory::Space0Newline1) =>
+            {
+                return;
             }
             _ => (),
         }
@@ -491,11 +479,11 @@ impl FormatState {
             return;
         }
 
-        if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter) {
-            if token.category != Some(TokenCategory::Delimiter) {
-                self.push(Token::new_newline());
-                return;
-            }
+        if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter)
+            && token.category != Some(TokenCategory::Delimiter)
+        {
+            self.push(Token::new_newline());
+            return;
         }
 
         if prev1_token
@@ -593,11 +581,9 @@ impl FormatState {
                     // no longer inside paren set in question
                     match prev_token.category {
                         Some(TokenCategory::NewLine) => break,
-                        Some(TokenCategory::Operator) => {
-                            if last_operator_len_after.is_none() {
-                                last_operator_len_after = Some(collapsed_line_len);
-                                last_operator_position = Some(i);
-                            }
+                        Some(TokenCategory::Operator) if last_operator_len_after.is_none() => {
+                            last_operator_len_after = Some(collapsed_line_len);
+                            last_operator_position = Some(i);
                         }
                         _ => (),
                     }
@@ -913,7 +899,7 @@ impl FormatState {
                     return;
                 }
 
-                if required_to_decrease.get(top_value.as_str()).is_some() {
+                if required_to_decrease.contains_key(top_value.as_str()) {
                     self.indent_stack.push(top);
                     return;
                 }
@@ -928,10 +914,7 @@ impl FormatState {
                 }
                 let top: Token = top.unwrap();
 
-                if required_to_decrease
-                    .get(top.value.to_uppercase().as_str())
-                    .is_some()
-                {
+                if required_to_decrease.contains_key(top.value.to_uppercase().as_str()) {
                     self.indent_stack.push(top);
                     return;
                 }

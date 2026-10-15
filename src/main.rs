@@ -37,8 +37,8 @@ fn main() {
 
     let sql_out: String = format::get_formatted_sql(&config, sql_in);
 
-    if args.output.is_some() {
-        match fs::write(args.output.unwrap(), &sql_out) {
+    if let Some(ao) = args.output {
+        match fs::write(ao, &sql_out) {
             Ok(_) => (),
             Err(result) => {
                 print_error(result.to_string().as_str());

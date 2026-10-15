@@ -46,18 +46,13 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
         match in_special {
             None => {
-                if curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()) {
-                    if !curr_token.is_empty() {
-                        curr_token.setup(config);
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
-                } else if !curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()) {
-                    if !curr_token.is_empty() {
-                        curr_token.setup(config);
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
+                if ((curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()))
+                    || (!curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace())))
+                    && !curr_token.is_empty()
+                {
+                    curr_token.setup(config);
+                    tokens.push(curr_token);
+                    curr_token = Token::new();
                 }
 
                 if get_in_delimiter_change(false, get_last_nonspace_token(&tokens), curr_ch) {
@@ -267,7 +262,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     tokens
 }
 
-fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
+fn get_last_nonspace_token(tokens: &[Token]) -> Option<&Token> {
     for i in (0..tokens.len()).rev() {
         let token: &Token = &tokens[i];
         if token.category == Some(TokenCategory::WhiteSpace) {
@@ -343,7 +338,7 @@ fn get_in_comment(
     match in_comment {
         Some(cc) => {
             if curr_token_len <= 1 {
-                return in_comment.clone();
+                return *in_comment;
             }
 
             match cc {
@@ -388,7 +383,7 @@ fn get_in_quote(
     match in_quote {
         Some(qc) => {
             if curr_token.len() <= 1 {
-                return in_quote.clone();
+                return *in_quote;
             }
 
             match qc {
@@ -396,27 +391,28 @@ fn get_in_quote(
                     if prev1_ch == Some(&BACKTICK) {
                         return None;
                     }
-                    in_quote.clone()
+                    *in_quote
                 }
                 QuoteCategory::QuoteSingle => {
-                    if prev1_ch == Some(&QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
-                        if curr_token.count(QUOTE_SINGLE) % 2 == 0 {
-                            return None;
-                        }
+                    if prev1_ch == Some(&QUOTE_SINGLE)
+                        && curr_ch != QUOTE_SINGLE
+                        && curr_token.count(QUOTE_SINGLE).is_multiple_of(2)
+                    {
+                        return None;
                     }
-                    in_quote.clone()
+                    *in_quote
                 }
                 QuoteCategory::QuoteDouble => {
                     if prev1_ch == Some(&QUOTE_DOUBLE) {
                         return None;
                     }
-                    in_quote.clone()
+                    *in_quote
                 }
                 QuoteCategory::Bracket => {
                     if prev1_ch == Some(&BRACKET_CLOSE) {
                         return None;
                     }
-                    in_quote.clone()
+                    *in_quote
                 }
             }
         }
@@ -471,7 +467,7 @@ impl Token {
     fn new_test(value: &str, category: Option<TokenCategory>) -> Token {
         Token {
             value: String::from(value),
-            category: category,
+            category,
             behavior: vec![],
         }
     }
@@ -522,10 +518,9 @@ impl Token {
                 && open_quote == BRACKET_OPEN
                 && let Some(close_quote) = quote_chars.next_back()
                 && close_quote == BRACKET_CLOSE
+                && get_category_from_value(quote_chars.as_str()) == Some(TokenCategory::DataType)
             {
-                if get_category_from_value(quote_chars.as_str()) == Some(TokenCategory::DataType) {
-                    return Some(TokenCategory::DataType);
-                }
+                return Some(TokenCategory::DataType);
             }
         }
 
