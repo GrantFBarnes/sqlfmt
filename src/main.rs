@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::io::{self, IsTerminal};
+use std::io::{self, IsTerminal, Read, Write};
 use std::process;
 
 mod arguments;
@@ -28,25 +28,26 @@ fn main() {
 
     let config: configuration::Configuration = configuration::Configuration::from(&args);
 
-    let sql_in: Result<String, io::Error> = get_input_sql(&args.input);
+    let sql_in: Result<Vec<u8>, io::Error> = get_input_sql(&args.input);
     if sql_in.is_err() {
         print_error(sql_in.err().unwrap().to_string().as_str());
         process::exit(1);
     }
-    let sql_in: String = sql_in.unwrap();
+    let sql_in: String = token::decode_input(&sql_in.unwrap());
 
-    let sql_out: String = format::get_formatted_sql(&config, sql_in);
+    let sql_out: Vec<u8> = token::encode_output(&format::get_formatted_sql(&config, sql_in));
 
-    if let Some(ao) = args.output {
-        match fs::write(ao, &sql_out) {
-            Ok(_) => (),
-            Err(result) => {
-                print_error(result.to_string().as_str());
-                process::exit(1);
-            }
-        }
+    let write_result: Result<(), io::Error> = if let Some(ao) = args.output {
+        fs::write(ao, &sql_out)
     } else {
-        println!("{sql_out}");
+        let mut stdout: io::StdoutLock<'_> = io::stdout().lock();
+        stdout
+            .write_all(&sql_out)
+            .and_then(|_| stdout.write_all(b"\n"))
+    };
+    if let Err(result) = write_result {
+        print_error(result.to_string().as_str());
+        process::exit(1);
     }
 
     process::exit(0);
@@ -111,7 +112,7 @@ fn print_version() {
     println!("{version}");
 }
 
-fn get_input_sql(input: &Option<String>) -> Result<String, io::Error> {
+fn get_input_sql(input: &Option<String>) -> Result<Vec<u8>, io::Error> {
     let stdin: io::Stdin = io::stdin();
     if stdin.is_terminal() {
         if input.is_none() {
@@ -120,8 +121,10 @@ fn get_input_sql(input: &Option<String>) -> Result<String, io::Error> {
                 "Input file not defined.",
             ));
         }
-        fs::read_to_string(input.as_ref().unwrap())
+        fs::read(input.as_ref().unwrap())
     } else {
-        io::read_to_string(stdin)
+        let mut bytes: Vec<u8> = vec![];
+        stdin.lock().read_to_end(&mut bytes)?;
+        Ok(bytes)
     }
 }

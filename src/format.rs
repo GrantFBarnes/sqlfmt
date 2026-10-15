@@ -3628,6 +3628,25 @@ VALUES (
     }
 
     #[test]
+    fn test_get_formatted_sql_insert_raw_bytes() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String =
+            decode_input(b"insert into tbl1(id,img)values(1,'\x89PNG\r\n\x1a\n\xff\xfe\x00')");
+
+        config.case = ConfigCase::Uppercase;
+        assert_eq!(
+            encode_output(&get_formatted_sql(&config, sql.clone())),
+            b"INSERT INTO tbl1(id, img) VALUES (1, '\x89PNG\n\x1a\n\xff\xfe\x00')"
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            encode_output(&get_formatted_sql(&config, sql.clone())),
+            b"INSERT INTO tbl1(id, img)\nVALUES (1, '\x89PNG\n\x1a\n\xff\xfe\x00')"
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_insert_select() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(

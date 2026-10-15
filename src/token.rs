@@ -27,6 +27,52 @@ const SLASH_FORWARD: char = '/';
 pub const TAB: char = '\t';
 const VERTICAL_BAR: char = '|';
 
+// invalid UTF-8 bytes (0x80..=0xFF) are carried through as private use chars
+const RAW_BYTE_BASE: u32 = 0x10FF00;
+
+fn raw_byte_char(byte: u8) -> char {
+    char::from_u32(RAW_BYTE_BASE + byte as u32).expect("raw byte placeholder is a valid char")
+}
+
+fn is_raw_byte(c: char) -> bool {
+    (RAW_BYTE_BASE + 0x80..=RAW_BYTE_BASE + 0xFF).contains(&(c as u32))
+}
+
+pub fn decode_input(bytes: &[u8]) -> String {
+    let mut result: String = String::with_capacity(bytes.len());
+    let mut rest: &[u8] = bytes;
+    loop {
+        match std::str::from_utf8(rest) {
+            Ok(valid) => {
+                result.push_str(valid);
+                return result;
+            }
+            Err(err) => {
+                let valid_len: usize = err.valid_up_to();
+                result.push_str(&String::from_utf8_lossy(&rest[..valid_len]));
+                let invalid_len: usize = err.error_len().unwrap_or(rest.len() - valid_len);
+                for byte in &rest[valid_len..valid_len + invalid_len] {
+                    result.push(raw_byte_char(*byte));
+                }
+                rest = &rest[valid_len + invalid_len..];
+            }
+        }
+    }
+}
+
+pub fn encode_output(sql: &str) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::with_capacity(sql.len());
+    let mut buf: [u8; 4] = [0; 4];
+    for c in sql.chars() {
+        if is_raw_byte(c) {
+            result.push((c as u32 - RAW_BYTE_BASE) as u8);
+        } else {
+            result.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+        }
+    }
+    result
+}
+
 pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
@@ -381,12 +427,20 @@ fn get_in_quote(
     curr_token: &Token,
 ) -> Option<QuoteCategory> {
     match in_quote {
+        Some(QuoteCategory::RawBytes) => {
+            if is_raw_byte(curr_ch) {
+                *in_quote
+            } else {
+                None
+            }
+        }
         Some(qc) => {
             if curr_token.len() <= 1 {
                 return *in_quote;
             }
 
             match qc {
+                QuoteCategory::RawBytes => unreachable!(),
                 QuoteCategory::Backtick => {
                     if prev1_ch == Some(&BACKTICK) {
                         return None;
@@ -427,6 +481,7 @@ fn get_in_quote(
                 }
                 None
             }
+            c if is_raw_byte(c) => Some(QuoteCategory::RawBytes),
             _ => None,
         },
     }
@@ -2042,11 +2097,47 @@ enum QuoteCategory {
     QuoteSingle,
     QuoteDouble,
     Bracket,
+    RawBytes,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_decode_encode_raw_bytes_round_trip() {
+        let bytes: Vec<u8> = b"INSERT INTO T (B) VALUES ('\x89PNG\r\n\xff\xfe')".to_vec();
+        let decoded: String = decode_input(&bytes);
+        assert_eq!(decoded.chars().filter(|c| is_raw_byte(*c)).count(), 3);
+        assert_eq!(encode_output(&decoded), bytes);
+    }
+
+    #[test]
+    fn test_decode_valid_utf8_unchanged() {
+        let sql: &str = "SELECT 'héllo' FROM TBL1";
+        assert_eq!(decode_input(sql.as_bytes()), sql);
+        assert_eq!(encode_output(sql), sql.as_bytes());
+    }
+
+    #[test]
+    fn test_get_sql_tokens_raw_bytes_in_quote() {
+        let sql: String = decode_input(b"SELECT '\x89PNG\xff'");
+        let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql.clone());
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
+        assert_eq!(encode_output(&tokens[2].value), b"'\x89PNG\xff'");
+    }
+
+    #[test]
+    fn test_get_sql_tokens_raw_bytes_outside_quote() {
+        let sql: String = decode_input(b"SELECT \xff\xfe,1");
+        let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql.clone());
+        assert_eq!(tokens.len(), 5);
+        assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
+        assert_eq!(encode_output(&tokens[2].value), b"\xff\xfe");
+        assert_eq!(tokens[3], Token::new_test(",", Some(TokenCategory::Comma)));
+        assert_eq!(tokens[4], Token::new_test("1", None));
+    }
 
     #[test]
     fn test_get_sql_tokens_basic() {
