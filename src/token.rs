@@ -673,6 +673,9 @@ impl Token {
             "CROSS" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
+            "DEALLOCATE" => {
+                behavior.push(TokenBehavior::NewLineBefore);
+            }
             "DECLARE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
