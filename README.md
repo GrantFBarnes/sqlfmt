@@ -111,7 +111,7 @@ chars=<INT>
 
 Input is treated as raw bytes rather than requiring valid UTF-8.
 Any non-UTF-8 bytes (for example, binary data stored in string literals) are preserved unchanged in the output.
-Carriage returns (`\r`) are stripped outside of string literals, but preserved inside them.
+Carriage returns (`\r`) are stripped outside of quoted strings and identifiers, but preserved inside them.
 
 ## Extensions
 
