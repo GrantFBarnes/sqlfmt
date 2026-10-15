@@ -68,7 +68,7 @@ impl Configuration {
             config.chars = args.chars.unwrap();
         }
 
-        return config;
+        config
     }
 }
 
@@ -97,7 +97,7 @@ fn find_config(path: &Path) -> Option<Configuration> {
         return None;
     }
 
-    return find_config(parent.unwrap());
+    find_config(parent.unwrap())
 }
 
 fn get_file_config(file: PathBuf) -> Option<Configuration> {
@@ -137,7 +137,7 @@ fn get_file_config(file: PathBuf) -> Option<Configuration> {
         }
     }
 
-    return Some(config);
+    Some(config)
 }
 
 #[derive(Debug, PartialEq, Eq)]

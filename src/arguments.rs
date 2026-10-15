@@ -128,7 +128,7 @@ impl Arguments {
             return Err("Invalid arguments provided");
         }
 
-        return Ok(arguments);
+        Ok(arguments)
     }
 }
 

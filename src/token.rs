@@ -264,7 +264,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
         tokens.push(curr_token);
     }
 
-    return tokens;
+    tokens
 }
 
 fn get_last_nonspace_token(tokens: &Vec<Token>) -> Option<&Token> {
@@ -291,7 +291,7 @@ fn get_in_delimiter_change(
         return true;
     }
 
-    return in_delimiter_change;
+    in_delimiter_change
 }
 
 fn get_in_interpolation(
@@ -306,7 +306,7 @@ fn get_in_interpolation(
             if prev1_ch == Some(&CURLY_BRACKET_CLOSE) {
                 return None;
             }
-            return Some(InterpolationCategory::Bracket);
+            Some(InterpolationCategory::Bracket)
         }
         Some(InterpolationCategory::Percent) => {
             if prev2_ch == Some(&PERCENT) {
@@ -316,7 +316,7 @@ fn get_in_interpolation(
             }
         }
         None => {
-            return match curr_ch {
+            match curr_ch {
                 CURLY_BRACKET_OPEN => Some(InterpolationCategory::Bracket),
                 PERCENT => match next1_ch {
                     // golang format verbs
@@ -327,7 +327,7 @@ fn get_in_interpolation(
                     _ => None,
                 },
                 _ => None,
-            };
+            }
         }
     }
 }
@@ -351,7 +351,7 @@ fn get_in_comment(
                     if curr_ch == NEW_LINE {
                         return None;
                     }
-                    return Some(CommentCategory::SingleLine);
+                    Some(CommentCategory::SingleLine)
                 }
                 CommentCategory::MultiLine => {
                     if curr_ch == SLASH_FORWARD && next1_ch == Some(&ASTERISK) {
@@ -360,7 +360,7 @@ fn get_in_comment(
                     if prev2_ch == Some(&ASTERISK) && prev1_ch == Some(&SLASH_FORWARD) {
                         return None;
                     }
-                    return Some(CommentCategory::MultiLine);
+                    Some(CommentCategory::MultiLine)
                 }
             }
         }
@@ -373,7 +373,7 @@ fn get_in_comment(
                 return Some(CommentCategory::MultiLine);
             }
 
-            return None;
+            None
         }
     }
 }
@@ -396,7 +396,7 @@ fn get_in_quote(
                     if prev1_ch == Some(&BACKTICK) {
                         return None;
                     }
-                    return in_quote.clone();
+                    in_quote.clone()
                 }
                 QuoteCategory::QuoteSingle => {
                     if prev1_ch == Some(&QUOTE_SINGLE) && curr_ch != QUOTE_SINGLE {
@@ -404,37 +404,35 @@ fn get_in_quote(
                             return None;
                         }
                     }
-                    return in_quote.clone();
+                    in_quote.clone()
                 }
                 QuoteCategory::QuoteDouble => {
                     if prev1_ch == Some(&QUOTE_DOUBLE) {
                         return None;
                     }
-                    return in_quote.clone();
+                    in_quote.clone()
                 }
                 QuoteCategory::Bracket => {
                     if prev1_ch == Some(&BRACKET_CLOSE) {
                         return None;
                     }
-                    return in_quote.clone();
+                    in_quote.clone()
                 }
             }
         }
-        None => {
-            return match curr_ch {
-                BACKTICK => Some(QuoteCategory::Backtick),
-                QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
-                QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
-                BRACKET_OPEN => Some(QuoteCategory::Bracket),
-                'N' => {
-                    if next1_ch == Some(&QUOTE_SINGLE) {
-                        return Some(QuoteCategory::QuoteSingle);
-                    }
-                    return None;
+        None => match curr_ch {
+            BACKTICK => Some(QuoteCategory::Backtick),
+            QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
+            QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
+            BRACKET_OPEN => Some(QuoteCategory::Bracket),
+            'N' => {
+                if next1_ch == Some(&QUOTE_SINGLE) {
+                    return Some(QuoteCategory::QuoteSingle);
                 }
-                _ => None,
-            };
-        }
+                None
+            }
+            _ => None,
+        },
     }
 }
 
@@ -501,7 +499,7 @@ impl Token {
         if self.category == Some(TokenCategory::WhiteSpace) {
             return self.value.replace(TAB, "    ").len();
         }
-        return self.value.len();
+        self.value.len()
     }
 
     fn is_empty(&self) -> bool {
@@ -572,7 +570,7 @@ impl Token {
             return Some(TokenCategory::WhiteSpace);
         }
 
-        return get_category_from_value(self.value.to_uppercase().as_str());
+        get_category_from_value(self.value.to_uppercase().as_str())
     }
 
     fn set_behavior(&mut self, config: &Configuration) {
@@ -911,7 +909,7 @@ impl Token {
 }
 
 fn get_category_from_value(value: &str) -> Option<TokenCategory> {
-    return match value {
+    match value {
         // Keywords
         "ABORT" => Some(TokenCategory::Keyword),
         "ABORTSESSION" => Some(TokenCategory::Keyword),
@@ -1970,7 +1968,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "VALUE" => Some(TokenCategory::XmlMethod),
 
         _ => None,
-    };
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

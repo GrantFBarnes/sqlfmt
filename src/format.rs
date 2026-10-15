@@ -30,7 +30,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
         state.align_text_groups(config, input_token);
     }
 
-    return state.get_result(config);
+    state.get_result(config)
 }
 
 struct FormatState {
@@ -85,7 +85,7 @@ impl FormatState {
                 }
 
                 // ignore all other user input newlines
-                return true;
+                true
             }
             Some(TokenCategory::WhiteSpace) => {
                 // define and keep user input space as prefix if not found
@@ -118,13 +118,13 @@ impl FormatState {
                 }
 
                 // ignore all other user input spaces
-                return true;
+                true
             }
             _ => {
                 if self.prefix.is_none() {
                     self.prefix = Some(String::new());
                 }
-                return false;
+                false
             }
         }
     }
@@ -444,7 +444,7 @@ impl FormatState {
                 _ => line_length += prev_token.len(),
             }
         }
-        return line_length;
+        line_length
     }
 
     fn add_pre_newline(&mut self, token: &Token) {
@@ -822,7 +822,7 @@ impl FormatState {
         for t in self.get_newline_pre_space_tokens(config) {
             size += t.len();
         }
-        return size;
+        size
     }
 
     fn get_newline_pre_space_tokens(&self, config: &Configuration) -> Vec<Token> {
@@ -839,7 +839,7 @@ impl FormatState {
             ConfigTab::Space(c) => " ".repeat(c as usize * self.indent_stack.len()),
         }));
 
-        return result;
+        result
     }
 
     fn increase_indent_stack(&mut self, token: &Token) {
@@ -1020,9 +1020,9 @@ impl FormatState {
 
             result.push_str(token_value.as_str());
         }
-        return result
+        result
             .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
-            .to_string();
+            .to_string()
     }
 }
 

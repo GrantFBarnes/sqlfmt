@@ -120,8 +120,8 @@ fn get_input_sql(input: &Option<String>) -> Result<String, io::Error> {
                 "Input file not defined.",
             ));
         }
-        return fs::read_to_string(input.as_ref().unwrap());
+        fs::read_to_string(input.as_ref().unwrap())
     } else {
-        return io::read_to_string(stdin);
+        io::read_to_string(stdin)
     }
 }
