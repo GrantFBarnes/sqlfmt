@@ -2,6 +2,7 @@ use crate::configuration::Configuration;
 
 const AMPERSAND: char = '&';
 const ASTERISK: char = '*';
+const BACKSLASH: char = '\\';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
 const BRACKET_OPEN: char = '[';
@@ -444,6 +445,24 @@ fn get_in_comment(
     }
 }
 
+// counts single quotes that are not backslash-escaped (an odd run of
+// preceding backslashes escapes the quote)
+fn count_unescaped(value: &str, target: char) -> usize {
+    let mut count: usize = 0;
+    let mut preceding_backslashes: usize = 0;
+    for c in value.chars() {
+        if c == target && preceding_backslashes.is_multiple_of(2) {
+            count += 1;
+        }
+        if c == BACKSLASH {
+            preceding_backslashes += 1;
+        } else {
+            preceding_backslashes = 0;
+        }
+    }
+    count
+}
+
 fn get_in_quote(
     in_quote: &Option<QuoteCategory>,
     prev1_ch: Option<&char>,
@@ -467,7 +486,7 @@ fn get_in_quote(
                 QuoteCategory::QuoteSingle => {
                     if prev1_ch == Some(&QUOTE_SINGLE)
                         && curr_ch != QUOTE_SINGLE
-                        && curr_token.count(QUOTE_SINGLE).is_multiple_of(2)
+                        && count_unescaped(&curr_token.value, QUOTE_SINGLE).is_multiple_of(2)
                     {
                         return None;
                     }
@@ -571,10 +590,6 @@ impl Token {
 
     fn is_empty(&self) -> bool {
         self.value.is_empty()
-    }
-
-    fn count(&self, find: char) -> usize {
-        self.value.match_indices(find).count()
     }
 
     fn setup(&mut self, config: &Configuration) {
@@ -2741,6 +2756,30 @@ mod tests {
                 Token::new_test("'Column''s Name'", Some(TokenCategory::Quote)),
             ]
         );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_backslash_escape() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT 'it\'s time'"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"'it\'s time'"#, Some(TokenCategory::Quote)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_backslash_escape_raw_bytes() {
+        let sql: String = decode_input(b"SELECT 'x\xff\\'y\xfe\\'z'");
+        let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql);
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
+        assert_eq!(encode_output(&tokens[2].value), b"'x\xff\\'y\xfe\\'z'");
     }
 
     #[test]
