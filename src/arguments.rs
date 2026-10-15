@@ -147,18 +147,18 @@ mod tests {
     fn test_get_arguments_empty() {
         let args: Vec<String> = vec![];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -184,18 +184,18 @@ mod tests {
             String::from("120"),
         ];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, true);
-        assert_eq!(arguments.version, true);
+        assert!(arguments.help);
+        assert!(arguments.version);
         assert_eq!(arguments.input, Some(String::from("in.sql")));
         assert_eq!(arguments.output, Some(String::from("out.sql")));
-        assert_eq!(arguments.newlines, true);
-        assert_eq!(arguments.comment_pre_space, true);
-        assert_eq!(arguments.align_text_groups, true);
-        assert_eq!(arguments.upper, true);
-        assert_eq!(arguments.lower, true);
-        assert_eq!(arguments.tabs, true);
+        assert!(arguments.newlines);
+        assert!(arguments.comment_pre_space);
+        assert!(arguments.align_text_groups);
+        assert!(arguments.upper);
+        assert!(arguments.lower);
+        assert!(arguments.tabs);
         assert_eq!(arguments.spaces, Some(2));
         assert_eq!(arguments.chars, Some(120));
     }
@@ -204,18 +204,18 @@ mod tests {
     fn test_get_arguments_help_short() {
         let args: Vec<String> = vec![String::from("-h")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, true);
-        assert_eq!(arguments.version, false);
+        assert!(arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -224,18 +224,18 @@ mod tests {
     fn test_get_arguments_help_long() {
         let args: Vec<String> = vec![String::from("--help")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, true);
-        assert_eq!(arguments.version, false);
+        assert!(arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -244,18 +244,18 @@ mod tests {
     fn test_get_arguments_version_short() {
         let args: Vec<String> = vec![String::from("-v")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, true);
+        assert!(!arguments.help);
+        assert!(arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -264,18 +264,18 @@ mod tests {
     fn test_get_arguments_version_long() {
         let args: Vec<String> = vec![String::from("--version")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, true);
+        assert!(!arguments.help);
+        assert!(arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -284,18 +284,18 @@ mod tests {
     fn test_get_arguments_input_short() {
         let args: Vec<String> = vec![String::from("-i"), String::from("file.sql")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -304,18 +304,18 @@ mod tests {
     fn test_get_arguments_input_long() {
         let args: Vec<String> = vec![String::from("--input"), String::from("file.sql")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -324,18 +324,18 @@ mod tests {
     fn test_get_arguments_output_short() {
         let args: Vec<String> = vec![String::from("-o"), String::from("file.sql")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -344,18 +344,18 @@ mod tests {
     fn test_get_arguments_output_long() {
         let args: Vec<String> = vec![String::from("--output"), String::from("file.sql")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -364,18 +364,18 @@ mod tests {
     fn test_get_arguments_newlines_short() {
         let args: Vec<String> = vec![String::from("-n")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, true);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -384,18 +384,18 @@ mod tests {
     fn test_get_arguments_newlines_long() {
         let args: Vec<String> = vec![String::from("--newlines")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, true);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -404,18 +404,18 @@ mod tests {
     fn test_get_arguments_comment_pre_space() {
         let args: Vec<String> = vec![String::from("--comment-pre-space")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, true);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -424,18 +424,18 @@ mod tests {
     fn test_get_arguments_align_text_groups() {
         let args: Vec<String> = vec![String::from("--align-text-groups")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, true);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -444,18 +444,18 @@ mod tests {
     fn test_get_arguments_upper_short() {
         let args: Vec<String> = vec![String::from("-u")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, true);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -464,18 +464,18 @@ mod tests {
     fn test_get_arguments_upper_long() {
         let args: Vec<String> = vec![String::from("--upper")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, true);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -484,18 +484,18 @@ mod tests {
     fn test_get_arguments_lower_short() {
         let args: Vec<String> = vec![String::from("-l")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, true);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -504,18 +504,18 @@ mod tests {
     fn test_get_arguments_lower_long() {
         let args: Vec<String> = vec![String::from("--lower")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, true);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -524,18 +524,18 @@ mod tests {
     fn test_get_arguments_tabs_short() {
         let args: Vec<String> = vec![String::from("-t")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, true);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -544,18 +544,18 @@ mod tests {
     fn test_get_arguments_tabs_long() {
         let args: Vec<String> = vec![String::from("--tabs")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, true);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, None);
     }
@@ -564,18 +564,18 @@ mod tests {
     fn test_get_arguments_spaces_short() {
         let args: Vec<String> = vec![String::from("-s"), String::from("2")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, Some(2));
         assert_eq!(arguments.chars, None);
     }
@@ -584,18 +584,18 @@ mod tests {
     fn test_get_arguments_spaces_long() {
         let args: Vec<String> = vec![String::from("--spaces"), String::from("2")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, Some(2));
         assert_eq!(arguments.chars, None);
     }
@@ -604,18 +604,18 @@ mod tests {
     fn test_get_arguments_chars_short() {
         let args: Vec<String> = vec![String::from("-c"), String::from("120")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, Some(120));
     }
@@ -624,18 +624,18 @@ mod tests {
     fn test_get_arguments_chars_long() {
         let args: Vec<String> = vec![String::from("--chars"), String::from("120")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_ok(), true);
+        assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
-        assert_eq!(arguments.help, false);
-        assert_eq!(arguments.version, false);
+        assert!(!arguments.help);
+        assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
-        assert_eq!(arguments.newlines, false);
-        assert_eq!(arguments.comment_pre_space, false);
-        assert_eq!(arguments.align_text_groups, false);
-        assert_eq!(arguments.upper, false);
-        assert_eq!(arguments.lower, false);
-        assert_eq!(arguments.tabs, false);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
         assert_eq!(arguments.spaces, None);
         assert_eq!(arguments.chars, Some(120));
     }
@@ -644,55 +644,55 @@ mod tests {
     fn test_get_arguments_input_short_no_file() {
         let args: Vec<String> = vec![String::from("-i")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_input_long_no_file() {
         let args: Vec<String> = vec![String::from("--input")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_ouput_short_no_file() {
         let args: Vec<String> = vec![String::from("-o")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_ouput_long_no_file() {
         let args: Vec<String> = vec![String::from("--output")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_spaces_no_number() {
         let args: Vec<String> = vec![String::from("--spaces")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_spaces_not_number() {
         let args: Vec<String> = vec![String::from("--spaces"), String::from("true")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_chars_no_number() {
         let args: Vec<String> = vec![String::from("--chars")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 
     #[test]
     fn test_get_arguments_chars_not_number() {
         let args: Vec<String> = vec![String::from("--chars"), String::from("true")];
         let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
-        assert_eq!(arguments.is_err(), true);
+        assert!(arguments.is_err());
     }
 }
