@@ -22,7 +22,7 @@ pub fn get_formatted_sql(config: &Configuration, input_sql: String) -> String {
         }
         state.increase_paren_stack(input_token);
         state.decrease_indent_stack(input_token);
-        state.add_pre_space(input_token, prev_input_token, config);
+        state.add_pre_space(input_token, prev_input_token, next_input_token, config);
         state.set_previous_comment_pre_space(config);
         state.push(input_token.clone());
         state.increase_indent_stack(input_token);
@@ -328,6 +328,7 @@ impl FormatState {
         &mut self,
         token: &Token,
         prev_input_token: Option<&Token>,
+        next_input_token: Option<&Token>,
         config: &Configuration,
     ) {
         if self
@@ -355,7 +356,7 @@ impl FormatState {
 
         if config.newlines {
             self.insert_newline(token, config);
-            self.add_pre_newline(token);
+            self.add_pre_newline(token, next_input_token);
             self.remove_extra_newline(token, config);
         }
 
@@ -435,7 +436,7 @@ impl FormatState {
         line_length
     }
 
-    fn add_pre_newline(&mut self, token: &Token) {
+    fn add_pre_newline(&mut self, token: &Token, next_input_token: Option<&Token>) {
         if self.tokens.is_empty() {
             return;
         }
@@ -503,6 +504,15 @@ impl FormatState {
         }
 
         if token.behavior.contains(&TokenBehavior::NewLineBefore) {
+            self.push(Token::new_newline());
+            return;
+        }
+
+        if token
+            .behavior
+            .contains(&TokenBehavior::NewLineBeforeIfNotMethodCall)
+            && next_input_token.is_none_or(|t| t.category != Some(TokenCategory::ParenOpen))
+        {
             self.push(Token::new_newline());
             return;
         }
@@ -3850,6 +3860,30 @@ CALL SP1()"#
             IF
             IF V2 IS NULL
             SET V2 = 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_if_left_method() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            IF LEFT(@V1, 1) = '#' SET @V1 = RIGHT(@V1, 2)
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            IF LEFT(@V1, 1) = '#' SET @V1 = RIGHT(@V1, 2)
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            IF LEFT(@V1, 1) = '#'
+            SET @V1 = RIGHT(@V1, 2)"#
         );
     }
 

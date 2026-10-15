@@ -771,7 +771,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "LEFT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotMethodCall);
             }
             "LIMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -820,7 +820,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "RIGHT" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotMethodCall);
             }
             "ROLLBACK" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -2003,6 +2003,7 @@ pub enum TokenBehavior {
     NewLineBeforeIfNotAfterEvent,
     NewLineBeforeIfNotAfterKeywordOrMethod,
     NewLineBeforeIfNotAfterWithin,
+    NewLineBeforeIfNotMethodCall,
     NoNewLineAfterX2Skip,
     NoNewLineBefore,
     NoNewLineBeforeUnlessMatch,
