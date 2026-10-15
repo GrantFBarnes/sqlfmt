@@ -38,6 +38,8 @@ struct FormatState {
     prefix: Option<String>,
     indent_stack: Vec<Token>,
     paren_stack: Vec<ParenCategory>,
+    // block opener (BEGIN/DO/CASE/THEN) closed by the most recent END
+    end_block_opener: Option<Token>,
 }
 
 impl FormatState {
@@ -47,6 +49,7 @@ impl FormatState {
             prefix: None,
             indent_stack: vec![],
             paren_stack: vec![],
+            end_block_opener: None,
         }
     }
 
@@ -459,6 +462,17 @@ impl FormatState {
             .expect("should always have a previous token");
         let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
 
+        // keep 'END IF' together when END closed an 'IF ... THEN' block
+        if token.value.to_uppercase() == "IF"
+            && prev1_token.value.to_uppercase() == "END"
+            && self
+                .end_block_opener
+                .as_ref()
+                .is_some_and(|t| t.value.to_uppercase() == "THEN")
+        {
+            return;
+        }
+
         if token
             .behavior
             .contains(&TokenBehavior::NoNewLineBeforeUnlessMatch)
@@ -868,6 +882,11 @@ impl FormatState {
     }
 
     fn decrease_indent_stack(&mut self, token: &Token) {
+        let is_end: bool = token.value.to_uppercase() == "END";
+        if is_end {
+            self.end_block_opener = None;
+        }
+
         if self.indent_stack.is_empty() {
             return;
         }
@@ -900,6 +919,9 @@ impl FormatState {
                 let top_value: String = top.value.to_uppercase();
 
                 if decrease_until.contains(&top_value.as_str()) {
+                    if is_end {
+                        self.end_block_opener = Some(top);
+                    }
                     return;
                 }
 
@@ -3856,10 +3878,47 @@ CALL SP1()"#
             END
             IF V1 IS NULL THEN
                 SET V1 = 0
-            END
-            IF
+            END IF
             IF V2 IS NULL
             SET V2 = 0"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_end_if() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"
+            IF V1 IS NULL THEN SET V1 = 0; ELSE SET V1 = 1; END IF;
+            IF V2 IS NULL BEGIN SET V2 = 0; END
+            IF V3 IS NULL SET V3 = 0;
+            "#,
+        );
+
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"
+            IF V1 IS NULL THEN SET V1 = 0; ELSE SET V1 = 1; END IF;
+            IF V2 IS NULL BEGIN SET V2 = 0; END
+            IF V3 IS NULL SET V3 = 0;
+"#
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"            IF V1 IS NULL THEN
+                SET V1 = 0;
+                ELSE
+                SET V1 = 1;
+            END IF;
+
+            IF V2 IS NULL
+            BEGIN
+                SET V2 = 0;
+            END
+            IF V3 IS NULL
+            SET V3 = 0;"#
         );
     }
 
