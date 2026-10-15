@@ -700,6 +700,7 @@ impl Token {
             "ELSE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NoNewLineBeforeX2);
+                behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "END" => {

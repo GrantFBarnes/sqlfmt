@@ -38,7 +38,7 @@ struct FormatState {
     prefix: Option<String>,
     indent_stack: Vec<Token>,
     paren_stack: Vec<ParenCategory>,
-    // block opener (BEGIN/DO/CASE/THEN) closed by the most recent END
+    // block opener (BEGIN/DO/CASE/THEN/ELSE) closed by the most recent END
     end_block_opener: Option<Token>,
 }
 
@@ -462,13 +462,13 @@ impl FormatState {
             .expect("should always have a previous token");
         let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
 
-        // keep 'END IF' together when END closed an 'IF ... THEN' block
+        // keep 'END IF' together when END closed an 'IF ... THEN [... ELSE]' block
         if token.value.to_uppercase() == "IF"
             && prev1_token.value.to_uppercase() == "END"
-            && self
-                .end_block_opener
-                .as_ref()
-                .is_some_and(|t| t.value.to_uppercase() == "THEN")
+            && self.end_block_opener.as_ref().is_some_and(|t| {
+                let v: String = t.value.to_uppercase();
+                v == "THEN" || v == "ELSE"
+            })
         {
             return;
         }
@@ -897,7 +897,8 @@ impl FormatState {
             ("BEGIN", vec!["END", "COMMIT", "ROLLBACK"]),
             ("DO", vec!["END"]),
             ("CASE", vec!["END"]),
-            ("THEN", vec!["END"]),
+            ("THEN", vec!["END", "ELSE"]),
+            ("ELSE", vec!["END", "BEGIN"]),
         ]);
 
         let mut decrease_until: Vec<&str> = vec![];
@@ -3909,7 +3910,7 @@ CALL SP1()"#
             get_formatted_sql(&config, sql.clone()),
             r#"            IF V1 IS NULL THEN
                 SET V1 = 0;
-                ELSE
+            ELSE
                 SET V1 = 1;
             END IF;
 
@@ -3960,7 +3961,7 @@ CALL SP1()"#
             get_formatted_sql(&config, sql.clone()),
             r#"
             IF V1 IS NULL THEN SET V1 = 0
-                ELSE SET V2 = NULL
+            ELSE SET V2 = NULL
 "#
         );
 
@@ -3969,7 +3970,7 @@ CALL SP1()"#
             get_formatted_sql(&config, sql.clone()),
             r#"            IF V1 IS NULL THEN
                 SET V1 = 0
-                ELSE
+            ELSE
                 SET V2 = NULL"#
         );
     }
