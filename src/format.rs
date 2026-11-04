@@ -181,7 +181,6 @@ impl FormatState {
         let mut current_group: Option<TextGroup> = None;
         let mut current_line: Vec<TextGroup> = vec![];
         let mut lines: Vec<Vec<TextGroup>> = vec![];
-        let mut max_groups_per_line: usize = 0;
 
         let groupings: Vec<Vec<&str>> = vec![
             vec!["NOT", "NULL"],
@@ -276,9 +275,6 @@ impl FormatState {
                                 }
                             }
 
-                            if current_line.len() > max_groups_per_line {
-                                max_groups_per_line = current_line.len();
-                            }
                             current_group = None;
                         }
                         last_whitespace_position = Some(i);
@@ -303,6 +299,7 @@ impl FormatState {
         }
 
         // find max len in each group
+        let max_groups_per_line: usize = lines.iter().map(|line| line.len()).max().unwrap_or(0);
         let mut max_len_in_each_group: Vec<usize> = vec![0; max_groups_per_line];
         for line in &lines {
             for group_idx in 0..line.len() {
@@ -2651,6 +2648,26 @@ SET C3 = 3"#
                     COUNT(*)
                 FROM TBL1
             )"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_align_text_groups_leading_comma() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"CREATE TABLE TBL1 (C1 INT NOT NULL
+, COLUMN2 VARCHAR(10) NULL
+, C3 INT
+, C4 DATETIME NOT NULL)"#,
+        );
+
+        config.align_text_groups = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"CREATE TABLE TBL1(C1 INT NOT NULL
+    , COLUMN2 VARCHAR(10) NULL
+    , C3      INT
+    , C4      DATETIME    NOT NULL)"#
         );
     }
 
