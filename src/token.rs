@@ -792,6 +792,9 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "BREAK" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "CALL" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -813,6 +816,9 @@ impl Token {
             }
             "COMMIT" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+            }
+            "CONTINUE" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
             }
             "CREATE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -894,6 +900,9 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineAfterX2);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "GOTO" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "GROUP" => {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterWithin);
                 behavior.push(TokenBehavior::IncreaseIndent);
@@ -920,6 +929,9 @@ impl Token {
                 behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
                 behavior.push(TokenBehavior::NewLineAfterIfNotAfterKeyword);
                 behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "ITERATE" => {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "LEAVE" => {
@@ -964,8 +976,15 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndent);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "PRINT" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "RAISERROR" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "RESIGNAL" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
             }
             "RETURN" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -992,11 +1011,15 @@ impl Token {
                 behavior.push(TokenBehavior::IncreaseIndentIfNotAfterKeyword);
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
+            "SIGNAL" => {
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
             "THEN" => {
                 behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
             }
             "THROW" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
             }
             "TOP" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);
@@ -1031,6 +1054,9 @@ impl Token {
             }
             "VALUES" => {
                 behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::DecreaseIndent);
+            }
+            "WAITFOR" => {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "WHEN" => {
