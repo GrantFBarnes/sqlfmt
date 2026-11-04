@@ -436,7 +436,12 @@ fn get_in_comment(
                     if curr_ch == SLASH_FORWARD && next1_ch == Some(&ASTERISK) {
                         return Some(CommentCategory::MultiLine);
                     }
-                    if prev2_ch == Some(&ASTERISK) && prev1_ch == Some(&SLASH_FORWARD) {
+                    // shortest closed comment is "/**/", so the opening "/*"
+                    // cannot also be part of the closing "*/" (e.g. "/*/")
+                    if curr_token_len >= 4
+                        && prev2_ch == Some(&ASTERISK)
+                        && prev1_ch == Some(&SLASH_FORWARD)
+                    {
                         return None;
                     }
                     Some(CommentCategory::MultiLine)
@@ -2399,6 +2404,30 @@ mod tests {
                 Token::new_test("*", Some(TokenCategory::Operator)),
                 Token::new_test("/*multi odd*/", Some(TokenCategory::Comment)),
                 Token::new_test("*", Some(TokenCategory::Operator)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_slash_after_open() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from("/*/ multi */ A")),
+            vec![
+                Token::new_test("/*/ multi */", Some(TokenCategory::Comment)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("A", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_comment_multi_empty() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from("/**/ A")),
+            vec![
+                Token::new_test("/**/", Some(TokenCategory::Comment)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("A", None),
             ]
         );
     }
