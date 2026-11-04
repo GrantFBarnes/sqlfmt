@@ -116,14 +116,13 @@ fn print_version() {
 
 fn get_input_sql(input: &Option<String>) -> Result<Vec<u8>, io::Error> {
     let stdin: io::Stdin = io::stdin();
-    if stdin.is_terminal() {
-        if input.is_none() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Input file not defined.",
-            ));
-        }
-        fs::read(input.as_ref().unwrap())
+    if let Some(path) = input {
+        fs::read(path)
+    } else if stdin.is_terminal() {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Input file not defined.",
+        ))
     } else {
         let mut bytes: Vec<u8> = vec![];
         stdin.lock().read_to_end(&mut bytes)?;
