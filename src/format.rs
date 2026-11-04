@@ -640,6 +640,11 @@ impl FormatState {
                             }
                             continue;
                         }
+                        Some(TokenCategory::Comment) if prev_token.value.starts_with("--") => {
+                            // a single-line comment ends at its newline, so collapsing
+                            // would pull the following tokens into the comment
+                            return;
+                        }
                         _ => inner_token_count += 1,
                     }
                     collapsed_inner_len += prev_token.len();
@@ -3092,6 +3097,62 @@ FROM TBL1;"#
             ORDER BY C1
             -- COMMENT
             SET V1 = 1"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_single_comment_inside_paren() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"SELECT * FROM TBL1 WHERE C1 IN (1, -- one
+2) AND C2 = COUNT(C3 -- note
+)"#,
+        );
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+    *
+FROM TBL1
+WHERE C1 IN (
+        1, -- one
+        2
+    )
+    AND C2 = COUNT(
+        C3 -- note
+    )"#
+        );
+
+        config.comment_pre_space = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+    *
+FROM TBL1
+WHERE C1 IN (
+        1,
+        -- one
+        2
+    )
+    AND C2 = COUNT(
+        C3
+    -- note
+    )"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_multiline_comment_inside_paren() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT (C1 /* note */ + C2) FROM TBL1"#);
+
+        config.newlines = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+    (C1 /* note */ + C2)
+FROM TBL1"#
         );
     }
 
