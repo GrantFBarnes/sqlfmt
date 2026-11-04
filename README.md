@@ -79,6 +79,7 @@ ORDER BY Column1;
     -n, --newlines      Replace newlines
     --comment-pre-space Replace comment pre-space with indent level
     --align-text-groups Align text by groups inside parentheses
+    --backslash-escapes Treat \' as an escaped quote in strings (MySQL)
     -u, --upper         Uppercase keywords
     -l, --lower         Lowercase keywords
     -t, --tabs          Use tabs for indents
@@ -100,6 +101,7 @@ Format Configuration
 newlines
 comment_pre_space
 align_text_groups
+backslash_escapes
 upper
 lower
 tabs

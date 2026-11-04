@@ -151,7 +151,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     in_special = Some(TokenSpecial::Comment(cc));
                     curr_token.category = Some(TokenCategory::Comment);
                 } else if let Some(qc) =
-                    get_in_quote(&None, prev1_ch, curr_ch, next1_ch, &curr_token)
+                    get_in_quote(&None, prev1_ch, curr_ch, next1_ch, &curr_token, config)
                 {
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
@@ -213,7 +213,9 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                 }
             }
             Some(TokenSpecial::Quote(qc)) => {
-                if get_in_quote(&Some(qc), prev1_ch, curr_ch, next1_ch, &curr_token).is_some() {
+                if get_in_quote(&Some(qc), prev1_ch, curr_ch, next1_ch, &curr_token, config)
+                    .is_some()
+                {
                     curr_token.value.push(curr_ch);
                     continue;
                 } else {
@@ -445,13 +447,13 @@ fn get_in_comment(
     }
 }
 
-// counts single quotes that are not backslash-escaped (an odd run of
-// preceding backslashes escapes the quote)
-fn count_unescaped(value: &str, target: char) -> usize {
+// counts occurrences of target, skipping backslash-escaped ones (an odd run
+// of preceding backslashes escapes the char) when backslash_escapes is set
+fn count_unescaped(value: &str, target: char, backslash_escapes: bool) -> usize {
     let mut count: usize = 0;
     let mut preceding_backslashes: usize = 0;
     for c in value.chars() {
-        if c == target && preceding_backslashes.is_multiple_of(2) {
+        if c == target && (!backslash_escapes || preceding_backslashes.is_multiple_of(2)) {
             count += 1;
         }
         if c == BACKSLASH {
@@ -469,6 +471,7 @@ fn get_in_quote(
     curr_ch: char,
     next1_ch: Option<&char>,
     curr_token: &Token,
+    config: &Configuration,
 ) -> Option<QuoteCategory> {
     match in_quote {
         Some(qc) => {
@@ -486,7 +489,12 @@ fn get_in_quote(
                 QuoteCategory::QuoteSingle => {
                     if prev1_ch == Some(&QUOTE_SINGLE)
                         && curr_ch != QUOTE_SINGLE
-                        && count_unescaped(&curr_token.value, QUOTE_SINGLE).is_multiple_of(2)
+                        && count_unescaped(
+                            &curr_token.value,
+                            QUOTE_SINGLE,
+                            config.backslash_escapes,
+                        )
+                        .is_multiple_of(2)
                     {
                         return None;
                     }
@@ -2760,11 +2768,10 @@ mod tests {
 
     #[test]
     fn test_get_sql_tokens_quote_single_backslash_escape() {
+        let mut config: Configuration = Configuration::new();
+        config.backslash_escapes = true;
         assert_eq!(
-            get_sql_tokens(
-                &Configuration::new(),
-                String::from(r#"SELECT 'it\'s time'"#)
-            ),
+            get_sql_tokens(&config, String::from(r#"SELECT 'it\'s time'"#)),
             vec![
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
@@ -2775,11 +2782,41 @@ mod tests {
 
     #[test]
     fn test_get_sql_tokens_quote_single_backslash_escape_raw_bytes() {
+        let mut config: Configuration = Configuration::new();
+        config.backslash_escapes = true;
         let sql: String = decode_input(b"SELECT 'x\xff\\'y\xfe\\'z'");
-        let tokens: Vec<Token> = get_sql_tokens(&Configuration::new(), sql);
+        let tokens: Vec<Token> = get_sql_tokens(&config, sql);
         assert_eq!(tokens.len(), 3);
         assert_eq!(tokens[2].category, Some(TokenCategory::Quote));
         assert_eq!(encode_output(&tokens[2].value), b"'x\xff\\'y\xfe\\'z'");
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_backslash_literal_by_default() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from(r#"SELECT 'C:\' AS p"#)),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"'C:\'"#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("AS", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("p", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_backslash_doubled_quote_by_default() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from(r#"SELECT 'it\''s'"#)),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"'it\''s'"#, Some(TokenCategory::Quote)),
+            ]
+        );
     }
 
     #[test]

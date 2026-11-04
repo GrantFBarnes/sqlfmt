@@ -55,8 +55,14 @@
           "default": false,
           "description": "Align text by groups inside parentheses."
         },
-        "sqlfmt.changeKeywordCase": {
+        "sqlfmt.backslashEscapes": {
           "order": 4,
+          "type": "boolean",
+          "default": false,
+          "description": "Treat backslash-escaped quotes (\\') as part of a string (MySQL)."
+        },
+        "sqlfmt.changeKeywordCase": {
+          "order": 5,
           "type": "string",
           "enum": [
             "none",
@@ -77,13 +83,13 @@
           "description": "Change case on keywords when formatting."
         },
         "sqlfmt.useTabs": {
-          "order": 5,
+          "order": 6,
           "type": "boolean",
           "default": false,
           "description": "Use tabs instead of spaces for indentation."
         },
         "sqlfmt.setSpaceCount": {
-          "order": 6,
+          "order": 7,
           "type": "number",
           "default": 4,
           "minimum": 0,
@@ -91,7 +97,7 @@
           "description": "Set amount of spaces for each level of indent."
         },
         "sqlfmt.setCharCount": {
-          "order": 7,
+          "order": 8,
           "type": "number",
           "default": 80,
           "minimum": 0,

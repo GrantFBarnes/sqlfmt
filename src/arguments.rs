@@ -10,6 +10,7 @@ pub struct Arguments {
     pub newlines: bool,
     pub comment_pre_space: bool,
     pub align_text_groups: bool,
+    pub backslash_escapes: bool,
     pub upper: bool,
     pub lower: bool,
     pub tabs: bool,
@@ -31,6 +32,7 @@ impl Arguments {
             newlines: false,
             comment_pre_space: false,
             align_text_groups: false,
+            backslash_escapes: false,
             upper: false,
             lower: false,
             tabs: false,
@@ -91,6 +93,9 @@ impl Arguments {
                 }
                 "--align-text-groups" => {
                     arguments.align_text_groups = true;
+                }
+                "--backslash-escapes" => {
+                    arguments.backslash_escapes = true;
                 }
                 _ => match arguments.arg_type {
                     Some(ArgType::Input) => {
@@ -156,6 +161,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -175,6 +181,7 @@ mod tests {
             String::from("-n"),
             String::from("--comment-pre-space"),
             String::from("--align-text-groups"),
+            String::from("--backslash-escapes"),
             String::from("-u"),
             String::from("-l"),
             String::from("-t"),
@@ -193,6 +200,7 @@ mod tests {
         assert!(arguments.newlines);
         assert!(arguments.comment_pre_space);
         assert!(arguments.align_text_groups);
+        assert!(arguments.backslash_escapes);
         assert!(arguments.upper);
         assert!(arguments.lower);
         assert!(arguments.tabs);
@@ -213,6 +221,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -233,6 +242,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -253,6 +263,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -273,6 +284,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -293,6 +305,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -313,6 +326,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -333,6 +347,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -353,6 +368,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -373,6 +389,7 @@ mod tests {
         assert!(arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -393,6 +410,7 @@ mod tests {
         assert!(arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -413,6 +431,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -433,6 +452,28 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
+        assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
+    }
+
+    #[test]
+    fn test_get_arguments_backslash_escapes() {
+        let args: Vec<String> = vec![String::from("--backslash-escapes")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert!(arguments.is_ok());
+        let arguments: Arguments = arguments.unwrap();
+        assert!(!arguments.help);
+        assert!(!arguments.version);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -453,6 +494,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -473,6 +515,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -493,6 +536,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(arguments.lower);
         assert!(!arguments.tabs);
@@ -513,6 +557,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(arguments.lower);
         assert!(!arguments.tabs);
@@ -533,6 +578,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(arguments.tabs);
@@ -553,6 +599,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(arguments.tabs);
@@ -573,6 +620,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -593,6 +641,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -613,6 +662,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);
@@ -633,6 +683,7 @@ mod tests {
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
         assert!(!arguments.upper);
         assert!(!arguments.lower);
         assert!(!arguments.tabs);

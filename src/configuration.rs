@@ -12,6 +12,7 @@ pub struct Configuration {
     pub newlines: bool,
     pub comment_pre_space: bool,
     pub align_text_groups: bool,
+    pub backslash_escapes: bool,
     pub case: ConfigCase,
     pub tabs: ConfigTab,
     pub chars: u8,
@@ -23,6 +24,7 @@ impl Configuration {
             newlines: false,
             comment_pre_space: false,
             align_text_groups: false,
+            backslash_escapes: false,
             case: ConfigCase::Unchanged,
             tabs: ConfigTab::Space(4),
             chars: 80,
@@ -48,6 +50,10 @@ impl Configuration {
 
         if args.align_text_groups {
             config.align_text_groups = true;
+        }
+
+        if args.backslash_escapes {
+            config.backslash_escapes = true;
         }
 
         if args.upper {
@@ -118,6 +124,7 @@ fn get_file_config(file: PathBuf) -> Option<Configuration> {
             "newlines" => config.newlines = true,
             "comment_pre_space" => config.comment_pre_space = true,
             "align_text_groups" => config.align_text_groups = true,
+            "backslash_escapes" => config.backslash_escapes = true,
             "upper" => config.case = ConfigCase::Uppercase,
             "lower" => config.case = ConfigCase::Lowercase,
             "tabs" => config.tabs = ConfigTab::Tab,
@@ -166,6 +173,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -182,6 +190,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -198,6 +207,24 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(config.align_text_groups);
+        assert!(!config.backslash_escapes);
+        assert_eq!(config.case, ConfigCase::Unchanged);
+        assert_eq!(config.tabs, ConfigTab::Space(4));
+        assert_eq!(config.chars, 80);
+    }
+
+    #[test]
+    fn test_get_configuration_backslash_escapes() {
+        let args: Vec<String> = vec![String::from("--backslash-escapes")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert!(arguments.is_ok());
+        let arguments: Arguments = arguments.unwrap();
+
+        let config: Configuration = Configuration::from(&arguments);
+        assert!(!config.newlines);
+        assert!(!config.comment_pre_space);
+        assert!(!config.align_text_groups);
+        assert!(config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -214,6 +241,7 @@ mod tests {
         assert!(config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -230,6 +258,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Uppercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -246,6 +275,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Lowercase);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 80);
@@ -262,6 +292,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Tab);
         assert_eq!(config.chars, 80);
@@ -278,6 +309,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(2));
         assert_eq!(config.chars, 80);
@@ -294,6 +326,7 @@ mod tests {
         assert!(!config.newlines);
         assert!(!config.comment_pre_space);
         assert!(!config.align_text_groups);
+        assert!(!config.backslash_escapes);
         assert_eq!(config.case, ConfigCase::Unchanged);
         assert_eq!(config.tabs, ConfigTab::Space(4));
         assert_eq!(config.chars, 120);

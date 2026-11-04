@@ -154,6 +154,10 @@ function getProcessArguments(): string[] {
     args.push("--align-text-groups");
   }
 
+  if (config.get("sqlfmt.backslashEscapes")) {
+    args.push("--backslash-escapes");
+  }
+
   switch (config.get("sqlfmt.changeKeywordCase")) {
     case "uppercase":
       args.push("-u");
