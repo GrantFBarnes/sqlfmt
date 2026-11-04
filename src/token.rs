@@ -620,11 +620,13 @@ impl Token {
         }
     }
 
+    // display length in chars (not bytes) so non-ASCII text is not over-counted
     pub fn len(&self) -> usize {
-        if self.category == Some(TokenCategory::WhiteSpace) {
-            return self.value.replace(TAB, "    ").len();
-        }
-        self.value.len()
+        let is_whitespace: bool = self.category == Some(TokenCategory::WhiteSpace);
+        self.value
+            .chars()
+            .map(|c: char| if is_whitespace && c == TAB { 4 } else { 1 })
+            .sum()
     }
 
     fn is_empty(&self) -> bool {

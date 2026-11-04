@@ -2655,6 +2655,44 @@ SET C3 = 3"#
     }
 
     #[test]
+    fn test_get_formatted_sql_non_ascii_line_length() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(r#"SELECT * FROM TBL1 WHERE (C1 = 'ééééééééé' AND C2 = 1)"#);
+
+        config.newlines = true;
+        config.chars = 40;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"SELECT
+    *
+FROM TBL1
+WHERE (C1 = 'ééééééééé' AND C2 = 1)"#
+        );
+    }
+
+    #[test]
+    fn test_get_formatted_sql_align_text_groups_non_ascii() {
+        let mut config: Configuration = Configuration::new();
+        let sql: String = String::from(
+            r#"CREATE TABLE TBL1 (
+    PRÉNOM VARCHAR(10) NOT NULL,
+    NOM INT NULL,
+    ÂGÉ INT
+)"#,
+        );
+
+        config.align_text_groups = true;
+        assert_eq!(
+            get_formatted_sql(&config, sql.clone()),
+            r#"CREATE TABLE TBL1(
+    PRÉNOM VARCHAR(10) NOT NULL,
+    NOM    INT         NULL,
+    ÂGÉ    INT
+)"#
+        );
+    }
+
+    #[test]
     fn test_get_formatted_sql_align_text_groups_leading_comma() {
         let mut config: Configuration = Configuration::new();
         let sql: String = String::from(
