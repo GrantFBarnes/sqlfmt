@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import cp from "child_process";
+import * as path from "path";
 import { getBinaryPath } from "./binary";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -35,7 +36,7 @@ function getSqlfmtCommand(binaryPath: string | null): vscode.Disposable {
       return;
     }
 
-    getFormattedSql(binaryPath, editor.document.getText(range))
+    getFormattedSql(binaryPath, editor.document, editor.document.getText(range))
       .then((formattedSql: string) => {
         editor.edit((tee: vscode.TextEditorEdit) => tee.replace(range, formattedSql));
         vscode.window.showInformationMessage("SQL is formatted.");
@@ -53,7 +54,7 @@ function setupLanguageFormatting(binaryPath: string) {
       const range = new vscode.Range(firstLine.range.start, lastLine.range.end);
 
       try {
-        const formattedSql: string = await getFormattedSql(binaryPath, document.getText(range));
+        const formattedSql: string = await getFormattedSql(binaryPath, document, document.getText(range));
         return [vscode.TextEdit.replace(range, formattedSql)];
       }
       catch {
@@ -66,7 +67,7 @@ function setupLanguageFormatting(binaryPath: string) {
   vscode.languages.registerDocumentRangeFormattingEditProvider("sql", {
     async provideDocumentRangeFormattingEdits(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.TextEdit[]> {
       try {
-        const formattedSql: string = await getFormattedSql(binaryPath, document.getText(range));
+        const formattedSql: string = await getFormattedSql(binaryPath, document, document.getText(range));
         return [vscode.TextEdit.replace(range, formattedSql)];
       }
       catch {
@@ -96,11 +97,11 @@ function getRangeToFormat(): vscode.Range | null {
   }
 }
 
-function getFormattedSql(binaryPath: string, inputSql: string): Promise<string> {
+function getFormattedSql(binaryPath: string, document: vscode.TextDocument, inputSql: string): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       const processArguments: string[] = getProcessArguments();
-      const process = cp.spawn(binaryPath, processArguments);
+      const process = cp.spawn(binaryPath, processArguments, { cwd: getProcessCwd(document) });
 
       process.stdin.write(inputSql);
       process.stdin.end();
@@ -133,6 +134,22 @@ function getFormattedSql(binaryPath: string, inputSql: string): Promise<string> 
   });
 }
 
+// sqlfmt looks for a .sqlfmt config file from its working directory up, so
+// run it from the document's folder (or the workspace for unsaved documents)
+function getProcessCwd(document: vscode.TextDocument): string | undefined {
+  if (document.uri.scheme === "file") {
+    return path.dirname(document.uri.fsPath);
+  }
+
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
+    ?? vscode.workspace.workspaceFolders?.[0];
+  if (workspaceFolder?.uri.scheme === "file") {
+    return workspaceFolder.uri.fsPath;
+  }
+
+  return undefined;
+}
+
 function getProcessArguments(): string[] {
   const config = vscode.workspace.getConfiguration();
 
@@ -140,7 +157,8 @@ function getProcessArguments(): string[] {
     return [];
   }
 
-  let args: string[] = [];
+  // extension settings are used instead, so ignore any .sqlfmt config file
+  let args: string[] = ["--no-config"];
 
   if (config.get("sqlfmt.replaceNewlines")) {
     args.push("-n");

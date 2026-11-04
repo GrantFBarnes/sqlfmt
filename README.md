@@ -74,6 +74,7 @@ ORDER BY Column1;
   IO
     -i, --input  <FILE_PATH> Define path to input SQL file
     -o, --output <FILE_PATH> Define path to output SQL file
+    --no-config              Ignore any .sqlfmt config file
 
   Format Configuration
     -n, --newlines      Replace newlines
@@ -94,6 +95,7 @@ ORDER BY Column1;
 This program will look for the config file in the current working directory and up (until root).
 If found, the file content sets the default configuration values.
 Any configuration arguments provided will override these defaults.
+Use `--no-config` to skip the config file entirely.
 
 Format Configuration
 

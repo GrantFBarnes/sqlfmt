@@ -34,7 +34,8 @@ impl Configuration {
     pub fn from(args: &Arguments) -> Configuration {
         let mut config: Configuration = Configuration::new();
 
-        if let Ok(cwd) = env::current_dir()
+        if !args.no_config
+            && let Ok(cwd) = env::current_dir()
             && let Some(file_config) = find_config(cwd.as_path())
         {
             config = file_config;

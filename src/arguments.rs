@@ -6,6 +6,7 @@ pub struct Arguments {
 
     pub input: Option<String>,
     pub output: Option<String>,
+    pub no_config: bool,
 
     pub newlines: bool,
     pub comment_pre_space: bool,
@@ -28,6 +29,7 @@ impl Arguments {
 
             input: None,
             output: None,
+            no_config: false,
 
             newlines: false,
             comment_pre_space: false,
@@ -63,6 +65,9 @@ impl Arguments {
                         return Err("Invalid arguments provided.");
                     }
                     arguments.arg_type = Some(ArgType::Output);
+                }
+                "--no-config" => {
+                    arguments.no_config = true;
                 }
                 "-n" | "--newlines" => {
                     arguments.newlines = true;
@@ -158,6 +163,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -178,6 +184,7 @@ mod tests {
             String::from("in.sql"),
             String::from("-o"),
             String::from("out.sql"),
+            String::from("--no-config"),
             String::from("-n"),
             String::from("--comment-pre-space"),
             String::from("--align-text-groups"),
@@ -197,6 +204,7 @@ mod tests {
         assert!(arguments.version);
         assert_eq!(arguments.input, Some(String::from("in.sql")));
         assert_eq!(arguments.output, Some(String::from("out.sql")));
+        assert!(arguments.no_config);
         assert!(arguments.newlines);
         assert!(arguments.comment_pre_space);
         assert!(arguments.align_text_groups);
@@ -218,6 +226,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -239,6 +248,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -260,6 +270,7 @@ mod tests {
         assert!(arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -281,6 +292,7 @@ mod tests {
         assert!(arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -302,6 +314,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -323,6 +336,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, Some(String::from("file.sql")));
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -344,6 +358,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -365,6 +380,29 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, Some(String::from("file.sql")));
+        assert!(!arguments.no_config);
+        assert!(!arguments.newlines);
+        assert!(!arguments.comment_pre_space);
+        assert!(!arguments.align_text_groups);
+        assert!(!arguments.backslash_escapes);
+        assert!(!arguments.upper);
+        assert!(!arguments.lower);
+        assert!(!arguments.tabs);
+        assert_eq!(arguments.spaces, None);
+        assert_eq!(arguments.chars, None);
+    }
+
+    #[test]
+    fn test_get_arguments_no_config() {
+        let args: Vec<String> = vec![String::from("--no-config")];
+        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        assert!(arguments.is_ok());
+        let arguments: Arguments = arguments.unwrap();
+        assert!(!arguments.help);
+        assert!(!arguments.version);
+        assert_eq!(arguments.input, None);
+        assert_eq!(arguments.output, None);
+        assert!(arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -386,6 +424,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -407,6 +446,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -428,6 +468,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -449,6 +490,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(arguments.align_text_groups);
@@ -470,6 +512,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -491,6 +534,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -512,6 +556,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -533,6 +578,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -554,6 +600,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -575,6 +622,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -596,6 +644,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -617,6 +666,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -638,6 +688,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -659,6 +710,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);
@@ -680,6 +732,7 @@ mod tests {
         assert!(!arguments.version);
         assert_eq!(arguments.input, None);
         assert_eq!(arguments.output, None);
+        assert!(!arguments.no_config);
         assert!(!arguments.newlines);
         assert!(!arguments.comment_pre_space);
         assert!(!arguments.align_text_groups);

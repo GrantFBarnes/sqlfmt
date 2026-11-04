@@ -35,7 +35,7 @@
           "order": 0,
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Controls whether to use a configuration file (`.sqlfmt`) for settings.\n\n#### If Enabled\n\n- all other settings for this extension have no effect and will be **ignored**\n- program will run as if no override arguments are provided\n  - default settings are used\n  - a configuration file _(if found)_ can change defaults\n\n#### If Disabled\n\n- all other settings for this extension will override any defaults/config file\n- if a setting below is the default value, a config file _(if found)_ could override"
+          "markdownDescription": "Controls whether to use a configuration file (`.sqlfmt`) for settings.\n\n#### If Enabled\n\n- all other settings for this extension have no effect and will be **ignored**\n- program will run as if no override arguments are provided\n  - default settings are used\n  - a configuration file _(if found)_ can change defaults\n\n#### If Disabled\n\n- the settings below are used instead\n- any configuration file _(if found)_ is **ignored**"
         },
         "sqlfmt.replaceNewlines": {
           "order": 1,
