@@ -479,9 +479,15 @@ fn get_in_quote(
                 return *in_quote;
             }
 
+            // a doubled close char is an escaped literal, so only close once
+            // the close char is not followed by another and the count of
+            // close chars shows the quote is balanced
             match qc {
                 QuoteCategory::Backtick => {
-                    if prev1_ch == Some(&BACKTICK) {
+                    if prev1_ch == Some(&BACKTICK)
+                        && curr_ch != BACKTICK
+                        && count_unescaped(&curr_token.value, BACKTICK, false).is_multiple_of(2)
+                    {
                         return None;
                     }
                     *in_quote
@@ -501,13 +507,20 @@ fn get_in_quote(
                     *in_quote
                 }
                 QuoteCategory::QuoteDouble => {
-                    if prev1_ch == Some(&QUOTE_DOUBLE) {
+                    if prev1_ch == Some(&QUOTE_DOUBLE)
+                        && curr_ch != QUOTE_DOUBLE
+                        && count_unescaped(&curr_token.value, QUOTE_DOUBLE, false).is_multiple_of(2)
+                    {
                         return None;
                     }
                     *in_quote
                 }
                 QuoteCategory::Bracket => {
-                    if prev1_ch == Some(&BRACKET_CLOSE) {
+                    if prev1_ch == Some(&BRACKET_CLOSE)
+                        && curr_ch != BRACKET_CLOSE
+                        && !count_unescaped(&curr_token.value, BRACKET_CLOSE, false)
+                            .is_multiple_of(2)
+                    {
                         return None;
                     }
                     *in_quote
@@ -2762,6 +2775,136 @@ mod tests {
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("'Column''s Name'", Some(TokenCategory::Quote)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_double_escape() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT "Column""s Name" FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#""Column""s Name""#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_double_escape_at_end() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT "Name""" FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#""Name""""#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_backtick_escape() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT `Column``s Name` FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"`Column``s Name`"#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_backtick_escape_at_end() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT `Name``` FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"`Name```"#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_bracket_escape() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT [Column]]s Name] FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"[Column]]s Name]"#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_bracket_escape_at_end() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from(r#"SELECT [Name]]] FROM t"#)
+            ),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#"[Name]]]"#, Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("FROM", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("t", None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_adjacent_close() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from(r#"SELECT "a",[b],`c`"#)),
+            vec![
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r#""a""#, Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("[b]", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("`c`", Some(TokenCategory::Quote)),
             ]
         );
     }
