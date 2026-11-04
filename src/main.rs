@@ -57,8 +57,12 @@ const FONT_RED: &str = "\x1b[31m";
 const FONT_RESET: &str = "\x1b[0m";
 
 fn print_error(msg: &str) {
-    println!("{FONT_RED}Error:{FONT_RESET} {msg}");
-    println!("Run with -h/--help to print help.");
+    if io::stderr().is_terminal() {
+        eprintln!("{FONT_RED}Error:{FONT_RESET} {msg}");
+    } else {
+        eprintln!("Error: {msg}");
+    }
+    eprintln!("Run with -h/--help to print help.");
 }
 
 fn print_help() {
