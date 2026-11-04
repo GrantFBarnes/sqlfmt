@@ -98,14 +98,21 @@ pub fn encode_output(sql: &str) -> Vec<u8> {
 pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = vec![];
 
-    let mut delimiter: String = String::from(";");
+    let mut delimiter: Vec<char> = vec![';'];
 
     let mut curr_token: Token = Token::new();
     let mut in_special: Option<TokenSpecial> = None;
 
     let sql_chars: Vec<char> = input_sql.chars().collect();
 
+    // index of the first char after a delimiter that has already been consumed
+    let mut skip_until: usize = 0;
+
     for i in 0..sql_chars.len() {
+        if i < skip_until {
+            continue;
+        }
+
         let prev2_ch: Option<&char> = if i >= 2 { sql_chars.get(i - 2) } else { None };
         let prev1_ch: Option<&char> = if i >= 1 { sql_chars.get(i - 1) } else { None };
         let curr_ch: char = sql_chars[i];
@@ -174,7 +181,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     continue;
                 } else {
                     in_special = None;
-                    delimiter = curr_token.value.clone();
+                    delimiter = curr_token.value.chars().collect();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -225,6 +232,23 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     curr_token = Token::new();
                 }
             }
+        }
+
+        // checked before the char-specific branches below so a delimiter made
+        // of operator or punctuation chars (e.g. "//") is still recognized
+        if !delimiter.is_empty() && sql_chars[i..].starts_with(&delimiter) {
+            if !curr_token.is_empty() {
+                curr_token.setup(config);
+                tokens.push(curr_token);
+            }
+            curr_token = Token::new();
+            curr_token.value = delimiter.iter().collect();
+            curr_token.category = Some(TokenCategory::Delimiter);
+            curr_token.setup(config);
+            tokens.push(curr_token);
+            curr_token = Token::new();
+            skip_until = i + delimiter.len();
+            continue;
         }
 
         match curr_ch {
@@ -312,20 +336,6 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
         }
 
         curr_token.value.push(curr_ch);
-
-        if curr_token.value.ends_with(&delimiter) {
-            curr_token.value = curr_token.value.replace(&delimiter, "");
-            if !curr_token.is_empty() {
-                curr_token.setup(config);
-                tokens.push(curr_token);
-            }
-            curr_token = Token::new();
-            curr_token.value = delimiter.clone();
-            curr_token.category = Some(TokenCategory::Delimiter);
-            curr_token.setup(config);
-            tokens.push(curr_token);
-            curr_token = Token::new();
-        }
     }
 
     if !curr_token.is_empty() {
@@ -3051,6 +3061,84 @@ Name'"#,
                 Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("\\", Some(TokenCategory::Delimiter)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_change_operator_chars() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("DELIMITER // SELECT 1// SELECT 2 //")
+            ),
+            vec![
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("1", None),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("2", None),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_change_in_quote_and_comment() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("DELIMITER // SELECT '//' /* // */ //")
+            ),
+            vec![
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("'//'", Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("/* // */", Some(TokenCategory::Comment)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_delimiter_change_back() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("DELIMITER // SELECT 1;// DELIMITER ; SELECT 2;")
+            ),
+            vec![
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("1;", None),
+                Token::new_test("//", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("DELIMITER", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("SELECT", Some(TokenCategory::Keyword)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("2", None),
+                Token::new_test(";", Some(TokenCategory::Delimiter)),
             ]
         );
     }
