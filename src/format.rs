@@ -1022,20 +1022,23 @@ impl FormatState {
                         token_value = token_value.to_lowercase();
                     }
                 }
-                Some(TokenCategory::NewLine) => {
-                    result = result
-                        .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
-                        .to_string();
-                }
+                Some(TokenCategory::NewLine) => trim_end_line_whitespace(&mut result),
                 _ => (),
             }
 
             result.push_str(token_value.as_str());
         }
+        trim_end_line_whitespace(&mut result);
         result
-            .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
-            .to_string()
     }
+}
+
+// trim in place, as rebuilding the string for every line is quadratic
+fn trim_end_line_whitespace(value: &mut String) {
+    let trimmed_len: usize = value
+        .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
+        .len();
+    value.truncate(trimmed_len);
 }
 
 #[derive(PartialEq, Eq, Debug)]
