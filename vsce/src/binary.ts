@@ -124,8 +124,6 @@ function getPlatformAssetName(): string {
         case "win32-x64":
         case "win32-arm64":
             return "sqlfmt-x86_64-pc-windows-msvc.tar.gz";
-        case "darwin-x64":
-            return "sqlfmt-x86_64-apple-darwin.tar.gz";
         case "darwin-arm64":
             return "sqlfmt-aarch64-apple-darwin.tar.gz";
         case "linux-x64":
