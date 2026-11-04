@@ -16,7 +16,7 @@ export async function getBinaryPath(rootPath: string): Promise<string> {
         await getBinary(rootPath, latestVersion);
     }
 
-    const installedVersion: string = await getInstalledVersion(binaryPath);
+    const installedVersion: string = await getInstalledVersion(binaryPath).catch(() => "");
     if (latestVersion != "" && installedVersion != latestVersion) {
         await getBinary(rootPath, latestVersion);
     }
@@ -120,14 +120,19 @@ function getPlatformBinaryName(): string {
 }
 
 function getPlatformAssetName(): string {
-    switch (process.platform) {
-        case "win32":
+    switch (`${process.platform}-${process.arch}`) {
+        case "win32-x64":
+        case "win32-arm64":
             return "sqlfmt-x86_64-pc-windows-msvc.tar.gz";
-        case "darwin":
+        case "darwin-x64":
+            return "sqlfmt-x86_64-apple-darwin.tar.gz";
+        case "darwin-arm64":
             return "sqlfmt-aarch64-apple-darwin.tar.gz";
-        case "linux":
+        case "linux-x64":
             return "sqlfmt-x86_64-unknown-linux-gnu.tar.gz";
+        case "linux-arm64":
+            return "sqlfmt-aarch64-unknown-linux-gnu.tar.gz";
         default:
-            throw new Error("Unsupported platform");
+            throw new Error(`Unsupported platform: ${process.platform}-${process.arch}`);
     }
 }
