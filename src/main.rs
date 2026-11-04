@@ -37,14 +37,15 @@ fn main() {
 
     let mut sql_out: Vec<u8> = token::encode_output(&format::get_formatted_sql(&config, sql_in));
 
+    // only add a newline if not already kept from input, so re-running on
+    // its own output does not add blank lines
+    if !sql_out.ends_with(b"\n") {
+        sql_out.push(b'\n');
+    }
+
     let write_result: Result<(), io::Error> = if let Some(ao) = args.output {
         fs::write(ao, &sql_out)
     } else {
-        // only add a newline if not already kept from input, so re-running on
-        // its own output does not add blank lines
-        if !sql_out.ends_with(b"\n") {
-            sql_out.push(b'\n');
-        }
         io::stdout().lock().write_all(&sql_out)
     };
     if let Err(result) = write_result {
