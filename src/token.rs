@@ -513,7 +513,8 @@ fn get_in_quote(
                         && count_unescaped(
                             &curr_token.value,
                             QUOTE_SINGLE,
-                            config.backslash_escapes,
+                            // E'' strings always treat \' as an escaped quote
+                            config.backslash_escapes || curr_token.value.starts_with(['E', 'e']),
                         )
                         .is_multiple_of(2)
                     {
@@ -547,11 +548,13 @@ fn get_in_quote(
             QUOTE_SINGLE => Some(QuoteCategory::QuoteSingle),
             QUOTE_DOUBLE => Some(QuoteCategory::QuoteDouble),
             BRACKET_OPEN => Some(QuoteCategory::Bracket),
-            'N' => {
-                if next1_ch == Some(&QUOTE_SINGLE) {
-                    return Some(QuoteCategory::QuoteSingle);
-                }
-                None
+            // string prefixes: N'' national, X'' hex, B'' bit, E'' escape
+            // only a prefix when it starts a new token, otherwise it is the
+            // end of a word directly followed by a quote (e.g. "ELSE'a'")
+            'N' | 'n' | 'X' | 'x' | 'B' | 'b' | 'E' | 'e'
+                if next1_ch == Some(&QUOTE_SINGLE) && curr_token.is_empty() =>
+            {
+                Some(QuoteCategory::QuoteSingle)
             }
             _ => None,
         },
@@ -2799,6 +2802,66 @@ mod tests {
                 Token::new_test("SELECT", Some(TokenCategory::Keyword)),
                 Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
                 Token::new_test("N'Column Name'", Some(TokenCategory::Quote)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_prefixes() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("n'a',X'0A',x'ff',B'1',b'0',e'c'")
+            ),
+            vec![
+                Token::new_test("n'a'", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("X'0A'", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("x'ff'", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("B'1'", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("b'0'", Some(TokenCategory::Quote)),
+                Token::new_test(",", Some(TokenCategory::Comma)),
+                Token::new_test("e'c'", Some(TokenCategory::Quote)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_prefix_letter_ends_word() {
+        assert_eq!(
+            get_sql_tokens(
+                &Configuration::new(),
+                String::from("WHEN'a' THEN'b' ELSE'c' LIKE'd'")
+            ),
+            vec![
+                Token::new_test("WHEN", Some(TokenCategory::Keyword)),
+                Token::new_test("'a'", Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("THEN", Some(TokenCategory::Keyword)),
+                Token::new_test("'b'", Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("ELSE", Some(TokenCategory::Keyword)),
+                Token::new_test("'c'", Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test("LIKE", Some(TokenCategory::Keyword)),
+                Token::new_test("'d'", Some(TokenCategory::Quote)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_sql_tokens_quote_single_e_prefix_backslash_escape() {
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from(r"E'a\'b' 'c\'d'")),
+            vec![
+                Token::new_test(r"E'a\'b'", Some(TokenCategory::Quote)),
+                Token::new_test(" ", Some(TokenCategory::WhiteSpace)),
+                Token::new_test(r"'c\'", Some(TokenCategory::Quote)),
+                Token::new_test("d", None),
+                Token::new_test("'", Some(TokenCategory::Quote)),
             ]
         );
     }
