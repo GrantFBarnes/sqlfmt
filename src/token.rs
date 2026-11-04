@@ -887,7 +887,7 @@ impl Token {
                 behavior.push(TokenBehavior::DecreaseIndent);
             }
             "FULL" => {
-                behavior.push(TokenBehavior::NewLineBefore);
+                behavior.push(TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod);
             }
             "GO" => {
                 behavior.push(TokenBehavior::NewLineBefore);
@@ -1134,7 +1134,6 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "CCSID" => Some(TokenCategory::Keyword),
         "CD" => Some(TokenCategory::Keyword),
         "CHANGE" => Some(TokenCategory::Keyword),
-        "CHARACTER" => Some(TokenCategory::Keyword),
         "CHECK" => Some(TokenCategory::Keyword),
         "CHECKPOINT" => Some(TokenCategory::Keyword),
         "CLASS" => Some(TokenCategory::Keyword),
@@ -1546,6 +1545,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "READ_WRITE" => Some(TokenCategory::Keyword),
         "RECOMPILE" => Some(TokenCategory::Keyword),
         "RECONFIGURE" => Some(TokenCategory::Keyword),
+        "RECOVERY" => Some(TokenCategory::Keyword),
         "RECURSIVE" => Some(TokenCategory::Keyword),
         "REF" => Some(TokenCategory::Keyword),
         "REFERENCING" => Some(TokenCategory::Keyword),
@@ -1763,6 +1763,7 @@ fn get_category_from_value(value: &str) -> Option<TokenCategory> {
         "BOOL" => Some(TokenCategory::DataType),
         "BOOLEAN" => Some(TokenCategory::DataType),
         "CHAR" => Some(TokenCategory::DataType),
+        "CHARACTER" => Some(TokenCategory::DataType),
         "COLUMN" => Some(TokenCategory::DataType),
         "DATABASE" => Some(TokenCategory::DataType),
         "DATE" => Some(TokenCategory::DataType),

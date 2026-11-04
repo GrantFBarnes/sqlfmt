@@ -861,11 +861,10 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::IncreaseIndentIfNotAfterKeyword)
-            && self
-                .tokens
-                .iter()
-                .nth_back(2)
-                .is_none_or(|t| t.category != Some(TokenCategory::Keyword))
+            && self.tokens.iter().nth_back(2).is_none_or(|t| {
+                t.category != Some(TokenCategory::Keyword)
+                    && t.category != Some(TokenCategory::DataType)
+            })
         {
             self.indent_stack.push(token.clone());
             return;
