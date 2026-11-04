@@ -613,7 +613,7 @@ impl FormatState {
                         Some(TokenCategory::ParenOpen) => paren_count -= 1,
                         Some(TokenCategory::ParenClose) => paren_count += 1,
                         Some(TokenCategory::WhiteSpace) => {
-                            if let Some(pt) = self.tokens.get(i - 1)
+                            if let Some(pt) = i.checked_sub(1).and_then(|j| self.tokens.get(j))
                                 && (pt.category == Some(TokenCategory::NewLine)
                                     || pt.category == Some(TokenCategory::WhiteSpace))
                             {
