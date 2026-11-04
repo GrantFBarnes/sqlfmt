@@ -35,15 +35,17 @@ fn main() {
     }
     let sql_in: String = token::decode_input(&sql_in.unwrap());
 
-    let sql_out: Vec<u8> = token::encode_output(&format::get_formatted_sql(&config, sql_in));
+    let mut sql_out: Vec<u8> = token::encode_output(&format::get_formatted_sql(&config, sql_in));
 
     let write_result: Result<(), io::Error> = if let Some(ao) = args.output {
         fs::write(ao, &sql_out)
     } else {
-        let mut stdout: io::StdoutLock<'_> = io::stdout().lock();
-        stdout
-            .write_all(&sql_out)
-            .and_then(|_| stdout.write_all(b"\n"))
+        // only add a newline if not already kept from input, so re-running on
+        // its own output does not add blank lines
+        if !sql_out.ends_with(b"\n") {
+            sql_out.push(b'\n');
+        }
+        io::stdout().lock().write_all(&sql_out)
     };
     if let Err(result) = write_result {
         print_error(result.to_string().as_str());

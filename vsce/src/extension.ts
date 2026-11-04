@@ -114,8 +114,9 @@ function getFormattedSql(binaryPath: string, document: vscode.TextDocument, inpu
 
       process.on("close", (code: any) => {
         if (code === 0) {
-          // remove single extra newline if found
-          if (outputSql.endsWith("\n")) {
+          // sqlfmt ends output with a newline, only adding one when the
+          // formatted sql lacks it, so remove it unless the input had one
+          if (outputSql.endsWith("\n") && !inputSql.endsWith("\n")) {
             outputSql = outputSql.replace(/\n$/, "");
           }
           resolve(outputSql);
