@@ -102,6 +102,8 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
     let mut curr_token: Token = Token::new();
     let mut in_special: Option<TokenSpecial> = None;
+    // resumable count_unescaped state for the current quote token
+    let mut quote_scan: (usize, usize, usize) = (0, 0, 0);
 
     let sql_chars: Vec<char> = input_sql.chars().collect();
 
@@ -148,7 +150,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     prev1_ch,
                     curr_ch,
                     next1_ch,
-                    curr_token.len(),
+                    curr_token.value.chars().take(4).count(),
                 ) {
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
@@ -157,9 +159,16 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     }
                     in_special = Some(TokenSpecial::Comment(cc));
                     curr_token.category = Some(TokenCategory::Comment);
-                } else if let Some(qc) =
-                    get_in_quote(&None, prev1_ch, curr_ch, next1_ch, &curr_token, config)
-                {
+                } else if let Some(qc) = get_in_quote(
+                    &None,
+                    prev1_ch,
+                    curr_ch,
+                    next1_ch,
+                    &curr_token,
+                    config,
+                    &mut quote_scan,
+                ) {
+                    quote_scan = (0, 0, 0);
                     if !curr_token.is_empty() {
                         curr_token.setup(config);
                         tokens.push(curr_token);
@@ -205,7 +214,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     prev1_ch,
                     curr_ch,
                     next1_ch,
-                    curr_token.len(),
+                    curr_token.value.chars().take(4).count(),
                 )
                 .is_some()
                 {
@@ -220,8 +229,16 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                 }
             }
             Some(TokenSpecial::Quote(qc)) => {
-                if get_in_quote(&Some(qc), prev1_ch, curr_ch, next1_ch, &curr_token, config)
-                    .is_some()
+                if get_in_quote(
+                    &Some(qc),
+                    prev1_ch,
+                    curr_ch,
+                    next1_ch,
+                    &curr_token,
+                    config,
+                    &mut quote_scan,
+                )
+                .is_some()
                 {
                     curr_token.value.push(curr_ch);
                     continue;
@@ -464,20 +481,27 @@ fn get_in_comment(
 
 // counts occurrences of target, skipping backslash-escaped ones (an odd run
 // of preceding backslashes escapes the char) when backslash_escapes is set
-fn count_unescaped(value: &str, target: char, backslash_escapes: bool) -> usize {
-    let mut count: usize = 0;
-    let mut preceding_backslashes: usize = 0;
-    for c in value.chars() {
+// resumes from scan (bytes scanned, count, preceding backslashes) so a quote
+// token is not rescanned from the start on every check, which is slow
+fn count_unescaped(
+    value: &str,
+    target: char,
+    backslash_escapes: bool,
+    scan: &mut (usize, usize, usize),
+) -> usize {
+    let (scanned, count, preceding_backslashes) = scan;
+    for c in value[*scanned..].chars() {
         if c == target && (!backslash_escapes || preceding_backslashes.is_multiple_of(2)) {
-            count += 1;
+            *count += 1;
         }
         if c == BACKSLASH {
-            preceding_backslashes += 1;
+            *preceding_backslashes += 1;
         } else {
-            preceding_backslashes = 0;
+            *preceding_backslashes = 0;
         }
     }
-    count
+    *scanned = value.len();
+    *count
 }
 
 fn get_in_quote(
@@ -487,10 +511,11 @@ fn get_in_quote(
     next1_ch: Option<&char>,
     curr_token: &Token,
     config: &Configuration,
+    quote_scan: &mut (usize, usize, usize),
 ) -> Option<QuoteCategory> {
     match in_quote {
         Some(qc) => {
-            if curr_token.len() <= 1 {
+            if curr_token.value.chars().nth(1).is_none() {
                 return *in_quote;
             }
 
@@ -501,7 +526,8 @@ fn get_in_quote(
                 QuoteCategory::Backtick => {
                     if prev1_ch == Some(&BACKTICK)
                         && curr_ch != BACKTICK
-                        && count_unescaped(&curr_token.value, BACKTICK, false).is_multiple_of(2)
+                        && count_unescaped(&curr_token.value, BACKTICK, false, quote_scan)
+                            .is_multiple_of(2)
                     {
                         return None;
                     }
@@ -515,6 +541,7 @@ fn get_in_quote(
                             QUOTE_SINGLE,
                             // E'' strings always treat \' as an escaped quote
                             config.backslash_escapes || curr_token.value.starts_with(['E', 'e']),
+                            quote_scan,
                         )
                         .is_multiple_of(2)
                     {
@@ -525,7 +552,8 @@ fn get_in_quote(
                 QuoteCategory::QuoteDouble => {
                     if prev1_ch == Some(&QUOTE_DOUBLE)
                         && curr_ch != QUOTE_DOUBLE
-                        && count_unescaped(&curr_token.value, QUOTE_DOUBLE, false).is_multiple_of(2)
+                        && count_unescaped(&curr_token.value, QUOTE_DOUBLE, false, quote_scan)
+                            .is_multiple_of(2)
                     {
                         return None;
                     }
@@ -534,7 +562,7 @@ fn get_in_quote(
                 QuoteCategory::Bracket => {
                     if prev1_ch == Some(&BRACKET_CLOSE)
                         && curr_ch != BRACKET_CLOSE
-                        && !count_unescaped(&curr_token.value, BRACKET_CLOSE, false)
+                        && !count_unescaped(&curr_token.value, BRACKET_CLOSE, false, quote_scan)
                             .is_multiple_of(2)
                     {
                         return None;
