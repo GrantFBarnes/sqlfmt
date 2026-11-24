@@ -794,7 +794,7 @@ impl Token {
             "CASE" => {
                 behavior.push(TokenBehavior::NewLineBefore);
                 behavior.push(TokenBehavior::NewLineAfter);
-                behavior.push(TokenBehavior::IncreaseIndentIfStandAlone);
+                behavior.push(TokenBehavior::IncreaseIndent);
             }
             "CATCH" => {
                 behavior.push(TokenBehavior::NoNewLineBefore);

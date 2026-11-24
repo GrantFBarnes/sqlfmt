@@ -851,10 +851,11 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
-            && self.indent_stack.last().is_none_or(|t| {
-                !t.behavior
-                    .contains(&TokenBehavior::IncreaseIndentIfStandAlone)
-            })
+            // WHEN/THEN/ELSE share the indent of their CASE or WHEN
+            && self
+                .indent_stack
+                .last()
+                .is_none_or(|t| t.upper != "CASE" && t.upper != "WHEN")
         {
             self.indent_stack.push(token.clone());
         }

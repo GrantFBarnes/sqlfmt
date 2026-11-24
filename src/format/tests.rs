@@ -2659,6 +2659,36 @@ fn test_get_formatted_sql_case() {
 }
 
 #[test]
+fn test_get_formatted_sql_case_nested() {
+    let mut config: Configuration = Configuration::new();
+    let sql: String = String::from(
+        r#"
+            SELECT
+            CASE WHEN C1 <= 1 THEN 'small'
+            WHEN C1 <= 3 THEN CASE WHEN C2 <= 1 THEN 'medium small' ELSE 'medium large' END
+            ELSE 'large' END AS C3
+            FROM TBL1
+            "#,
+    );
+
+    config.newlines = true;
+    assert_eq!(
+        get_formatted_sql(&config, sql.clone()),
+        r#"            SELECT
+                CASE
+                    WHEN C1 <= 1 THEN 'small'
+                    WHEN C1 <= 3 THEN
+                    CASE
+                        WHEN C2 <= 1 THEN 'medium small'
+                        ELSE 'medium large'
+                    END
+                    ELSE 'large'
+                END AS C3
+            FROM TBL1"#
+    );
+}
+
+#[test]
 fn test_get_formatted_sql_insert_simple() {
     let mut config: Configuration = Configuration::new();
     let sql: String = String::from(r#"INSERT INTO TBL1(ID)VALUES(1)"#);
@@ -3129,6 +3159,33 @@ fn test_get_formatted_sql_if_else() {
                 SET V1 = 0
             ELSE
                 SET V2 = NULL"#
+    );
+}
+
+#[test]
+fn test_get_formatted_sql_if_nested() {
+    let mut config: Configuration = Configuration::new();
+    let sql: String = String::from(
+        r#"
+            IF V1 IS NULL THEN IF V2 IS NULL THEN SET V1 = 0; END IF;
+            ELSE IF V2 IS NULL THEN SET V1 = 1; ELSE SET V1 = 2; END IF; END IF;
+            "#,
+    );
+
+    config.newlines = true;
+    assert_eq!(
+        get_formatted_sql(&config, sql.clone()),
+        r#"            IF V1 IS NULL THEN
+                IF V2 IS NULL THEN
+                    SET V1 = 0;
+                END IF;
+            ELSE
+                IF V2 IS NULL THEN
+                    SET V1 = 1;
+                ELSE
+                    SET V1 = 2;
+                END IF;
+            END IF;"#
     );
 }
 
