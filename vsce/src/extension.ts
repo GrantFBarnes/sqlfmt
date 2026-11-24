@@ -108,8 +108,11 @@ function getFormattedSql(binaryPath: string, document: vscode.TextDocument, inpu
 
       let outputSql: string = "";
 
-      process.stdout.on("data", (data: any) => {
-        outputSql += data.toString();
+      // decode as a stream so a multi-byte character split across two
+      // chunks is not turned into replacement characters
+      process.stdout.setEncoding("utf8");
+      process.stdout.on("data", (data: string) => {
+        outputSql += data;
       });
 
       process.on("close", (code: any) => {
