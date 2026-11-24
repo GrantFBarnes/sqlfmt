@@ -1287,6 +1287,61 @@ fn test_get_sql_tokens_bitwise_or() {
 }
 
 #[test]
+fn test_get_sql_tokens_concatenation() {
+    assert_eq!(
+        get_sql_tokens(&Configuration::new(), String::from("V1||V2 || V3")),
+        vec![
+            Token::new_test("V1", TokenCategory::Identifier),
+            Token::new_test("||", TokenCategory::Operator),
+            Token::new_test("V2", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("||", TokenCategory::Operator),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("V3", TokenCategory::Identifier),
+        ]
+    );
+}
+
+#[test]
+fn test_get_sql_tokens_json_operators() {
+    assert_eq!(
+        get_sql_tokens(
+            &Configuration::new(),
+            String::from("C1->'a'->>'b' C1 @> C2 C1@>C2 C1 #> C2 C1 #>> C2")
+        ),
+        vec![
+            Token::new_test("C1", TokenCategory::Identifier),
+            Token::new_test("->", TokenCategory::Compare),
+            Token::new_test("'a'", TokenCategory::Quote),
+            Token::new_test("->>", TokenCategory::Compare),
+            Token::new_test("'b'", TokenCategory::Quote),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C1", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("@>", TokenCategory::Compare),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C2", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C1", TokenCategory::Identifier),
+            Token::new_test("@>", TokenCategory::Compare),
+            Token::new_test("C2", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C1", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("#>", TokenCategory::Compare),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C2", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C1", TokenCategory::Identifier),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("#>>", TokenCategory::Compare),
+            Token::new_test(" ", TokenCategory::WhiteSpace),
+            Token::new_test("C2", TokenCategory::Identifier),
+        ]
+    );
+}
+
+#[test]
 fn test_get_sql_tokens_bitwise_exclusive_or() {
     assert_eq!(
         get_sql_tokens(&Configuration::new(), String::from("V1^V2")),

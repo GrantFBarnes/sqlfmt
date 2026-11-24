@@ -2,6 +2,7 @@ use crate::configuration::Configuration;
 
 const AMPERSAND: char = '&';
 const ASTERISK: char = '*';
+const AT_SIGN: char = '@';
 const BACKSLASH: char = '\\';
 const BACKTICK: char = '`';
 const BRACKET_CLOSE: char = ']';
@@ -15,6 +16,7 @@ const EQUAL: char = '=';
 const EXCLAMATION: char = '!';
 pub const FULL_STOP: char = '.';
 const GREATER_THAN: char = '>';
+const HASH: char = '#';
 const HYPHEN: char = '-';
 const LESS_THAN: char = '<';
 pub const NEW_LINE: char = '\n';
@@ -260,6 +262,24 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
         match curr_ch {
             CARRIAGE_RETURN => continue,
+            // string concatenation
+            VERTICAL_BAR if curr_token.value == "|" => {
+                curr_token.value.push(curr_ch);
+                curr_token.category = TokenCategory::Operator;
+                flush_token!();
+                continue;
+            }
+            VERTICAL_BAR if next1_ch == Some(&VERTICAL_BAR) => {
+                flush_token!();
+                curr_token.value.push(curr_ch);
+                continue;
+            }
+            // start of a JSON/array operator (@>)
+            AT_SIGN if next1_ch == Some(&GREATER_THAN) => {
+                flush_token!();
+                curr_token.value.push(curr_ch);
+                continue;
+            }
             // always single character tokens
             NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
@@ -284,7 +304,10 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
                 curr_token.setup(config);
 
-                if next1_ch != Some(&EQUAL) {
+                // keep JSON operators (->, ->>) together
+                if next1_ch != Some(&EQUAL)
+                    && !(curr_ch == HYPHEN && next1_ch == Some(&GREATER_THAN))
+                {
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -304,13 +327,17 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     && prev1_ch != Some(&LESS_THAN)
                     && prev1_ch != Some(&GREATER_THAN)
                     && prev1_ch != Some(&EXCLAMATION)
+                    // JSON/array operators (@>, #>, #>>)
+                    && !(curr_ch == GREATER_THAN
+                        && (curr_token.value == AT_SIGN.to_string()
+                            || curr_token.value == HASH.to_string()))
                 {
                     flush_token!();
                 }
                 curr_token.value.push(curr_ch);
                 curr_token.category = match prev1_ch {
                     Some(&PLUS) => TokenCategory::Operator,
-                    Some(&HYPHEN) => TokenCategory::Operator,
+                    Some(&HYPHEN) if curr_ch != GREATER_THAN => TokenCategory::Operator,
                     Some(&ASTERISK) => TokenCategory::Operator,
                     Some(&SLASH_FORWARD) => TokenCategory::Operator,
                     Some(&PERCENT) => TokenCategory::Operator,
