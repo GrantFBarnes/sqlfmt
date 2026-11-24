@@ -1503,6 +1503,9 @@ FROM TBL1 AS [DO]"#
 
         config.newlines = true;
         assert_eq!(get_formatted_sql(&config, sql.clone()), r#"[NVARCHAR](36)"#);
+
+        let sql: String = String::from(r#"[nvarchar](36)"#);
+        assert_eq!(get_formatted_sql(&config, sql.clone()), r#"[nvarchar](36)"#);
     }
 
     #[test]

@@ -677,7 +677,7 @@ impl Token {
 
     fn get_category(&self) -> Option<TokenCategory> {
         if self.category == Some(TokenCategory::Quote) {
-            let mut quote_chars = self.value.chars();
+            let mut quote_chars = self.upper.chars();
             if let Some(open_quote) = quote_chars.next()
                 && open_quote == BRACKET_OPEN
                 && let Some(close_quote) = quote_chars.next_back()
@@ -2869,6 +2869,10 @@ mod tests {
         assert_eq!(
             get_sql_tokens(&Configuration::new(), String::from("[NVARCHAR]")),
             vec![Token::new_test("[NVARCHAR]", Some(TokenCategory::DataType))],
+        );
+        assert_eq!(
+            get_sql_tokens(&Configuration::new(), String::from("[nvarchar]")),
+            vec![Token::new_test("[nvarchar]", Some(TokenCategory::DataType))],
         );
     }
 
