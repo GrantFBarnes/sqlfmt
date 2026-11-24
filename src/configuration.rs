@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{self, DirEntry, ReadDir},
+    fs::{self, DirEntry},
     path::{Path, PathBuf},
 };
 
@@ -30,8 +30,10 @@ impl Configuration {
             chars: 80,
         }
     }
+}
 
-    pub fn from(args: &Arguments) -> Configuration {
+impl From<&Arguments> for Configuration {
+    fn from(args: &Arguments) -> Configuration {
         let mut config: Configuration = Configuration::new();
 
         if !args.no_config
@@ -84,12 +86,11 @@ fn find_config(path: &Path) -> Option<Configuration> {
         return None;
     }
 
-    let entries: Result<ReadDir, std::io::Error> = path.read_dir();
-    if entries.is_err() {
+    let Ok(entries) = path.read_dir() else {
         return None;
-    }
+    };
 
-    for entry in entries.unwrap() {
+    for entry in entries {
         if entry.is_err() {
             continue;
         }
@@ -107,11 +108,9 @@ fn find_config(path: &Path) -> Option<Configuration> {
 }
 
 fn get_file_config(file: PathBuf) -> Option<Configuration> {
-    let content: Result<String, std::io::Error> = fs::read_to_string(file);
-    if content.is_err() {
+    let Ok(content) = fs::read_to_string(file) else {
         return None;
-    }
-    let content: String = content.unwrap();
+    };
 
     let mut config: Configuration = Configuration::new();
 
@@ -166,7 +165,7 @@ mod tests {
     #[test]
     fn test_get_configuration_empty() {
         let args: Vec<String> = vec![];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -183,7 +182,7 @@ mod tests {
     #[test]
     fn test_get_configuration_comment_pre_space() {
         let args: Vec<String> = vec![String::from("--comment-pre-space")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -200,7 +199,7 @@ mod tests {
     #[test]
     fn test_get_configuration_align_text_groups() {
         let args: Vec<String> = vec![String::from("--align-text-groups")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -217,7 +216,7 @@ mod tests {
     #[test]
     fn test_get_configuration_backslash_escapes() {
         let args: Vec<String> = vec![String::from("--backslash-escapes")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -234,7 +233,7 @@ mod tests {
     #[test]
     fn test_get_configuration_newlines() {
         let args: Vec<String> = vec![String::from("-n")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -251,7 +250,7 @@ mod tests {
     #[test]
     fn test_get_configuration_upper() {
         let args: Vec<String> = vec![String::from("-u")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -268,7 +267,7 @@ mod tests {
     #[test]
     fn test_get_configuration_lower() {
         let args: Vec<String> = vec![String::from("-l")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -285,7 +284,7 @@ mod tests {
     #[test]
     fn test_get_configuration_tabs() {
         let args: Vec<String> = vec![String::from("-t")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -302,7 +301,7 @@ mod tests {
     #[test]
     fn test_get_configuration_spaces() {
         let args: Vec<String> = vec![String::from("-s"), String::from("2")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
@@ -319,7 +318,7 @@ mod tests {
     #[test]
     fn test_get_configuration_chars() {
         let args: Vec<String> = vec![String::from("-c"), String::from("120")];
-        let arguments: Result<Arguments, &str> = Arguments::from(args.into_iter());
+        let arguments: Result<Arguments, &str> = Arguments::parse(args.into_iter());
         assert!(arguments.is_ok());
         let arguments: Arguments = arguments.unwrap();
 
