@@ -444,6 +444,23 @@ impl FormatState {
             return;
         }
 
+        // keep 'BETWEEN x AND y' together
+        if token.upper == "AND" {
+            let mut paren_depth: usize = 0;
+            for prev_token in self.tokens.iter().rev() {
+                match prev_token.category {
+                    TokenCategory::ParenClose => paren_depth += 1,
+                    TokenCategory::ParenOpen if paren_depth == 0 => break,
+                    TokenCategory::ParenOpen => paren_depth -= 1,
+                    TokenCategory::Delimiter => break,
+                    _ if paren_depth > 0 => (),
+                    _ if prev_token.upper == "BETWEEN" => return,
+                    _ if prev_token.upper == "AND" || prev_token.upper == "OR" => break,
+                    _ => (),
+                }
+            }
+        }
+
         if token
             .behavior
             .contains(&TokenBehavior::NoNewLineBeforeUnlessMatch)

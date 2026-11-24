@@ -1899,6 +1899,29 @@ fn test_get_formatted_sql_select_where() {
 }
 
 #[test]
+fn test_get_formatted_sql_select_where_between() {
+    let mut config: Configuration = Configuration::new();
+    let sql: String = String::from(
+        r#"
+            SELECT C1 FROM TBL1
+            WHERE C1 = 1 AND C2 BETWEEN ABS(C3 - 1) AND (C3 + 1) AND C4 NOT BETWEEN 1 AND 2 OR C5 = 1
+            "#,
+    );
+
+    config.newlines = true;
+    assert_eq!(
+        get_formatted_sql(&config, sql.clone()),
+        r#"            SELECT
+                C1
+            FROM TBL1
+            WHERE C1 = 1
+                AND C2 BETWEEN ABS(C3 - 1) AND (C3 + 1)
+                AND C4 NOT BETWEEN 1 AND 2
+                OR C5 = 1"#
+    );
+}
+
+#[test]
 fn test_get_formatted_sql_multi_join() {
     let mut config: Configuration = Configuration::new();
     let sql: String = String::from(
