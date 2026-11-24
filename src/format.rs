@@ -167,27 +167,22 @@ impl FormatState {
             return;
         }
 
-        struct TextGroup {
-            value: String,
-            len: usize,
-            post_whitespace_position: Option<usize>,
-        }
+        let Some(lines) = self.get_paren_text_group_lines() else {
+            return;
+        };
 
+        self.pad_text_groups(&lines);
+    }
+
+    // collect the text groups on each line of the just-closed paren
+    // returns None if the paren contains indented formatting, which is not aligned
+    fn get_paren_text_group_lines(&self) -> Option<Vec<Vec<TextGroup>>> {
         let mut paren_count: usize = 1;
         let mut indent_len: Option<usize> = None;
         let mut last_whitespace_position: Option<usize> = None;
         let mut current_group: Option<TextGroup> = None;
         let mut current_line: Vec<TextGroup> = vec![];
         let mut lines: Vec<Vec<TextGroup>> = vec![];
-
-        let groupings: Vec<Vec<&str>> = vec![
-            vec!["NOT", "NULL"],
-            vec!["SET", "NULL"],
-            vec!["SET", "DEFAULT"],
-            vec!["NO", "ACTION"],
-            vec!["ON", "DELETE"],
-            vec!["ON", "UPDATE"],
-        ];
 
         // loop backwards until previous newline outside paren set
         for i in (0..self.tokens.len() - 1).rev() {
@@ -208,7 +203,7 @@ impl FormatState {
                         if current_indent_len > indent_len.unwrap() {
                             // inner paren contains indented formatting
                             // do not align groups
-                            return;
+                            return None;
                         }
                     }
                 }
@@ -239,39 +234,7 @@ impl FormatState {
                     TokenCategory::WhiteSpace if paren_count == 1 => {
                         if let Some(cg) = current_group {
                             current_line.push(cg);
-
-                            // check for groupings to be merged
-                            for grouping in &groupings {
-                                let mut group_found: bool = true;
-                                for g in 0..grouping.len() {
-                                    if g > current_line.len() - 1 {
-                                        group_found = false;
-                                        break;
-                                    }
-                                    if grouping[g]
-                                        != current_line[current_line.len() - g - 1]
-                                            .value
-                                            .to_uppercase()
-                                    {
-                                        group_found = false;
-                                        break;
-                                    }
-                                }
-
-                                if group_found {
-                                    let mut merge_group: TextGroup = current_line.pop().unwrap();
-                                    for _ in 0..grouping.len() - 1 {
-                                        let last_group: TextGroup = current_line.pop().unwrap();
-                                        merge_group.value =
-                                            format!("{} {}", last_group.value, merge_group.value);
-                                        merge_group.len += last_group.len + 1;
-                                        merge_group.post_whitespace_position =
-                                            last_group.post_whitespace_position;
-                                    }
-                                    current_line.push(merge_group);
-                                    break;
-                                }
-                            }
+                            merge_keyword_groupings(&mut current_line);
 
                             current_group = None;
                         }
@@ -296,10 +259,15 @@ impl FormatState {
             }
         }
 
+        Some(lines)
+    }
+
+    // pad the whitespace after each text group so the groups line up in columns
+    fn pad_text_groups(&mut self, lines: &[Vec<TextGroup>]) {
         // find max len in each group
         let max_groups_per_line: usize = lines.iter().map(|line| line.len()).max().unwrap_or(0);
         let mut max_len_in_each_group: Vec<usize> = vec![0; max_groups_per_line];
-        for line in &lines {
+        for line in lines {
             for group_idx in 0..line.len() {
                 if line[group_idx].len > max_len_in_each_group[group_idx] {
                     max_len_in_each_group[group_idx] = line[group_idx].len;
@@ -308,7 +276,7 @@ impl FormatState {
         }
 
         // adjust post whitespace len to align each group
-        for line in &lines {
+        for line in lines {
             for group_idx in 0..line.len() {
                 if line[group_idx].post_whitespace_position.is_some() {
                     let post_whitespace_position: usize =
@@ -578,189 +546,194 @@ impl FormatState {
     }
 
     fn remove_extra_newline(&mut self, token: &Token, config: &Configuration) {
-        // collapse paren if short enough
         if token.category == TokenCategory::ParenClose {
-            let mut paren_count: usize = 1;
-            let mut inner_token_count: usize = 0;
-            let mut collapsed_line_len: usize = 1;
-            let mut collapsed_inner_len: usize = 1;
-            let mut last_operator_len_after: Option<usize> = None;
-            let mut last_operator_position: Option<usize> = None;
-            let mut positions_to_remove: Vec<usize> = vec![];
-            let mut positions_to_add_space: Vec<usize> = vec![];
+            self.collapse_paren(config);
+        } else if token.behavior.contains(&TokenBehavior::NoNewLineBeforeX2) {
+            self.remove_double_newline();
+        } else if token.category == TokenCategory::Delimiter {
+            self.remove_double_newline_between_delimiter_lines();
+        } else if token.upper == "FROM" {
+            self.join_is_distinct_from();
+        }
+    }
 
-            // loop backwards until previous newline outside paren set
-            for i in (0..self.tokens.len()).rev() {
-                let prev_token: &Token = &self.tokens[i];
+    // collapse the just-closed paren onto one line if short enough
+    fn collapse_paren(&mut self, config: &Configuration) {
+        let mut paren_count: usize = 1;
+        let mut inner_token_count: usize = 0;
+        let mut collapsed_line_len: usize = 1;
+        let mut collapsed_inner_len: usize = 1;
+        let mut last_operator_len_after: Option<usize> = None;
+        let mut last_operator_position: Option<usize> = None;
+        let mut positions_to_remove: Vec<usize> = vec![];
+        let mut positions_to_add_space: Vec<usize> = vec![];
 
-                if paren_count == 0 {
-                    // no longer inside paren set in question
-                    match prev_token.category {
-                        TokenCategory::NewLine => break,
-                        TokenCategory::Operator if last_operator_len_after.is_none() => {
-                            last_operator_len_after = Some(collapsed_line_len);
-                            last_operator_position = Some(i);
-                        }
-                        _ => (),
+        // loop backwards until previous newline outside paren set
+        for i in (0..self.tokens.len()).rev() {
+            let prev_token: &Token = &self.tokens[i];
+
+            if paren_count == 0 {
+                // no longer inside paren set in question
+                match prev_token.category {
+                    TokenCategory::NewLine => break,
+                    TokenCategory::Operator if last_operator_len_after.is_none() => {
+                        last_operator_len_after = Some(collapsed_line_len);
+                        last_operator_position = Some(i);
                     }
-                } else {
-                    // still inside paren set in question
-                    match prev_token.category {
-                        TokenCategory::ParenOpen => paren_count -= 1,
-                        TokenCategory::ParenClose => paren_count += 1,
-                        TokenCategory::WhiteSpace => {
-                            if let Some(pt) = i.checked_sub(1).and_then(|j| self.tokens.get(j))
-                                && (pt.category == TokenCategory::NewLine
-                                    || pt.category == TokenCategory::WhiteSpace)
-                            {
-                                positions_to_remove.push(i);
-                                continue;
-                            }
-                        }
-                        TokenCategory::NewLine => {
+                    _ => (),
+                }
+            } else {
+                // still inside paren set in question
+                match prev_token.category {
+                    TokenCategory::ParenOpen => paren_count -= 1,
+                    TokenCategory::ParenClose => paren_count += 1,
+                    TokenCategory::WhiteSpace => {
+                        if let Some(pt) = i.checked_sub(1).and_then(|j| self.tokens.get(j))
+                            && (pt.category == TokenCategory::NewLine
+                                || pt.category == TokenCategory::WhiteSpace)
+                        {
                             positions_to_remove.push(i);
-
-                            if let Some(pnwt) = self.get_prev_nonwhitespace_token(i)
-                                && pnwt.category != TokenCategory::ParenOpen
-                                && let Some(nnwt) = self.get_next_nonwhitespace_token(i)
-                                && nnwt.category != TokenCategory::ParenClose
-                            {
-                                positions_to_add_space.push(i);
-
-                                // increase length for space that would replace the newline if collapsed
-                                collapsed_line_len += 1;
-                                collapsed_inner_len += 1;
-                            }
                             continue;
                         }
-                        TokenCategory::Comment if prev_token.value.starts_with("--") => {
-                            // a single-line comment ends at its newline, so collapsing
-                            // would pull the following tokens into the comment
-                            return;
+                    }
+                    TokenCategory::NewLine => {
+                        positions_to_remove.push(i);
+
+                        if let Some(pnwt) = self.get_prev_nonwhitespace_token(i)
+                            && pnwt.category != TokenCategory::ParenOpen
+                            && let Some(nnwt) = self.get_next_nonwhitespace_token(i)
+                            && nnwt.category != TokenCategory::ParenClose
+                        {
+                            positions_to_add_space.push(i);
+
+                            // increase length for space that would replace the newline if collapsed
+                            collapsed_line_len += 1;
+                            collapsed_inner_len += 1;
                         }
-                        _ => inner_token_count += 1,
+                        continue;
                     }
-                    collapsed_inner_len += prev_token.len();
+                    TokenCategory::Comment if prev_token.value.starts_with("--") => {
+                        // a single-line comment ends at its newline, so collapsing
+                        // would pull the following tokens into the comment
+                        return;
+                    }
+                    _ => inner_token_count += 1,
                 }
-
-                collapsed_line_len += prev_token.len();
+                collapsed_inner_len += prev_token.len();
             }
 
-            // determine whether to collapse paren
-            if inner_token_count <= 1 // paren is empty or just one inner token
-                || collapsed_line_len <= config.chars.into() // collapsed line is short enough
-                || last_operator_len_after.is_some_and(|len_after| {
-                    collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
-                        && collapsed_inner_len + self.get_newline_pre_space_len(config) // collapsed paren plus indent is short enough
-                            <= config.chars.into()
-                })
-            {
-                for p in positions_to_remove {
-                    self.tokens.remove(p);
-                    if positions_to_add_space.contains(&p) {
-                        self.tokens
-                            .insert(p, Token::new_whitespace(String::from(" ")));
-                    }
-                }
-            }
+            collapsed_line_len += prev_token.len();
+        }
 
-            // determine whether to insert newline after last operator
-            if collapsed_line_len > config.chars.into() // collapsed line was too long
-                && last_operator_len_after
-                    .is_some_and(|len_after| {
-                        collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
-                })
-            {
-                self.insert_newline_after_last_operator(
-                    last_operator_position.unwrap() + 1,
-                    config,
-                );
+        // determine whether to collapse paren
+        if inner_token_count <= 1 // paren is empty or just one inner token
+            || collapsed_line_len <= config.chars.into() // collapsed line is short enough
+            || last_operator_len_after.is_some_and(|len_after| {
+                collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
+                    && collapsed_inner_len + self.get_newline_pre_space_len(config) // collapsed paren plus indent is short enough
+                        <= config.chars.into()
+            })
+        {
+            for p in positions_to_remove {
+                self.tokens.remove(p);
+                if positions_to_add_space.contains(&p) {
+                    self.tokens
+                        .insert(p, Token::new_whitespace(String::from(" ")));
+                }
             }
         }
 
-        // remove double newline
-        if token.behavior.contains(&TokenBehavior::NoNewLineBeforeX2) {
-            if self.tokens.len() < 2 {
-                return;
-            }
+        // determine whether to insert newline after last operator
+        if collapsed_line_len > config.chars.into() // collapsed line was too long
+            && last_operator_len_after
+                .is_some_and(|len_after| {
+                    collapsed_line_len - len_after <= config.chars.into() // line up to operator is short enough
+            })
+        {
+            self.insert_newline_after_last_operator(last_operator_position.unwrap() + 1, config);
+        }
+    }
 
-            if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
-                return;
-            }
-
-            if self.tokens[self.tokens.len() - 2].category != TokenCategory::NewLine {
-                return;
-            }
-
-            self.tokens.pop();
+    // remove a double newline before the current token
+    fn remove_double_newline(&mut self) {
+        if self.tokens.len() < 2 {
             return;
         }
 
-        // remove double newline for two consecutive single delimiter lines
-        if token.category == TokenCategory::Delimiter {
-            let mut prev_newline_positions: Vec<usize> = vec![];
-            let mut prev_endline_tokens: Vec<&Token> = vec![];
-            for i in (1..self.tokens.len()).rev() {
-                if self.tokens[i].category == TokenCategory::NewLine {
-                    prev_newline_positions.push(i);
-                    prev_endline_tokens.push(&self.tokens[i - 1]);
-                    if prev_newline_positions.len() >= 3 {
-                        break;
-                    }
+        if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
+            return;
+        }
+
+        if self.tokens[self.tokens.len() - 2].category != TokenCategory::NewLine {
+            return;
+        }
+
+        self.tokens.pop();
+    }
+
+    // remove double newline for two consecutive single delimiter lines
+    fn remove_double_newline_between_delimiter_lines(&mut self) {
+        let mut prev_newline_positions: Vec<usize> = vec![];
+        let mut prev_endline_tokens: Vec<&Token> = vec![];
+        for i in (1..self.tokens.len()).rev() {
+            if self.tokens[i].category == TokenCategory::NewLine {
+                prev_newline_positions.push(i);
+                prev_endline_tokens.push(&self.tokens[i - 1]);
+                if prev_newline_positions.len() >= 3 {
+                    break;
                 }
             }
-
-            // need at least two newlines to remove extra
-            if prev_newline_positions.len() < 2 {
-                return;
-            }
-
-            // last two newlines need to be next to each other
-            if prev_newline_positions[0] != prev_newline_positions[1] + 1 {
-                return;
-            }
-
-            // need previous line to end in delimiter
-            if prev_endline_tokens[1].category != TokenCategory::Delimiter {
-                return;
-            }
-
-            if prev_endline_tokens.len() == 2
-                || prev_endline_tokens[2]
-                    .behavior
-                    .contains(&TokenBehavior::NoNewLineAfterX2Skip)
-            {
-                self.tokens.remove(prev_newline_positions[0]);
-                return;
-            }
         }
 
-        // remove newline for 'IS [NOT] DISTINCT FROM'
-        if token.upper == "FROM" {
-            if self.tokens.len() < 4 {
-                return;
-            }
-
-            if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
-                return;
-            }
-
-            if self.tokens[self.tokens.len() - 2].upper != "DISTINCT" {
-                return;
-            }
-
-            if self.tokens[self.tokens.len() - 3].category != TokenCategory::WhiteSpace {
-                return;
-            }
-
-            if self.tokens[self.tokens.len() - 4].upper != "IS"
-                && self.tokens[self.tokens.len() - 4].upper != "NOT"
-            {
-                return;
-            }
-
-            self.tokens.pop();
+        // need at least two newlines to remove extra
+        if prev_newline_positions.len() < 2 {
+            return;
         }
+
+        // last two newlines need to be next to each other
+        if prev_newline_positions[0] != prev_newline_positions[1] + 1 {
+            return;
+        }
+
+        // need previous line to end in delimiter
+        if prev_endline_tokens[1].category != TokenCategory::Delimiter {
+            return;
+        }
+
+        if prev_endline_tokens.len() == 2
+            || prev_endline_tokens[2]
+                .behavior
+                .contains(&TokenBehavior::NoNewLineAfterX2Skip)
+        {
+            self.tokens.remove(prev_newline_positions[0]);
+        }
+    }
+
+    // remove newline for 'IS [NOT] DISTINCT FROM'
+    fn join_is_distinct_from(&mut self) {
+        if self.tokens.len() < 4 {
+            return;
+        }
+
+        if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
+            return;
+        }
+
+        if self.tokens[self.tokens.len() - 2].upper != "DISTINCT" {
+            return;
+        }
+
+        if self.tokens[self.tokens.len() - 3].category != TokenCategory::WhiteSpace {
+            return;
+        }
+
+        if self.tokens[self.tokens.len() - 4].upper != "IS"
+            && self.tokens[self.tokens.len() - 4].upper != "NOT"
+        {
+            return;
+        }
+
+        self.tokens.pop();
     }
 
     fn get_prev_nonwhitespace_token(&self, pos: usize) -> Option<&Token> {
@@ -1025,6 +998,52 @@ fn trim_end_line_whitespace(value: &mut String) {
         .trim_end_matches(|c: char| c.is_whitespace() && c != NEW_LINE)
         .len();
     value.truncate(trimmed_len);
+}
+
+struct TextGroup {
+    value: String,
+    len: usize,
+    post_whitespace_position: Option<usize>,
+}
+
+// keyword sequences kept together as a single text group when aligning
+const KEYWORD_GROUPINGS: [&[&str]; 6] = [
+    &["NOT", "NULL"],
+    &["SET", "NULL"],
+    &["SET", "DEFAULT"],
+    &["NO", "ACTION"],
+    &["ON", "DELETE"],
+    &["ON", "UPDATE"],
+];
+
+// merge the most recent groups of a line into one if they form a keyword grouping
+// lines are built backwards, so the last group in the line is the first word
+fn merge_keyword_groupings(line: &mut Vec<TextGroup>) {
+    for grouping in &KEYWORD_GROUPINGS {
+        let mut group_found: bool = true;
+        for g in 0..grouping.len() {
+            if g > line.len() - 1 {
+                group_found = false;
+                break;
+            }
+            if grouping[g] != line[line.len() - g - 1].value.to_uppercase() {
+                group_found = false;
+                break;
+            }
+        }
+
+        if group_found {
+            let mut merge_group: TextGroup = line.pop().unwrap();
+            for _ in 0..grouping.len() - 1 {
+                let last_group: TextGroup = line.pop().unwrap();
+                merge_group.value = format!("{} {}", last_group.value, merge_group.value);
+                merge_group.len += last_group.len + 1;
+                merge_group.post_whitespace_position = last_group.post_whitespace_position;
+            }
+            line.push(merge_group);
+            break;
+        }
+    }
 }
 
 // block openers and the tokens that close them
