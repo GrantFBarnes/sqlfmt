@@ -102,13 +102,23 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
     let mut curr_token: Token = Token::new();
     let mut in_special: Option<TokenSpecial> = None;
-    // resumable count_unescaped state for the current quote token
-    let mut quote_scan: (usize, usize, usize) = (0, 0, 0);
+    let mut quote_scan: QuoteScan = QuoteScan::default();
 
     let sql_chars: Vec<char> = input_sql.chars().collect();
 
     // index of the first char after a delimiter that has already been consumed
     let mut skip_until: usize = 0;
+
+    // push the current token (if any) and start a new one
+    macro_rules! flush_token {
+        () => {
+            if !curr_token.is_empty() {
+                curr_token.setup(config);
+                tokens.push(curr_token);
+                curr_token = Token::new();
+            }
+        };
+    }
 
     for i in 0..sql_chars.len() {
         if i < skip_until {
@@ -122,13 +132,10 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
 
         match in_special {
             None => {
-                if ((curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()))
-                    || (!curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace())))
-                    && !curr_token.is_empty()
+                if (curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| !c.is_whitespace()))
+                    || (!curr_ch.is_whitespace() && prev1_ch.is_some_and(|c| c.is_whitespace()))
                 {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
+                    flush_token!();
                 }
 
                 if get_in_delimiter_change(false, get_last_nonspace_token(&tokens), curr_ch) {
@@ -137,11 +144,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                 } else if let Some(ic) =
                     get_in_interpolation(None, prev2_ch, prev1_ch, curr_ch, next1_ch)
                 {
-                    if !curr_token.is_empty() {
-                        curr_token.setup(config);
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
+                    flush_token!();
                     in_special = Some(TokenSpecial::Interpolation(ic));
                     curr_token.category = Some(TokenCategory::Interpolation);
                 } else if let Some(cc) = get_in_comment(
@@ -152,11 +155,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     next1_ch,
                     curr_token.value.chars().take(4).count(),
                 ) {
-                    if !curr_token.is_empty() {
-                        curr_token.setup(config);
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
+                    flush_token!();
                     in_special = Some(TokenSpecial::Comment(cc));
                     curr_token.category = Some(TokenCategory::Comment);
                 } else if let Some(qc) = get_in_quote(
@@ -168,12 +167,8 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     config,
                     &mut quote_scan,
                 ) {
-                    quote_scan = (0, 0, 0);
-                    if !curr_token.is_empty() {
-                        curr_token.setup(config);
-                        tokens.push(curr_token);
-                        curr_token = Token::new();
-                    }
+                    quote_scan = QuoteScan::default();
+                    flush_token!();
                     in_special = Some(TokenSpecial::Quote(qc));
                     curr_token.category = Some(TokenCategory::Quote);
                 }
@@ -247,9 +242,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     continue;
                 } else {
                     in_special = None;
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
+                    flush_token!();
                 }
             }
         }
@@ -257,16 +250,10 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
         // checked before the char-specific branches below so a delimiter made
         // of operator or punctuation chars (e.g. "//") is still recognized
         if !delimiter.is_empty() && sql_chars[i..].starts_with(&delimiter) {
-            if !curr_token.is_empty() {
-                curr_token.setup(config);
-                tokens.push(curr_token);
-            }
-            curr_token = Token::new();
+            flush_token!();
             curr_token.value = delimiter.iter().collect();
             curr_token.category = Some(TokenCategory::Delimiter);
-            curr_token.setup(config);
-            tokens.push(curr_token);
-            curr_token = Token::new();
+            flush_token!();
             skip_until = i + delimiter.len();
             continue;
         }
@@ -276,24 +263,14 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
             // always single character tokens
             NEW_LINE | COMMA | FULL_STOP | PAREN_OPEN | PAREN_CLOSE | AMPERSAND | VERTICAL_BAR
             | CIRCUMFLEX => {
-                if !curr_token.is_empty() {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
+                flush_token!();
                 curr_token.value.push(curr_ch);
-                curr_token.setup(config);
-                tokens.push(curr_token);
-                curr_token = Token::new();
+                flush_token!();
                 continue;
             }
             // operators
             PLUS | HYPHEN | ASTERISK | SLASH_FORWARD | PERCENT => {
-                if !curr_token.is_empty() {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
-                }
+                flush_token!();
                 curr_token.value.push(curr_ch);
 
                 if curr_ch == PLUS || curr_ch == HYPHEN {
@@ -314,9 +291,8 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
             }
             // comparators
             EQUAL | LESS_THAN | GREATER_THAN | EXCLAMATION => {
-                if !curr_token.is_empty()
-                    // operators
-                    && prev1_ch != Some(&PLUS)
+                // operators
+                if prev1_ch != Some(&PLUS)
                     && prev1_ch != Some(&HYPHEN)
                     && prev1_ch != Some(&ASTERISK)
                     && prev1_ch != Some(&SLASH_FORWARD)
@@ -327,9 +303,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     && prev1_ch != Some(&GREATER_THAN)
                     && prev1_ch != Some(&EXCLAMATION)
                 {
-                    curr_token.setup(config);
-                    tokens.push(curr_token);
-                    curr_token = Token::new();
+                    flush_token!();
                 }
                 curr_token.value.push(curr_ch);
                 curr_token.category = match prev1_ch {
@@ -482,29 +456,35 @@ fn get_in_comment(
     }
 }
 
+// resumable count_unescaped state for the current quote token, so a quote
+// token is not rescanned from the start on every check, which is slow
+#[derive(Default)]
+struct QuoteScan {
+    bytes_scanned: usize,
+    count: usize,
+    preceding_backslashes: usize,
+}
+
 // counts occurrences of target, skipping backslash-escaped ones (an odd run
 // of preceding backslashes escapes the char) when backslash_escapes is set
-// resumes from scan (bytes scanned, count, preceding backslashes) so a quote
-// token is not rescanned from the start on every check, which is slow
 fn count_unescaped(
     value: &str,
     target: char,
     backslash_escapes: bool,
-    scan: &mut (usize, usize, usize),
+    scan: &mut QuoteScan,
 ) -> usize {
-    let (scanned, count, preceding_backslashes) = scan;
-    for c in value[*scanned..].chars() {
-        if c == target && (!backslash_escapes || preceding_backslashes.is_multiple_of(2)) {
-            *count += 1;
+    for c in value[scan.bytes_scanned..].chars() {
+        if c == target && (!backslash_escapes || scan.preceding_backslashes.is_multiple_of(2)) {
+            scan.count += 1;
         }
         if c == BACKSLASH {
-            *preceding_backslashes += 1;
+            scan.preceding_backslashes += 1;
         } else {
-            *preceding_backslashes = 0;
+            scan.preceding_backslashes = 0;
         }
     }
-    *scanned = value.len();
-    *count
+    scan.bytes_scanned = value.len();
+    scan.count
 }
 
 fn get_in_quote(
@@ -514,7 +494,7 @@ fn get_in_quote(
     next1_ch: Option<&char>,
     curr_token: &Token,
     config: &Configuration,
-    quote_scan: &mut (usize, usize, usize),
+    quote_scan: &mut QuoteScan,
 ) -> Option<QuoteCategory> {
     match in_quote {
         Some(qc) => {
