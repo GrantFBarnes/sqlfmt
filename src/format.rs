@@ -383,6 +383,16 @@ impl FormatState {
     }
 
     fn insert_newline(&mut self, token: &Token, config: &Configuration) {
+        // a trailing comment should not cause the code before it to wrap
+        if token.category == TokenCategory::Comment
+            || self
+                .tokens
+                .last()
+                .is_some_and(|t| t.category == TokenCategory::Comment)
+        {
+            return;
+        }
+
         if self.get_current_line_length(token) > config.chars.into() {
             self.insert_newline_after_last_operator(self.tokens.len(), config);
         }

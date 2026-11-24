@@ -282,6 +282,37 @@ fn test_get_formatted_sql_config_chars_operators() {
 }
 
 #[test]
+fn test_get_formatted_sql_config_chars_operators_comment() {
+    let mut config: Configuration = Configuration::new();
+    let sql: String = String::from(
+        r#"
+            SET V1 = V2 + V3 -- really long comment that goes past the max line length
+            SELECT COLUMN1 FROM TBL1
+            "#,
+    );
+
+    config.newlines = true;
+
+    assert_eq!(
+        get_formatted_sql(&config, sql.clone()),
+        r#"            SET V1 = V2 + V3 -- really long comment that goes past the max line length
+            SELECT
+                COLUMN1
+            FROM TBL1"#
+    );
+
+    config.comment_pre_space = true;
+    assert_eq!(
+        get_formatted_sql(&config, sql.clone()),
+        r#"            SET V1 = V2 + V3
+            -- really long comment that goes past the max line length
+            SELECT
+                COLUMN1
+            FROM TBL1"#
+    );
+}
+
+#[test]
 fn test_get_formatted_sql_config_chars_paren_operators() {
     let mut config: Configuration = Configuration::new();
     let sql: String = String::from(
