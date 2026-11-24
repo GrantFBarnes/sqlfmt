@@ -63,7 +63,7 @@ impl FormatState {
         config: &Configuration,
     ) -> bool {
         match input_token.category {
-            Some(TokenCategory::NewLine) => {
+            TokenCategory::NewLine => {
                 // keep user input newlines as is
                 if !config.newlines {
                     return false;
@@ -88,7 +88,7 @@ impl FormatState {
                 // ignore all other user input newlines
                 true
             }
-            Some(TokenCategory::WhiteSpace) => {
+            TokenCategory::WhiteSpace => {
                 // define and keep user input space as prefix if not found
                 if self.prefix.is_none() {
                     self.prefix = Some(input_token.value.clone());
@@ -101,10 +101,10 @@ impl FormatState {
                     && next_token
                         .behavior
                         .contains(&TokenBehavior::PreSpaceKeepInput)
-                    && prev_input_token.is_some_and(|t| t.category == Some(TokenCategory::NewLine))
+                    && prev_input_token.is_some_and(|t| t.category == TokenCategory::NewLine)
                 {
                     let prev_token: Option<&Token> = self.tokens.last();
-                    if prev_token.is_none_or(|t| t.category != Some(TokenCategory::NewLine)) {
+                    if prev_token.is_none_or(|t| t.category != TokenCategory::NewLine) {
                         if prev_token
                             .is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterX2))
                         {
@@ -131,17 +131,17 @@ impl FormatState {
     }
 
     fn increase_paren_stack(&mut self, token: &Token) {
-        if token.category != Some(TokenCategory::ParenOpen) {
+        if token.category != TokenCategory::ParenOpen {
             return;
         }
 
         if let Some(prev_token) = self.tokens.last() {
             match prev_token.category {
-                Some(TokenCategory::XmlMethod) => {
+                TokenCategory::XmlMethod => {
                     self.paren_stack.push(ParenCategory::Space0Newline0);
                     return;
                 }
-                Some(TokenCategory::DataType) | Some(TokenCategory::Method) | None => {
+                TokenCategory::DataType | TokenCategory::Method | TokenCategory::Identifier => {
                     self.paren_stack.push(ParenCategory::Space0Newline1);
                     return;
                 }
@@ -153,7 +153,7 @@ impl FormatState {
     }
 
     fn decrease_paren_stack(&mut self, token: &Token) {
-        if token.category == Some(TokenCategory::ParenClose) {
+        if token.category == TokenCategory::ParenClose {
             self.paren_stack.pop();
         }
     }
@@ -163,7 +163,7 @@ impl FormatState {
             return;
         }
 
-        if token.category != Some(TokenCategory::ParenClose) {
+        if token.category != TokenCategory::ParenClose {
             return;
         }
 
@@ -197,7 +197,7 @@ impl FormatState {
                 break;
             }
 
-            if prev_token.category == Some(TokenCategory::NewLine) {
+            if prev_token.category == TokenCategory::NewLine {
                 // check if indented formatting inside paren
                 if self.tokens.get(i + 2).is_some() {
                     let current_indent_len: usize = self.tokens[i + 2].len();
@@ -222,9 +222,9 @@ impl FormatState {
                 current_line = vec![];
             } else {
                 match prev_token.category {
-                    Some(TokenCategory::ParenOpen) => paren_count -= 1,
-                    Some(TokenCategory::ParenClose) => paren_count += 1,
-                    Some(TokenCategory::Comma) if paren_count == 1 => {
+                    TokenCategory::ParenOpen => paren_count -= 1,
+                    TokenCategory::ParenClose => paren_count += 1,
+                    TokenCategory::Comma if paren_count == 1 => {
                         if let Some(cg) = current_group {
                             current_line.push(cg);
                         }
@@ -236,7 +236,7 @@ impl FormatState {
                         current_group = None;
                         continue;
                     }
-                    Some(TokenCategory::WhiteSpace) if paren_count == 1 => {
+                    TokenCategory::WhiteSpace if paren_count == 1 => {
                         if let Some(cg) = current_group {
                             current_line.push(cg);
 
@@ -332,7 +332,7 @@ impl FormatState {
         if self
             .tokens
             .last()
-            .is_none_or(|t| t.category == Some(TokenCategory::WhiteSpace))
+            .is_none_or(|t| t.category == TokenCategory::WhiteSpace)
         {
             return;
         }
@@ -345,8 +345,7 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
-                t.category != Some(TokenCategory::WhiteSpace)
-                    && t.category != Some(TokenCategory::NewLine)
+                t.category != TokenCategory::WhiteSpace && t.category != TokenCategory::NewLine
             })
         {
             return;
@@ -366,18 +365,18 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NoSpaceBeforeIfStartOfNewLine)
-            && prev_token.category == Some(TokenCategory::NewLine)
+            && prev_token.category == TokenCategory::NewLine
         {
             return;
         }
 
         match token.category {
-            Some(TokenCategory::Delimiter) => {
+            TokenCategory::Delimiter => {
                 if prev_token.upper != "DELIMITER" {
                     return;
                 }
             }
-            Some(TokenCategory::ParenOpen)
+            TokenCategory::ParenOpen
                 if let Some(paren) = self.paren_stack.last()
                     && (paren == &ParenCategory::Space0Newline0
                         || paren == &ParenCategory::Space0Newline1) =>
@@ -395,14 +394,13 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NoSpaceAroundIfNotProvidedInput)
             && prev_input_token.is_none_or(|t| {
-                t.category != Some(TokenCategory::WhiteSpace)
-                    && t.category != Some(TokenCategory::NewLine)
+                t.category != TokenCategory::WhiteSpace && t.category != TokenCategory::NewLine
             })
         {
             return;
         }
 
-        if prev_token.category == Some(TokenCategory::NewLine) {
+        if prev_token.category == TokenCategory::NewLine {
             for t in self.get_newline_pre_space_tokens(config) {
                 self.push(t);
             }
@@ -427,7 +425,7 @@ impl FormatState {
         for i in (0..self.tokens.len()).rev() {
             let prev_token: &Token = &self.tokens[i];
             match prev_token.category {
-                Some(TokenCategory::NewLine) => break,
+                TokenCategory::NewLine => break,
                 _ => line_length += prev_token.len(),
             }
         }
@@ -490,7 +488,7 @@ impl FormatState {
         }
 
         if prev1_token.behavior.contains(&TokenBehavior::NewLineAfter)
-            && token.category != Some(TokenCategory::Delimiter)
+            && token.category != TokenCategory::Delimiter
         {
             self.push(Token::new_newline());
             return;
@@ -505,8 +503,8 @@ impl FormatState {
             return;
         }
 
-        if prev1_token.category == Some(TokenCategory::ParenOpen) {
-            if token.category != Some(TokenCategory::ParenClose) {
+        if prev1_token.category == TokenCategory::ParenOpen {
+            if token.category != TokenCategory::ParenClose {
                 self.push(Token::new_newline());
             }
             return;
@@ -520,7 +518,7 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotMethodCall)
-            && next_input_token.is_none_or(|t| t.category != Some(TokenCategory::ParenOpen))
+            && next_input_token.is_none_or(|t| t.category != TokenCategory::ParenOpen)
         {
             self.push(Token::new_newline());
             return;
@@ -529,8 +527,8 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterKeywordOrMethod)
-            && prev1_token.category != Some(TokenCategory::Keyword)
-            && prev1_token.category != Some(TokenCategory::Method)
+            && prev1_token.category != TokenCategory::Keyword
+            && prev1_token.category != TokenCategory::Method
         {
             self.push(Token::new_newline());
             return;
@@ -548,9 +546,9 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterEvent)
-            && prev1_token.category != Some(TokenCategory::DataType)
-            && prev1_token.category != Some(TokenCategory::Event)
-            && prev3_token.is_none_or(|t| t.category != Some(TokenCategory::Event))
+            && prev1_token.category != TokenCategory::DataType
+            && prev1_token.category != TokenCategory::Event
+            && prev3_token.is_none_or(|t| t.category != TokenCategory::Event)
         {
             self.push(Token::new_newline());
             return;
@@ -560,15 +558,15 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::NewLineAfterIfNotAfterKeyword)
             && let Some(p3t) = prev3_token
-            && p3t.category != Some(TokenCategory::Keyword)
+            && p3t.category != TokenCategory::Keyword
         {
             self.push(Token::new_newline());
             return;
         }
 
         if prev3_token.is_some_and(|t| t.behavior.contains(&TokenBehavior::NewLineAfterSkip))
-            || (prev1_token.category == Some(TokenCategory::ParenClose)
-                && prev3_token.is_some_and(|t| t.category == Some(TokenCategory::ParenOpen))
+            || (prev1_token.category == TokenCategory::ParenClose
+                && prev3_token.is_some_and(|t| t.category == TokenCategory::ParenOpen)
                 && self
                     .tokens
                     .iter()
@@ -581,7 +579,7 @@ impl FormatState {
 
     fn remove_extra_newline(&mut self, token: &Token, config: &Configuration) {
         // collapse paren if short enough
-        if token.category == Some(TokenCategory::ParenClose) {
+        if token.category == TokenCategory::ParenClose {
             let mut paren_count: usize = 1;
             let mut inner_token_count: usize = 0;
             let mut collapsed_line_len: usize = 1;
@@ -598,8 +596,8 @@ impl FormatState {
                 if paren_count == 0 {
                     // no longer inside paren set in question
                     match prev_token.category {
-                        Some(TokenCategory::NewLine) => break,
-                        Some(TokenCategory::Operator) if last_operator_len_after.is_none() => {
+                        TokenCategory::NewLine => break,
+                        TokenCategory::Operator if last_operator_len_after.is_none() => {
                             last_operator_len_after = Some(collapsed_line_len);
                             last_operator_position = Some(i);
                         }
@@ -608,24 +606,24 @@ impl FormatState {
                 } else {
                     // still inside paren set in question
                     match prev_token.category {
-                        Some(TokenCategory::ParenOpen) => paren_count -= 1,
-                        Some(TokenCategory::ParenClose) => paren_count += 1,
-                        Some(TokenCategory::WhiteSpace) => {
+                        TokenCategory::ParenOpen => paren_count -= 1,
+                        TokenCategory::ParenClose => paren_count += 1,
+                        TokenCategory::WhiteSpace => {
                             if let Some(pt) = i.checked_sub(1).and_then(|j| self.tokens.get(j))
-                                && (pt.category == Some(TokenCategory::NewLine)
-                                    || pt.category == Some(TokenCategory::WhiteSpace))
+                                && (pt.category == TokenCategory::NewLine
+                                    || pt.category == TokenCategory::WhiteSpace)
                             {
                                 positions_to_remove.push(i);
                                 continue;
                             }
                         }
-                        Some(TokenCategory::NewLine) => {
+                        TokenCategory::NewLine => {
                             positions_to_remove.push(i);
 
                             if let Some(pnwt) = self.get_prev_nonwhitespace_token(i)
-                                && pnwt.category != Some(TokenCategory::ParenOpen)
+                                && pnwt.category != TokenCategory::ParenOpen
                                 && let Some(nnwt) = self.get_next_nonwhitespace_token(i)
-                                && nnwt.category != Some(TokenCategory::ParenClose)
+                                && nnwt.category != TokenCategory::ParenClose
                             {
                                 positions_to_add_space.push(i);
 
@@ -635,7 +633,7 @@ impl FormatState {
                             }
                             continue;
                         }
-                        Some(TokenCategory::Comment) if prev_token.value.starts_with("--") => {
+                        TokenCategory::Comment if prev_token.value.starts_with("--") => {
                             // a single-line comment ends at its newline, so collapsing
                             // would pull the following tokens into the comment
                             return;
@@ -686,11 +684,11 @@ impl FormatState {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 1].category != Some(TokenCategory::NewLine) {
+            if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 2].category != Some(TokenCategory::NewLine) {
+            if self.tokens[self.tokens.len() - 2].category != TokenCategory::NewLine {
                 return;
             }
 
@@ -699,11 +697,11 @@ impl FormatState {
         }
 
         // remove double newline for two consecutive single delimiter lines
-        if token.category == Some(TokenCategory::Delimiter) {
+        if token.category == TokenCategory::Delimiter {
             let mut prev_newline_positions: Vec<usize> = vec![];
             let mut prev_endline_tokens: Vec<&Token> = vec![];
             for i in (1..self.tokens.len()).rev() {
-                if self.tokens[i].category == Some(TokenCategory::NewLine) {
+                if self.tokens[i].category == TokenCategory::NewLine {
                     prev_newline_positions.push(i);
                     prev_endline_tokens.push(&self.tokens[i - 1]);
                     if prev_newline_positions.len() >= 3 {
@@ -723,7 +721,7 @@ impl FormatState {
             }
 
             // need previous line to end in delimiter
-            if prev_endline_tokens[1].category != Some(TokenCategory::Delimiter) {
+            if prev_endline_tokens[1].category != TokenCategory::Delimiter {
                 return;
             }
 
@@ -743,7 +741,7 @@ impl FormatState {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 1].category != Some(TokenCategory::NewLine) {
+            if self.tokens[self.tokens.len() - 1].category != TokenCategory::NewLine {
                 return;
             }
 
@@ -751,7 +749,7 @@ impl FormatState {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 3].category != Some(TokenCategory::WhiteSpace) {
+            if self.tokens[self.tokens.len() - 3].category != TokenCategory::WhiteSpace {
                 return;
             }
 
@@ -769,8 +767,8 @@ impl FormatState {
         for i in (0..std::cmp::min(pos, self.tokens.len())).rev() {
             let prev_token: &Token = &self.tokens[i];
             match prev_token.category {
-                Some(TokenCategory::WhiteSpace) => continue,
-                Some(TokenCategory::NewLine) => continue,
+                TokenCategory::WhiteSpace => continue,
+                TokenCategory::NewLine => continue,
                 _ => return Some(prev_token),
             }
         }
@@ -781,8 +779,8 @@ impl FormatState {
         for i in pos + 1..self.tokens.len() {
             let next_token: &Token = &self.tokens[i];
             match next_token.category {
-                Some(TokenCategory::WhiteSpace) => continue,
-                Some(TokenCategory::NewLine) => continue,
+                TokenCategory::WhiteSpace => continue,
+                TokenCategory::NewLine => continue,
                 _ => return Some(next_token),
             }
         }
@@ -792,20 +790,20 @@ impl FormatState {
     fn insert_newline_after_last_operator(&mut self, pos: usize, config: &Configuration) {
         for i in (0..std::cmp::min(pos, self.tokens.len())).rev() {
             match self.tokens[i].category {
-                Some(TokenCategory::NewLine) => return,
-                Some(TokenCategory::Operator) => {
+                TokenCategory::NewLine => return,
+                TokenCategory::Operator => {
                     if i == self.tokens.len() - 1 {
                         self.tokens.push(Token::new_newline());
                         return;
                     }
 
                     if self.tokens[i].value == "*"
-                        && self.tokens[i + 1].category == Some(TokenCategory::ParenClose)
+                        && self.tokens[i + 1].category == TokenCategory::ParenClose
                     {
                         return;
                     }
 
-                    if self.tokens[i + 1].category == Some(TokenCategory::WhiteSpace) {
+                    if self.tokens[i + 1].category == TokenCategory::WhiteSpace {
                         self.tokens.remove(i + 1);
                     }
 
@@ -860,8 +858,7 @@ impl FormatState {
             .behavior
             .contains(&TokenBehavior::IncreaseIndentIfNotAfterKeyword)
             && self.tokens.iter().nth_back(2).is_none_or(|t| {
-                t.category != Some(TokenCategory::Keyword)
-                    && t.category != Some(TokenCategory::DataType)
+                t.category != TokenCategory::Keyword && t.category != TokenCategory::DataType
             })
         {
             self.indent_stack.push(token.clone());
@@ -954,9 +951,9 @@ impl FormatState {
             return;
         }
 
-        if self.tokens[token_count - 1].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[token_count - 2].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[token_count - 3].category != Some(TokenCategory::NewLine)
+        if self.tokens[token_count - 1].category != TokenCategory::WhiteSpace
+            || self.tokens[token_count - 2].category != TokenCategory::WhiteSpace
+            || self.tokens[token_count - 3].category != TokenCategory::NewLine
         {
             return;
         }
@@ -972,10 +969,10 @@ impl FormatState {
             return;
         }
 
-        if self.tokens[newline_index - 1].category != Some(TokenCategory::Comment)
-            || self.tokens[newline_index - 2].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[newline_index - 3].category != Some(TokenCategory::WhiteSpace)
-            || self.tokens[newline_index - 4].category != Some(TokenCategory::NewLine)
+        if self.tokens[newline_index - 1].category != TokenCategory::Comment
+            || self.tokens[newline_index - 2].category != TokenCategory::WhiteSpace
+            || self.tokens[newline_index - 3].category != TokenCategory::WhiteSpace
+            || self.tokens[newline_index - 4].category != TokenCategory::NewLine
         {
             return;
         }
@@ -993,25 +990,25 @@ impl FormatState {
             let mut token_value: String = token.value.clone();
 
             match token.category {
-                Some(TokenCategory::Keyword)
-                | Some(TokenCategory::DataType)
-                | Some(TokenCategory::Event)
-                | Some(TokenCategory::Method) => match config.case {
+                TokenCategory::Keyword
+                | TokenCategory::DataType
+                | TokenCategory::Event
+                | TokenCategory::Method => match config.case {
                     ConfigCase::Uppercase => token_value = token.upper.clone(),
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
                 },
-                Some(TokenCategory::XmlMethod) => {
+                TokenCategory::XmlMethod => {
                     if result.ends_with(FULL_STOP)
                         && self
                             .tokens
                             .get(i + 1)
-                            .is_some_and(|t| t.category == Some(TokenCategory::ParenOpen))
+                            .is_some_and(|t| t.category == TokenCategory::ParenOpen)
                     {
                         token_value = token_value.to_lowercase();
                     }
                 }
-                Some(TokenCategory::NewLine) => trim_end_line_whitespace(&mut result),
+                TokenCategory::NewLine => trim_end_line_whitespace(&mut result),
                 _ => (),
             }
 
