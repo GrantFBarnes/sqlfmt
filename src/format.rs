@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::configuration::{ConfigCase, ConfigTab, Configuration};
 use crate::token::*;
 
@@ -375,7 +373,7 @@ impl FormatState {
 
         match token.category {
             Some(TokenCategory::Delimiter) => {
-                if prev_token.value.to_uppercase() != "DELIMITER" {
+                if prev_token.upper != "DELIMITER" {
                     return;
                 }
             }
@@ -460,12 +458,12 @@ impl FormatState {
         let prev3_token: Option<&Token> = self.tokens.iter().nth_back(2);
 
         // keep 'END IF' together when END closed an 'IF ... THEN [... ELSE]' block
-        if token.value.to_uppercase() == "IF"
-            && prev1_token.value.to_uppercase() == "END"
-            && self.end_block_opener.as_ref().is_some_and(|t| {
-                let v: String = t.value.to_uppercase();
-                v == "THEN" || v == "ELSE"
-            })
+        if token.upper == "IF"
+            && prev1_token.upper == "END"
+            && self
+                .end_block_opener
+                .as_ref()
+                .is_some_and(|t| t.upper == "THEN" || t.upper == "ELSE")
         {
             return;
         }
@@ -541,7 +539,7 @@ impl FormatState {
         if token
             .behavior
             .contains(&TokenBehavior::NewLineBeforeIfNotAfterWithin)
-            && prev1_token.value.to_uppercase() != "WITHIN"
+            && prev1_token.upper != "WITHIN"
         {
             self.push(Token::new_newline());
             return;
@@ -740,7 +738,7 @@ impl FormatState {
         }
 
         // remove newline for 'IS [NOT] DISTINCT FROM'
-        if token.value.to_uppercase() == "FROM" {
+        if token.upper == "FROM" {
             if self.tokens.len() < 4 {
                 return;
             }
@@ -749,7 +747,7 @@ impl FormatState {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 2].value.to_uppercase() != "DISTINCT" {
+            if self.tokens[self.tokens.len() - 2].upper != "DISTINCT" {
                 return;
             }
 
@@ -757,8 +755,8 @@ impl FormatState {
                 return;
             }
 
-            if self.tokens[self.tokens.len() - 4].value.to_uppercase() != "IS"
-                && self.tokens[self.tokens.len() - 4].value.to_uppercase() != "NOT"
+            if self.tokens[self.tokens.len() - 4].upper != "IS"
+                && self.tokens[self.tokens.len() - 4].upper != "NOT"
             {
                 return;
             }
@@ -883,7 +881,7 @@ impl FormatState {
     }
 
     fn decrease_indent_stack(&mut self, token: &Token) {
-        let is_end: bool = token.value.to_uppercase() == "END";
+        let is_end: bool = token.upper == "END";
         if is_end {
             self.end_block_opener = None;
         }
@@ -892,24 +890,11 @@ impl FormatState {
             return;
         }
 
-        let required_to_decrease: HashMap<&str, Vec<&str>> = HashMap::from([
-            ("(", vec![")"]),
-            ("OPEN", vec!["CLOSE"]),
-            ("BEGIN", vec!["END", "COMMIT", "ROLLBACK"]),
-            ("DO", vec!["END"]),
-            ("CASE", vec!["END"]),
-            ("THEN", vec!["END", "ELSE"]),
-            ("ELSE", vec!["END", "BEGIN"]),
-        ]);
-
-        let mut decrease_until: Vec<&str> = vec![];
-        for kv in &required_to_decrease {
-            for v in kv.1 {
-                if v == &token.value.to_uppercase() {
-                    decrease_until.push(kv.0);
-                }
-            }
-        }
+        let decrease_until: Vec<&str> = REQUIRED_TO_DECREASE
+            .iter()
+            .filter(|(_, closers)| closers.contains(&token.upper.as_str()))
+            .map(|(opener, _)| *opener)
+            .collect();
 
         if !decrease_until.is_empty() {
             loop {
@@ -918,16 +903,18 @@ impl FormatState {
                     return;
                 }
                 let top: Token = top.unwrap();
-                let top_value: String = top.value.to_uppercase();
 
-                if decrease_until.contains(&top_value.as_str()) {
+                if decrease_until.contains(&top.upper.as_str()) {
                     if is_end {
                         self.end_block_opener = Some(top);
                     }
                     return;
                 }
 
-                if required_to_decrease.contains_key(top_value.as_str()) {
+                if REQUIRED_TO_DECREASE
+                    .iter()
+                    .any(|(opener, _)| *opener == top.upper)
+                {
                     self.indent_stack.push(top);
                     return;
                 }
@@ -942,7 +929,10 @@ impl FormatState {
                 }
                 let top: Token = top.unwrap();
 
-                if required_to_decrease.contains_key(top.value.to_uppercase().as_str()) {
+                if REQUIRED_TO_DECREASE
+                    .iter()
+                    .any(|(opener, _)| *opener == top.upper)
+                {
                     self.indent_stack.push(top);
                     return;
                 }
@@ -1007,7 +997,7 @@ impl FormatState {
                 | Some(TokenCategory::DataType)
                 | Some(TokenCategory::Event)
                 | Some(TokenCategory::Method) => match config.case {
-                    ConfigCase::Uppercase => token_value = token_value.to_uppercase(),
+                    ConfigCase::Uppercase => token_value = token.upper.clone(),
                     ConfigCase::Lowercase => token_value = token_value.to_lowercase(),
                     ConfigCase::Unchanged => (),
                 },
@@ -1039,6 +1029,17 @@ fn trim_end_line_whitespace(value: &mut String) {
         .len();
     value.truncate(trimmed_len);
 }
+
+// block openers and the tokens that close them
+const REQUIRED_TO_DECREASE: [(&str, &[&str]); 7] = [
+    ("(", &[")"]),
+    ("OPEN", &["CLOSE"]),
+    ("BEGIN", &["END", "COMMIT", "ROLLBACK"]),
+    ("DO", &["END"]),
+    ("CASE", &["END"]),
+    ("THEN", &["END", "ELSE"]),
+    ("ELSE", &["END", "BEGIN"]),
+];
 
 #[derive(PartialEq, Eq, Debug)]
 enum ParenCategory {

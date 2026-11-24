@@ -191,6 +191,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                 } else {
                     in_special = None;
                     delimiter = curr_token.value.chars().collect();
+                    curr_token.upper = curr_token.value.to_uppercase();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -203,6 +204,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     continue;
                 } else {
                     in_special = None;
+                    curr_token.upper = curr_token.value.to_uppercase();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -224,6 +226,7 @@ pub fn get_sql_tokens(config: &Configuration, input_sql: String) -> Vec<Token> {
                     continue;
                 } else {
                     in_special = None;
+                    curr_token.upper = curr_token.value.to_uppercase();
                     tokens.push(curr_token);
                     curr_token = Token::new();
                 }
@@ -383,7 +386,7 @@ fn get_in_delimiter_change(
         return false;
     }
 
-    if prev_token.is_some_and(|t| t.value.to_uppercase() == "DELIMITER") {
+    if prev_token.is_some_and(|t| t.upper == "DELIMITER") {
         return true;
     }
 
@@ -592,6 +595,7 @@ fn get_in_quote(
 #[derive(Clone)]
 pub struct Token {
     pub value: String,
+    pub upper: String,
     pub category: Option<TokenCategory>,
     pub behavior: Vec<TokenBehavior>,
 }
@@ -615,6 +619,7 @@ impl Token {
     fn new() -> Token {
         Token {
             value: String::new(),
+            upper: String::new(),
             category: None,
             behavior: vec![],
         }
@@ -624,6 +629,7 @@ impl Token {
     fn new_test(value: &str, category: Option<TokenCategory>) -> Token {
         Token {
             value: String::from(value),
+            upper: value.to_uppercase(),
             category,
             behavior: vec![],
         }
@@ -631,6 +637,7 @@ impl Token {
 
     pub fn new_whitespace(value: String) -> Token {
         Token {
+            upper: value.clone(),
             value,
             category: Some(TokenCategory::WhiteSpace),
             behavior: vec![TokenBehavior::NoSpaceBefore, TokenBehavior::NoSpaceAfter],
@@ -640,6 +647,7 @@ impl Token {
     pub fn new_newline() -> Token {
         Token {
             value: "\n".to_string(),
+            upper: "\n".to_string(),
             category: Some(TokenCategory::NewLine),
             behavior: vec![
                 TokenBehavior::NoWhiteSpaceBefore,
@@ -662,6 +670,7 @@ impl Token {
     }
 
     fn setup(&mut self, config: &Configuration) {
+        self.upper = self.value.to_uppercase();
         self.category = self.get_category();
         self.set_behavior(config);
     }
@@ -720,7 +729,7 @@ impl Token {
             return Some(TokenCategory::WhiteSpace);
         }
 
-        get_category_from_value(self.value.to_uppercase().as_str())
+        get_category_from_value(self.upper.as_str())
     }
 
     fn set_behavior(&mut self, config: &Configuration) {
@@ -768,7 +777,7 @@ impl Token {
             _ => (),
         }
 
-        match self.value.to_uppercase().as_str() {
+        match self.upper.as_str() {
             "AFTER" => {
                 behavior.push(TokenBehavior::NewLineBefore);
             }
